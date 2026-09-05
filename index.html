@@ -1,84 +1,62 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Personal academic website of CMC, a PhD student in theoretical physics and astrophysics.">
-  <title>CMC | Theoretical Physics</title>
+  <meta name="description" content="CMC personal website">
+  <title>CMC</title>
   <link rel="stylesheet" href="/assets/css/style.css">
-  <script>
-    window.MathJax = {tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']]}};
-  </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
   <header class="site-header">
     <div class="container nav-wrap">
       <a class="site-title" href="/">CMC</a>
-      <nav aria-label="Main navigation">
-        <a class="active" href="/">Home</a>
-        <a href="/research.html">Research</a>
-        <a href="/publications.html">Publications</a>
-        <a href="/blog.html">Blog</a>
-        <a href="/cv.html">CV</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a class="active" href="/" data-zh="Home page" data-en="Home page">Home page</a>
+        <a href="/photography.html" data-zh="摄影集" data-en="Photography">摄影集</a>
+        <a href="/academics.html" data-zh="学术集" data-en="Academics">学术集</a>
+        <a href="/reviews.html" data-zh="简评集" data-en="Notes">简评集</a>
+        <button class="lang-switch" type="button" aria-label="Switch language">EN</button>
       </nav>
     </div>
   </header>
 
-  <main>
-    <section class="hero container">
-      <p class="eyebrow">THEORETICAL PHYSICS · GRAVITATION · ASTROPHYSICS</p>
+  <main class="home-main">
+    <section class="container home-intro">
       <h1>CMC</h1>
-      <p class="lead">PhD student at the Tsung-Dao Lee Institute and Shanghai Jiao Tong University.</p>
-      <p>Research interests include gravitational-wave theory, dark matter, compact objects, pulsar timing arrays, and relativistic astrophysics.</p>
-      <div class="hero-links">
-        <a class="button" href="/research.html">Research</a>
-        <a class="button secondary" href="/publications.html">Publications</a>
-        <a class="button secondary" href="https://inspirehep.net/authors/2107075?ui-citation-summary=true">INSPIRE</a>
-      </div>
+      <p data-zh="个人主页。" data-en="Personal website.">个人主页。</p>
     </section>
 
-    <section class="container section-grid">
-      <div>
-        <h2>Current affiliation</h2>
-        <p><strong>Tsung-Dao Lee Institute</strong>, Shanghai</p>
-        <p><strong>Shanghai Jiao Tong University</strong></p>
-      </div>
-      <aside class="card">
-        <h2>Academic background</h2>
-        <p>2026–present · PhD, Tsung-Dao Lee Institute</p>
-        <p>2026–present · PhD, Shanghai Jiao Tong University</p>
-        <p>2023 · Visitor, ICTP-AP</p>
-        <p>2023–2026 · Master, GUCAS</p>
-        <p>2019–2023 · Undergraduate, Wuhan University</p>
-      </aside>
-    </section>
+    <section class="container entry-grid" aria-label="Site sections">
+      <a class="entry-panel" href="/photography.html">
+        <span class="entry-index">01</span>
+        <h2 data-zh="摄影集" data-en="Photography">摄影集</h2>
+        <p data-zh="照片与影像记录" data-en="Photographs and visual records">照片与影像记录</p>
+        <span class="entry-arrow">→</span>
+      </a>
 
-    <section class="container">
-      <h2>Research interests</h2>
-      <div class="cards">
-        <article class="card">
-          <h3>Pulsar timing arrays</h3>
-          <p>Finite-pulsar effects, harmonic-space methods, stochastic backgrounds, and individually resolvable supermassive black-hole binaries.</p>
-        </article>
-        <article class="card">
-          <h3>Dark matter</h3>
-          <p>Dark-matter environments and additional fields around compact objects, with emphasis on their gravitational-wave signatures.</p>
-        </article>
-        <article class="card">
-          <h3>Compact binaries</h3>
-          <p>Orbital dynamics, radiation, environmental interactions, EMRIs, and beyond-vacuum gravitational-wave signatures.</p>
-        </article>
-      </div>
+      <a class="entry-panel" href="/academics.html">
+        <span class="entry-index">02</span>
+        <h2 data-zh="学术集" data-en="Academics">学术集</h2>
+        <p data-zh="研究、经历与发表" data-en="Research, background and publications">研究、经历与发表</p>
+        <span class="entry-arrow">→</span>
+      </a>
+
+      <a class="entry-panel" href="/reviews.html">
+        <span class="entry-index">03</span>
+        <h2 data-zh="简评集" data-en="Notes">简评集</h2>
+        <p data-zh="短文、随笔与评论" data-en="Short notes, essays and reviews">短文、随笔与评论</p>
+        <span class="entry-arrow">→</span>
+      </a>
     </section>
   </main>
 
   <footer class="site-footer">
     <div class="container footer-wrap">
       <span>© <span id="year"></span> CMC</span>
-      <span><a href="https://inspirehep.net/authors/2107075?ui-citation-summary=true">INSPIRE</a> · <a href="https://github.com/0923katouC">GitHub</a></span>
     </div>
   </footer>
+
   <script src="/assets/js/main.js"></script>
 </body>
 </html>
