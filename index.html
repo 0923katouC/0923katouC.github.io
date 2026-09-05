@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Personal academic website of CMC, a PhD student in theoretical physics.">
+  <title>CMC | Theoretical Physics</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script>
+    window.MathJax = {tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']]}};
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="site-title" href="/">CMC</a>
+      <nav aria-label="Main navigation">
+        <a class="active" href="/">Home</a>
+        <a href="/research.html">Research</a>
+        <a href="/publications.html">Publications</a>
+        <a href="/blog.html">Blog</a>
+        <a href="/cv.html">CV</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero container">
+      <p class="eyebrow">THEORETICAL PHYSICS · GRAVITATION · COSMOLOGY</p>
+      <h1>CMC</h1>
+      <p class="lead">PhD student in theoretical physics, working on gravitational-wave theory, dark matter, compact objects, and related problems in relativistic astrophysics.</p>
+      <div class="hero-links">
+        <a class="button" href="/research.html">Research</a>
+        <a class="button secondary" href="/publications.html">Publications</a>
+      </div>
+    </section>
+
+    <section class="container section-grid">
+      <div>
+        <h2>Research interests</h2>
+        <ul class="clean-list">
+          <li>Gravitational-wave theory</li>
+          <li>Pulsar timing arrays and supermassive black-hole binaries</li>
+          <li>Dark-matter phenomenology</li>
+          <li>Extreme mass-ratio inspirals and compact objects</li>
+        </ul>
+      </div>
+      <aside class="card">
+        <h2>Current focus</h2>
+        <p>Methods for gravitational-wave source modeling, inference, and environmental effects across nanoHertz to milliHertz frequency bands.</p>
+      </aside>
+    </section>
+
+    <section class="container">
+      <h2>Selected topics</h2>
+      <div class="cards">
+        <article class="card">
+          <h3>Pulsar timing arrays</h3>
+          <p>Finite-pulsar effects, harmonic-space methods, stochastic backgrounds, and individually resolvable sources.</p>
+        </article>
+        <article class="card">
+          <h3>Dark matter</h3>
+          <p>Dark-matter environments around compact objects and their imprint on gravitational-wave dynamics.</p>
+        </article>
+        <article class="card">
+          <h3>Compact binaries</h3>
+          <p>Orbital dynamics, radiation, environmental interactions, and beyond-vacuum signatures.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="container note">
+      <h2>Notation note</h2>
+      <p>This site supports MathJax. For example, the observed and source-frame gravitational-wave frequencies may be related by</p>
+      <p class="equation">\[ f_{\rm gw}=\frac{f_s}{1+z}. \]</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-wrap">
+      <span>© <span id="year"></span> CMC</span>
+      <a href="https://github.com/0923katouC">GitHub</a>
+    </div>
+  </footer>
+  <script src="/assets/js/main.js"></script>
+</body>
+</html>
