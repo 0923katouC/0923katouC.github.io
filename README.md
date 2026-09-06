@@ -2,6 +2,8 @@
 
 Personal academic website hosted with GitHub Pages.
 
+**Website:** [https://0923katouC.github.io/](https://0923katouC.github.io/)
+
 ## Structure
 
 - `index.html` — homepage
