@@ -3,19 +3,41 @@
   overflow:hidden;
   min-height:calc(100vh - 154px);
   background-color:#f7f8fa;
-  background-image:
-    linear-gradient(rgba(247,248,250,.12),rgba(247,248,250,.12)),
-    url("/assets/images/homepage-bg.webp");
-  background-size:auto,100% 100%;
-  background-position:center center,center center;
-  background-repeat:no-repeat,no-repeat;
+}
+
+.home-main::before{
+  content:"";
+  position:absolute;
+  inset:-2%;
+  z-index:0;
+  pointer-events:none;
+  background-image:url("/assets/images/homepage-bg.webp");
+  background-size:cover;
+  background-position:center center;
+  background-repeat:no-repeat;
+  filter:blur(2px);
+  transform:scale(1.02);
+}
+
+.home-main::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background:rgba(247,248,250,.10);
+}
+
+.home-main > *{
+  position:relative;
+  z-index:1;
 }
 
 .home-main .entry-panel{
-  background:rgba(255,255,255,.74);
+  background:rgba(255,255,255,.72);
   border-color:rgba(210,214,220,.78);
-  -webkit-backdrop-filter:blur(5px);
-  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
 }
 
 .site-footer{
@@ -23,10 +45,13 @@
 }
 
 @media(max-width:640px){
-  .home-main{
-    background-image:
-      linear-gradient(rgba(247,248,250,.16),rgba(247,248,250,.16)),
-      url("/assets/images/homepage-bg.webp");
-    background-size:auto,100% 100%;
+  .home-main::before{
+    inset:-2%;
+    filter:blur(1.5px);
+    transform:scale(1.02);
+  }
+
+  .home-main::after{
+    background:rgba(247,248,250,.14);
   }
 }
