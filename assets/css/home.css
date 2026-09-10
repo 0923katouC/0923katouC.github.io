@@ -7,16 +7,16 @@
 .home-main::before{
   content:"";
   position:absolute;
-  inset:-32px;
+  inset:0;
   z-index:-2;
   pointer-events:none;
+  background-color:#f7f8fa;
   background-image:url("https://pub-aaf94121331648f0a0658c3db52a35eb.r2.dev/cmc_blog_web_resourcefig/mmexport1724733053608.jpg");
-  background-size:cover;
+  background-size:contain;
   background-position:center center;
   background-repeat:no-repeat;
-  filter:blur(14px);
-  opacity:.42;
-  transform:scale(1.045);
+  filter:blur(4px);
+  opacity:.78;
 }
 
 .home-main::after{
@@ -25,24 +25,22 @@
   inset:0;
   z-index:-1;
   pointer-events:none;
-  background:rgba(247,248,250,.42);
+  background:rgba(247,248,250,.18);
 }
 
 .home-main .entry-panel{
-  background:rgba(255,255,255,.82);
-  border-color:rgba(210,214,220,.85);
-  -webkit-backdrop-filter:blur(9px);
-  backdrop-filter:blur(9px);
+  background:rgba(255,255,255,.74);
+  border-color:rgba(210,214,220,.78);
+  -webkit-backdrop-filter:blur(5px);
+  backdrop-filter:blur(5px);
 }
 
 @media(max-width:640px){
   .home-main::before{
-    inset:-24px;
-    filter:blur(11px);
-    opacity:.38;
-    transform:scale(1.055);
+    filter:blur(3px);
+    opacity:.74;
   }
   .home-main::after{
-    background:rgba(247,248,250,.48);
+    background:rgba(247,248,250,.22);
   }
 }
