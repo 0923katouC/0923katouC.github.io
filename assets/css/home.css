@@ -1,14 +1,14 @@
-.home-main{
+body.home-page{
   position:relative;
-  overflow:hidden;
-  min-height:calc(100vh - 154px);
-  background-color:#f7f8fa;
+  min-height:100vh;
+  isolation:isolate;
+  background:#f7f8fa;
 }
 
-.home-main::before{
+body.home-page::before{
   content:"";
-  position:absolute;
-  inset:-2%;
+  position:fixed;
+  inset:-1.5%;
   z-index:0;
   pointer-events:none;
   background-image:url("/assets/images/homepage-bg.webp");
@@ -16,42 +16,163 @@
   background-position:center center;
   background-repeat:no-repeat;
   filter:blur(2px);
-  transform:scale(1.02);
+  transform:scale(1.015);
 }
 
-.home-main::after{
+body.home-page::after{
   content:"";
-  position:absolute;
+  position:fixed;
   inset:0;
   z-index:0;
   pointer-events:none;
-  background:rgba(247,248,250,.10);
+  background:rgba(247,248,250,.05);
 }
 
-.home-main > *{
+body.home-page > *{
   position:relative;
   z-index:1;
 }
 
-.home-main .entry-panel{
-  background:rgba(255,255,255,.72);
-  border-color:rgba(210,214,220,.78);
-  -webkit-backdrop-filter:blur(4px);
-  backdrop-filter:blur(4px);
+.home-page .site-header{
+  background:rgba(247,248,250,.48);
+  border-bottom-color:rgba(255,255,255,.46);
+  -webkit-backdrop-filter:blur(14px) saturate(1.08);
+  backdrop-filter:blur(14px) saturate(1.08);
 }
 
-.site-footer{
+.home-page .site-title{
+  color:#101318;
+  text-shadow:0 1px 12px rgba(255,255,255,.72);
+}
+
+.home-page .main-nav a{
+  position:relative;
+  color:#303640;
+  padding:6px 9px;
+  border-radius:7px;
+  font-weight:560;
+  text-shadow:0 1px 10px rgba(255,255,255,.8);
+  transition:background-color .18s ease,color .18s ease,transform .18s ease;
+}
+
+.home-page .main-nav a.active{
+  color:#11151a;
+  background:rgba(255,255,255,.38);
+}
+
+.home-page .main-nav a:hover{
+  color:#0d1117;
+  background:rgba(255,255,255,.62);
+  transform:translateY(-1px);
+  text-decoration:none;
+}
+
+.home-page .lang-switch{
+  background:rgba(255,255,255,.38);
+  border-color:rgba(255,255,255,.58);
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+}
+
+.home-main{
+  min-height:calc(100vh - 154px);
+  background:transparent;
+}
+
+.home-page .home-intro h1{
+  color:#0c1015;
+  text-shadow:0 2px 20px rgba(255,255,255,.72);
+}
+
+.home-page .home-intro p{
+  color:#303741;
+  font-weight:520;
+  text-shadow:0 1px 12px rgba(255,255,255,.82);
+}
+
+.home-page .entry-panel{
+  background:rgba(255,255,255,.72);
+  border-color:rgba(255,255,255,.58);
+  box-shadow:0 8px 24px rgba(25,34,45,.10);
+  -webkit-backdrop-filter:blur(8px) saturate(1.08);
+  backdrop-filter:blur(8px) saturate(1.08);
+  transition:transform .22s ease,background-color .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+
+.home-page .entry-panel h2{
+  color:#0c1015;
+  font-weight:800;
+  text-shadow:0 1px 10px rgba(255,255,255,.68);
+}
+
+.home-page .entry-panel p{
+  color:#424a55;
+  font-weight:520;
+}
+
+.home-page .entry-index,
+.home-page .entry-arrow{
+  color:#454e5a;
+  font-weight:650;
+}
+
+.home-page .entry-arrow{
+  transition:transform .22s ease,color .22s ease;
+}
+
+.home-page .entry-panel:hover{
+  background:rgba(255,255,255,.88);
+  border-color:rgba(255,255,255,.86);
+  box-shadow:0 18px 42px rgba(25,34,45,.19);
+  transform:translateY(-7px) scale(1.015);
+  text-decoration:none;
+}
+
+.home-page .entry-panel:hover .entry-arrow{
+  color:#111820;
+  transform:translateX(5px);
+}
+
+.home-page .site-footer{
   margin-top:0;
+  background:rgba(247,248,250,.42);
+  border-top-color:rgba(255,255,255,.46);
+  -webkit-backdrop-filter:blur(12px) saturate(1.06);
+  backdrop-filter:blur(12px) saturate(1.06);
+}
+
+.home-page .footer-wrap{
+  color:#353c46;
+  text-shadow:0 1px 10px rgba(255,255,255,.78);
 }
 
 @media(max-width:640px){
-  .home-main::before{
+  body.home-page::before{
     inset:-2%;
     filter:blur(1.5px);
     transform:scale(1.02);
   }
 
-  .home-main::after{
-    background:rgba(247,248,250,.14);
+  body.home-page::after{
+    background:rgba(247,248,250,.08);
+  }
+
+  .home-page .site-header,
+  .home-page .site-footer{
+    background:rgba(247,248,250,.56);
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .home-page .entry-panel,
+  .home-page .entry-arrow,
+  .home-page .main-nav a{
+    transition:none;
+  }
+
+  .home-page .entry-panel:hover,
+  .home-page .main-nav a:hover,
+  .home-page .entry-panel:hover .entry-arrow{
+    transform:none;
   }
 }
