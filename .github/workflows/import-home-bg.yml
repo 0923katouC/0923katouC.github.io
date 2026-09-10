@@ -1,0 +1,35 @@
+name: Import homepage background
+
+on:
+  push:
+    paths:
+      - '.github/workflows/import-home-bg.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Download homepage background from R2
+        run: |
+          mkdir -p assets/images
+          curl --fail --location --retry 3 \
+            'https://pub-aaf94121331648f0a0658c3db52a35eb.r2.dev/cmc_blog_web_resourcefig/mmexport1724733053608.jpg' \
+            --output assets/images/homepage-bg.jpg
+          test -s assets/images/homepage-bg.jpg
+      - name: Commit imported image
+        run: |
+          if git diff --quiet -- assets/images/homepage-bg.jpg && git ls-files --error-unmatch assets/images/homepage-bg.jpg >/dev/null 2>&1; then
+            echo 'Background image already present.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/images/homepage-bg.jpg
+          git commit -m 'Store homepage background locally'
+          git push
