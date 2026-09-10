@@ -1,11 +1,12 @@
 .home-main{
   position:relative;
   overflow:hidden;
+  min-height:calc(100vh - 154px);
   background-color:#f7f8fa;
   background-image:
     linear-gradient(rgba(247,248,250,.12),rgba(247,248,250,.12)),
     url("/assets/images/homepage-bg.webp");
-  background-size:auto,contain;
+  background-size:auto,100% 100%;
   background-position:center center,center center;
   background-repeat:no-repeat,no-repeat;
 }
@@ -17,10 +18,15 @@
   backdrop-filter:blur(5px);
 }
 
+.site-footer{
+  margin-top:0;
+}
+
 @media(max-width:640px){
   .home-main{
     background-image:
       linear-gradient(rgba(247,248,250,.16),rgba(247,248,250,.16)),
       url("/assets/images/homepage-bg.webp");
+    background-size:auto,100% 100%;
   }
 }
