@@ -15,7 +15,6 @@
   background-size:contain;
   background-position:center center;
   background-repeat:no-repeat;
-  filter:blur(4px);
   opacity:.78;
 }
 
@@ -37,7 +36,6 @@
 
 @media(max-width:640px){
   .home-main::before{
-    filter:blur(3px);
     opacity:.74;
   }
   .home-main::after{
