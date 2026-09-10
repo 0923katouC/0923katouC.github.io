@@ -15,21 +15,37 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Download homepage background from R2
+
+      - name: Prepare image tooling
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Download and optimize homepage background
         run: |
           mkdir -p assets/images
           curl --fail --location --retry 3 \
             'https://pub-aaf94121331648f0a0658c3db52a35eb.r2.dev/cmc_blog_web_resourcefig/mmexport1724733053608.jpg' \
-            --output assets/images/homepage-bg.jpg
-          test -s assets/images/homepage-bg.jpg
-      - name: Commit imported image
+            --output /tmp/homepage-source.jpg
+          python - <<'PY'
+          from PIL import Image, ImageOps
+
+          src = '/tmp/homepage-source.jpg'
+          dst = 'assets/images/homepage-bg.webp'
+          img = ImageOps.exif_transpose(Image.open(src)).convert('RGB')
+          img.thumbnail((2560, 2560), Image.Resampling.LANCZOS)
+          img.save(dst, 'WEBP', quality=82, method=6)
+          print('optimized size:', img.size)
+          PY
+          rm -f assets/images/homepage-bg.jpg
+          test -s assets/images/homepage-bg.webp
+
+      - name: Commit optimized image
         run: |
-          if git diff --quiet -- assets/images/homepage-bg.jpg && git ls-files --error-unmatch assets/images/homepage-bg.jpg >/dev/null 2>&1; then
-            echo 'Background image already present.'
+          if git diff --quiet -- assets/images && git ls-files --error-unmatch assets/images/homepage-bg.webp >/dev/null 2>&1; then
+            echo 'Optimized background already present.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/images/homepage-bg.jpg
-          git commit -m 'Store homepage background locally'
+          git add -A assets/images
+          git commit -m 'Optimize homepage background for web'
           git push
