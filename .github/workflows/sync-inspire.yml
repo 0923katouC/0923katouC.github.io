@@ -1,0 +1,50 @@
+name: Sync INSPIRE publications
+
+on:
+  schedule:
+    # Every Monday at 01:17 UTC (09:17 China Standard Time).
+    - cron: "17 1 * * 1"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync-inspire.yml"
+      - "scripts/sync_inspire_publications.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-inspire-publications
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Query INSPIRE and update publication block
+        run: python scripts/sync_inspire_publications.py
+
+      - name: Commit publication changes
+        shell: bash
+        run: |
+          if git diff --quiet -- academics.html; then
+            echo "Publication list already matches INSPIRE."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add academics.html
+          git commit -m "Sync publications from INSPIRE"
+          git push
