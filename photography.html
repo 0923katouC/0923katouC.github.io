@@ -9,14 +9,19 @@
   <title>摄影集 | CMC</title>
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/assets/css/site-ui.css?v=20260911-shared-ui">
+  <link rel="stylesheet" href="/assets/css/photography-background.css?v=20260911-photo-bg1">
 </head>
-<body class="ui-page">
-  <header class="site-header"><div class="container nav-wrap"><a class="site-title" href="/">CMC</a><nav class="main-nav" aria-label="Main navigation"><a href="/" data-zh="Home page" data-en="Home page">Home page</a><a class="active" href="/photography.html" data-zh="摄影集" data-en="Photography">摄影集</a><a href="/academics.html?v=20260911-beam2" data-zh="学术集" data-en="Academics">学术集</a><a href="/writing.html" data-zh="码字集" data-en="Writing">码字集</a><a href="/projects.html" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a><button class="lang-switch" type="button" aria-label="Switch language">EN</button></nav></div></header>
+<body class="ui-page photography-page">
+  <picture class="photography-background" aria-hidden="true">
+    <source media="(max-width: 640px)" srcset="/assets/images/photography-background-mobile.webp" type="image/webp">
+    <img src="/assets/images/photography-background-desktop.webp" width="1920" height="1230" alt="" decoding="async" fetchpriority="high">
+  </picture>
+  <header class="site-header"><div class="container nav-wrap"><a class="site-title" href="/">CMC</a><nav class="main-nav" aria-label="Main navigation"><a href="/" data-zh="Home page" data-en="Home page">Home page</a><a class="active" href="/photography.html?v=20260911-photo-bg1" data-zh="摄影集" data-en="Photography">摄影集</a><a href="/academics.html?v=20260911-beam2" data-zh="学术集" data-en="Academics">学术集</a><a href="/writing.html" data-zh="码字集" data-en="Writing">码字集</a><a href="/projects.html" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a><button class="lang-switch" type="button" aria-label="Switch language">EN</button></nav></div></header>
   <main>
-    <section class="container page-head compact-head"><span class="eyebrow" data-zh="影像归档" data-en="Photo archive">影像归档</span><h1 data-zh="摄影集" data-en="Photography">摄影集</h1><p data-zh="按旅程与主题整理照片。图片资源继续由外部对象存储提供。" data-en="Photographs organized by journeys and themes. Image assets remain hosted on external object storage.">按旅程与主题整理照片。图片资源继续由外部对象存储提供。</p></section>
+    <section class="container page-head compact-head"><span class="eyebrow" data-zh="影像归档" data-en="Photo archive">影像归档</span><h1 data-zh="摄影集" data-en="Photography">摄影集</h1><p data-zh="按旅程与主题整理照片。" data-en="Photographs organized by journeys and themes.">按旅程与主题整理照片。</p></section>
     <section class="container section-grid two-up" aria-label="Photography sections">
-      <a class="section-card" href="/photography/travel.html"><span class="entry-index">01</span><h2 data-zh="旅拍" data-en="Travel">旅拍</h2><p data-zh="按时间整理旅行影像" data-en="Travel photographs arranged by time">按时间整理旅行影像</p><span class="entry-arrow">→</span></a>
-      <a class="section-card" href="/photography/topics.html"><span class="entry-index">02</span><h2 data-zh="专题" data-en="Themes">专题</h2><p data-zh="漫展、鸟类、天文与外景" data-en="Conventions, birds, astronomy and outdoor scenes">漫展、鸟类、天文与外景</p><span class="entry-arrow">→</span></a>
+      <a class="section-card" href="/photography/travel.html?v=20260911-photo-bg1"><span class="entry-index">01</span><h2 data-zh="旅拍" data-en="Travel">旅拍</h2><p data-zh="按时间整理旅行影像" data-en="Travel photographs arranged by time">按时间整理旅行影像</p><span class="entry-arrow">→</span></a>
+      <a class="section-card" href="/photography/topics.html?v=20260911-photo-bg1"><span class="entry-index">02</span><h2 data-zh="专题" data-en="Themes">专题</h2><p data-zh="漫展、鸟类、天文与外景" data-en="Conventions, birds, astronomy and outdoor scenes">漫展、鸟类、天文与外景</p><span class="entry-arrow">→</span></a>
     </section>
   </main>
   <footer class="site-footer"><div class="container footer-wrap"><span>© <span id="year"></span> CMC</span></div></footer>
@@ -24,3 +29,4 @@
   <script src="/assets/js/site-ui.js?v=20260911-shared-ui" defer></script>
 </body>
 </html>
+

@@ -1,0 +1,45 @@
+/* The photography archive and its descendants share one local cover image. */
+.photography-page .photography-background{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  display:block;
+  overflow:hidden;
+  pointer-events:none;
+  user-select:none;
+  background:#5d95b0;
+}
+
+.photography-page .photography-background img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+}
+
+.photography-page .page-head h1{
+  color:#0c1015;
+  text-shadow:0 1px 3px rgba(255,255,255,.65),0 2px 20px rgba(255,255,255,.60);
+}
+
+.photography-page .page-head :is(p,.eyebrow,.back-link){
+  color:#17222e;
+  font-weight:550;
+  text-shadow:0 1px 2px rgba(255,255,255,.90),0 1px 10px rgba(255,255,255,.80);
+}
+
+.photography-page .archive-block{
+  padding:24px 26px;
+  margin-bottom:16px;
+  border:1px solid rgba(255,255,255,.58);
+  border-radius:8px;
+  background:rgba(255,255,255,.72);
+  -webkit-backdrop-filter:blur(8px) saturate(1.08);
+  backdrop-filter:blur(8px) saturate(1.08);
+  box-shadow:0 8px 24px rgba(25,34,45,.10);
+}
+
+.photography-page .archive-block :is(p,.archive-year){
+  color:#424a55;
+}

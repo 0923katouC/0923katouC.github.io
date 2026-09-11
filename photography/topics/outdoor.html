@@ -9,12 +9,17 @@
   <title>外景 | 摄影集 | CMC</title>
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/assets/css/site-ui.css?v=20260911-shared-ui">
+  <link rel="stylesheet" href="/assets/css/photography-background.css?v=20260911-photo-bg1">
   <link rel="stylesheet" href="/assets/css/photography-topics.css?v=20260911-topic-links2">
 </head>
-<body class="ui-page photography-gallery">
-  <header class="site-header"><div class="container nav-wrap"><a class="site-title" href="/">CMC</a><nav class="main-nav" aria-label="Main navigation"><a href="/" data-zh="Home page" data-en="Home page">Home page</a><a class="active" href="/photography.html" data-zh="摄影集" data-en="Photography">摄影集</a><a href="/academics.html" data-zh="学术集" data-en="Academics">学术集</a><a href="/writing.html" data-zh="码字集" data-en="Writing">码字集</a><a href="/projects.html" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a><button class="lang-switch" type="button" aria-label="Switch language">EN</button></nav></div></header>
+<body class="ui-page photography-gallery photography-page">
+  <picture class="photography-background" aria-hidden="true">
+    <source media="(max-width: 640px)" srcset="/assets/images/photography-background-mobile.webp" type="image/webp">
+    <img src="/assets/images/photography-background-desktop.webp" width="1920" height="1230" alt="" decoding="async" fetchpriority="high">
+  </picture>
+  <header class="site-header"><div class="container nav-wrap"><a class="site-title" href="/">CMC</a><nav class="main-nav" aria-label="Main navigation"><a href="/" data-zh="Home page" data-en="Home page">Home page</a><a class="active" href="/photography.html?v=20260911-photo-bg1" data-zh="摄影集" data-en="Photography">摄影集</a><a href="/academics.html" data-zh="学术集" data-en="Academics">学术集</a><a href="/writing.html" data-zh="码字集" data-en="Writing">码字集</a><a href="/projects.html" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a><button class="lang-switch" type="button" aria-label="Switch language">EN</button></nav></div></header>
   <main>
-    <section class="container page-head compact-head"><a class="back-link" href="/photography/topics.html?v=20260911-topic-links2" data-zh="← 专题" data-en="← Themes">← 专题</a><h1 id="gallery-title" data-zh="外景" data-en="Outdoor">外景</h1></section>
+    <section class="container page-head compact-head"><a class="back-link" href="/photography/topics.html?v=20260911-photo-bg1" data-zh="← 专题" data-en="← Themes">← 专题</a><h1 id="gallery-title" data-zh="外景" data-en="Outdoor">外景</h1></section>
     <section class="container theme-gallery" aria-labelledby="gallery-title">
       <figure class="theme-photo"><img src="/assets/images/photography-topics/outersceneenter_button-960.webp" srcset="/assets/images/photography-topics/outersceneenter_button-480.webp 480w, /assets/images/photography-topics/outersceneenter_button-960.webp 960w" sizes="(max-width: 640px) calc(100vw - 28px), (max-width: 1000px) calc(100vw - 40px), 960px" width="960" height="818" alt="群山环绕的湖泊 / Lake surrounded by mountains" decoding="async"></figure>
     </section>
