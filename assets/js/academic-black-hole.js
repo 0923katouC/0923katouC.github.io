@@ -43,11 +43,6 @@
     const float DPHI = 0.055;
     const int MAX_STEPS = 170;
 
-    vec3 rotateZ(vec3 p, float a) {
-      float c = cos(a), s = sin(a);
-      return vec3(c*p.x - s*p.y, s*p.x + c*p.y, p.z);
-    }
-
     vec4 packHit(vec3 p, float g) {
       return vec4(p.xy / ROUT * 0.5 + 0.5, (clamp(g,0.30,1.95)-0.30)/1.65, 1.0);
     }
@@ -73,7 +68,8 @@
 
       float u = 1.0 / ROBS;
       float du = -ndotr / tangentMag * u;
-      float phi = 0.0;
+      float cphi = 1.0;
+      float sphi = 0.0;
       float drag = 0.0;
       float lz = clamp(cross(cam, ray).z / ROBS, -1.0, 1.0);
       vec3 previous = cam;
@@ -91,7 +87,10 @@
 
         float un = u + du*DPHI;
         float dun = du + (-un + 1.5*un*un)*DPHI;
-        float phin = phi + DPHI;
+        const float CD = 0.9984878812;
+        const float SD = 0.0549722750;
+        float cphin = cphi*CD - sphi*SD;
+        float sphin = sphi*CD + cphi*SD;
         float dragn = drag + SPIN*0.035*un*un*DPHI;
 
         if (un >= 1.0) {
@@ -105,8 +104,9 @@
           break;
         }
 
-        vec3 pos = (cos(phin)*n + sin(phin)*tangent) / max(un, 1e-5);
-        pos = rotateZ(pos, dragn*(1.0 + 0.35*lz));
+        vec3 pos = (cphin*n + sphin*tangent) / max(un, 1e-5);
+        float frameAngle = dragn*(1.0 + 0.35*lz);
+        pos.xy += frameAngle*vec2(-pos.y,pos.x);
 
         if (previous.z * pos.z <= 0.0 && abs(previous.z-pos.z) > 1e-6) {
           float f = previous.z / (previous.z-pos.z);
@@ -133,9 +133,12 @@
         previous = pos;
         u = un;
         du = dun;
-        phi = phin;
+        cphi = cphin;
+        sphi = sphin;
         drag = dragn;
-        finalDir = normalize(rotateZ(cos(phi)*n + sin(phi)*tangent, drag*(1.0+0.35*lz)));
+        finalDir = normalize(cphi*n + sphi*tangent);
+        finalDir.xy += drag*(1.0+0.35*lz)*vec2(-finalDir.y,finalDir.x);
+        finalDir = normalize(finalDir);
       }
 
       float skyMask = escaped && !captured ? 1.0 : 0.0;
