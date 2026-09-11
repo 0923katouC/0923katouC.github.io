@@ -1,0 +1,233 @@
+/* Shared glass controls; page backgrounds and bar springs keep their own styles. */
+body.glass-ui{
+  --glass-radius:22px;
+  --glass-fill:rgba(246,251,255,.58);
+  --glass-top:rgba(255,255,255,.24);
+  --glass-bottom:rgba(229,242,255,.05);
+  --glass-glow:rgba(255,255,255,.22);
+  --glass-ink:#142131;
+  --glass-muted:#223042;
+  --glass-text-shadow:0 1px 6px rgba(255,255,255,.58);
+  --glass-fallback:rgba(246,251,255,.94);
+  --glass-focus:#255b8b;
+  --glass-shadow:0 10px 28px rgba(12,34,54,.13),inset 0 1px 1px rgba(255,255,255,.70),inset 0 -1px 1px rgba(255,255,255,.24);
+}
+
+body.glass-ui.academic-cosmos{
+  --glass-fill:rgba(17,32,51,.54);
+  --glass-top:rgba(225,240,255,.13);
+  --glass-bottom:rgba(90,135,185,.05);
+  --glass-glow:rgba(220,240,255,.16);
+  --glass-ink:#f0f6ff;
+  --glass-muted:#d2ddeb;
+  --glass-text-shadow:0 1px 7px rgba(0,0,0,.65);
+  --glass-fallback:rgba(15,28,46,.94);
+  --glass-focus:#acd7ff;
+}
+
+body.glass-ui :is(.entry-panel,.section-card,.topic-card,.back-link,.lang-switch,.invite-row button),
+body.glass-ui .main-nav a,
+body.glass-ui.photography-topics a.topic-card{
+  --glass-surface:radial-gradient(ellipse at var(--glass-x,22%) var(--glass-y,8%),var(--glass-glow),transparent 65%),linear-gradient(145deg,var(--glass-top),var(--glass-bottom)),var(--glass-fill);
+  position:relative;
+  isolation:isolate;
+  border:1px solid rgba(255,255,255,.44);
+  border-radius:var(--glass-radius);
+  background:var(--glass-surface);
+  box-shadow:var(--glass-shadow);
+  color:var(--glass-ink);
+  -webkit-backdrop-filter:blur(18px) saturate(1.22);
+  backdrop-filter:blur(18px) saturate(1.22);
+  text-decoration:none;
+  transform:none;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .30s cubic-bezier(.2,.75,.25,1),box-shadow .30s ease,border-color .30s ease;
+}
+
+body.glass-ui :is(.entry-panel,.section-card,.topic-card){
+  overflow:hidden;
+}
+
+body.glass-ui :is(.entry-panel,.section-card,.topic-card) h2{
+  color:var(--glass-ink);
+  text-shadow:var(--glass-text-shadow);
+}
+
+body.glass-ui :is(.entry-panel,.section-card,.topic-card) p,
+body.glass-ui :is(.entry-index,.entry-arrow){
+  color:var(--glass-muted);
+  text-shadow:var(--glass-text-shadow);
+}
+
+body.glass-ui :is(.back-link,.lang-switch,.invite-row button),
+body.glass-ui .main-nav a{
+  --glass-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:40px;
+  padding:7px 13px;
+  line-height:1.35;
+  font-weight:600;
+  cursor:pointer;
+  touch-action:manipulation;
+  text-shadow:var(--glass-text-shadow);
+}
+
+body.glass-ui .main-nav a{
+  --glass-fill:rgba(246,251,255,.18);
+  --glass-top:rgba(255,255,255,.16);
+  min-height:34px;
+  font-size:.93rem;
+}
+
+body.glass-ui.academic-cosmos .main-nav a{
+  --glass-fill:rgba(17,32,51,.20);
+}
+
+body.glass-ui .main-nav a.active{
+  --glass-top:rgba(255,255,255,.32);
+  border-color:rgba(255,255,255,.68);
+}
+
+body.glass-ui .page-head a.back-link{
+  min-height:44px;
+  padding:10px 17px;
+  margin-bottom:18px;
+  color:var(--glass-ink);
+  font-weight:650;
+  text-shadow:var(--glass-text-shadow);
+}
+
+body.glass-ui .back-icon{
+  display:inline-block;
+  font-size:1.1em;
+  line-height:1;
+  transition:transform .28s cubic-bezier(.2,.75,.25,1);
+}
+
+/* A masked highlight traces the rim without whitening the photo or label. */
+@supports (mask-composite:exclude) or (-webkit-mask-composite:xor){
+  body.glass-ui :is(.entry-panel,.section-card,.topic-card,.back-link,.lang-switch,.invite-row button)::before,
+  body.glass-ui .main-nav a::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:3;
+    padding:1.5px;
+    border-radius:inherit;
+    pointer-events:none;
+    background:radial-gradient(ellipse at var(--glass-x,22%) var(--glass-y,8%),rgba(255,255,255,.96),transparent 68%),linear-gradient(145deg,rgba(255,255,255,.82),rgba(255,255,255,.12) 42%,rgba(193,224,251,.08) 66%,rgba(255,255,255,.56));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+    mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor;
+    mask-composite:exclude;
+  }
+}
+
+/* The stationary glass rim stays visible while the photograph zooms inside. */
+body.glass-ui.photography-topics a.topic-card{
+  --glass-fill:rgba(231,246,255,.13);
+  --glass-top:rgba(255,255,255,.15);
+  --glass-bottom:rgba(201,231,252,.05);
+}
+
+body.glass-ui.photography-topics .topic-media{
+  position:absolute;
+  inset:8px;
+  z-index:0;
+  overflow:hidden;
+  border-radius:calc(var(--glass-radius) - 8px);
+  pointer-events:none;
+}
+
+body.glass-ui.photography-topics .topic-cover{
+  border-radius:0;
+}
+
+@supports (mask-composite:intersect) or (-webkit-mask-composite:source-in){
+  body.glass-ui.photography-topics .topic-media{
+    inset:0;
+    border-radius:inherit;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent),linear-gradient(0deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent),linear-gradient(0deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);
+    -webkit-mask-composite:source-in;
+    mask-composite:intersect;
+  }
+}
+
+body.glass-ui.photography-topics .topic-card::after{
+  inset:auto 10px 9px;
+  height:76px;
+  border-radius:0 0 14px 14px;
+  background:linear-gradient(0deg,rgba(8,13,22,.08),rgba(8,13,22,.48) 30%,rgba(8,13,22,.20) 62%,transparent);
+}
+
+body.glass-ui.photography-topics .topic-card h2{
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.95),0 2px 12px rgba(0,0,0,.60);
+}
+
+/* Neutralize opaque page-specific hover fills before applying glass motion. */
+body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,.back-link,.lang-switch,.invite-row button,.main-nav a):is(:hover,:focus-visible,:active),
+body.glass-ui.photography-topics a.topic-card:is(:hover,:focus-visible,:active){
+  background:var(--glass-surface);
+  border-color:rgba(255,255,255,.65);
+  color:var(--glass-ink);
+  text-decoration:none;
+  transform:none;
+  box-shadow:var(--glass-shadow);
+}
+
+body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,.back-link,.lang-switch,.invite-row button,.main-nav a):focus-visible,
+body.glass-ui.photography-topics a.topic-card:focus-visible{
+  outline:3px solid var(--glass-focus);
+  outline-offset:4px;
+  box-shadow:var(--glass-shadow),0 0 0 6px rgba(157,203,242,.28);
+}
+
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card):hover,
+  body.glass-ui.photography-topics a.topic-card:hover{
+    transform:translateY(-6px) scale(1.012);
+    box-shadow:0 18px 38px rgba(12,34,54,.19),inset 0 1px 2px rgba(255,255,255,.85),inset 0 -1px 1px rgba(255,255,255,.32);
+  }
+
+  body.glass-ui :is(.back-link,.lang-switch,.invite-row button,.main-nav a):hover{
+    transform:translateY(-2px);
+    box-shadow:0 8px 20px rgba(12,34,54,.18),inset 0 1px 2px rgba(255,255,255,.88);
+  }
+
+  body.glass-ui .back-link:hover .back-icon{
+    transform:translateX(-3px);
+  }
+}
+
+@media(prefers-reduced-motion:no-preference){
+  body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,.back-link,.lang-switch,.invite-row button,.main-nav a):active,
+  body.glass-ui.photography-topics a.topic-card:active{
+    transform:translateY(0) scale(.975);
+    box-shadow:0 3px 10px rgba(12,34,54,.12),inset 0 1px 1px rgba(255,255,255,.58);
+    transition-duration:.12s;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  body.glass-ui :is(.entry-panel,.section-card,.topic-card,.back-link,.back-icon,.lang-switch,.invite-row button,.main-nav a,.topic-cover),
+  body.glass-ui.photography-topics a.topic-card{
+    transition:none;
+  }
+}
+
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  body.glass-ui :is(.entry-panel,.section-card,.topic-card,.back-link,.lang-switch,.invite-row button,.main-nav a){
+    --glass-fill:var(--glass-fallback);
+  }
+}
+
+body.glass-ui :is(button,.lang-switch,.invite-row button):disabled{
+  cursor:not-allowed;
+  opacity:.55;
+  transform:none;
+}
