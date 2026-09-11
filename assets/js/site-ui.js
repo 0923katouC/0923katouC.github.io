@@ -1,5 +1,5 @@
 (() => {
-  const page = document.querySelector('body.home-page');
+  const page = document.querySelector('body.ui-page');
   const header = page?.querySelector('.site-header');
   const footer = page?.querySelector('.site-footer');
   if (!header || !footer) return;
@@ -20,8 +20,8 @@
 
   // Actual bar sizes own the glass, border and centered content together.
   const paint = () => {
-    page.style.setProperty('--home-header-stretch', stretch.toFixed(3) + 'px');
-    page.style.setProperty('--home-footer-stretch', (-stretch * 0.75).toFixed(3) + 'px');
+    page.style.setProperty('--ui-header-stretch', stretch.toFixed(3) + 'px');
+    page.style.setProperty('--ui-footer-stretch', (-stretch * 0.75).toFixed(3) + 'px');
   };
   const measureSpaces = () => {
     // Reserve resting sizes so the spring never changes the document scroll range.
@@ -29,11 +29,11 @@
     const bottom = footer.getBoundingClientRect().height + stretch * 0.75;
     if (Math.abs(top - headerSpace) > 0.5) {
       headerSpace = top;
-      page.style.setProperty('--home-header-space', top.toFixed(2) + 'px');
+      page.style.setProperty('--ui-header-space', top.toFixed(2) + 'px');
     }
     if (Math.abs(bottom - footerSpace) > 0.5) {
       footerSpace = bottom;
-      page.style.setProperty('--home-footer-space', bottom.toFixed(2) + 'px');
+      page.style.setProperty('--ui-footer-space', bottom.toFixed(2) + 'px');
     }
   };
   const reset = () => {
