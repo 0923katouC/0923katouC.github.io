@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Stationary-camera transfer maps using NPGS's analytic Hamiltonian + RK4.
  * Outputs: two equatorial disk intersections; escaping sky direction;
- * line-integrated jet emissivity and its emission-weighted coordinates.
+ * line-integrated jet emissivity, height and rotating helical phase moments.
  */
 uniform vec2 uMapSize;
 layout(location = 0) out vec4 diskNear;
@@ -29,13 +29,13 @@ void integrateJet(vec4 x, vec4 p, float properLength, float transmission,
                   inout float weight, inout vec3 weightedPosition) {
     float height = abs(x.y);
     float rho = length(x.xz);
-    // NPGS JetColor's hollow, widening sheath and longitudinal envelope.
-    // Smooth shell boundaries avoid hard edges at this lower sampling density.
-    float width = DISK_INNER + 0.2 * height;
+    // A collimated sheath becomes visible above the central disk/black hole.
+    // The cutoff is in emitter space, so its base follows the lensed ray.
+    float width = 0.52 + 0.07 * max(height - 3.0, 0.0);
     float shape = max(0.0, 1.0 - 2.0 * abs(1.0 - pow(rho / width, 2.0))) / width;
-    if (shape <= 0.0 || height < 0.15 || height > 35.0) return;
-    shape *= (1.0 - exp(-pow(height / DISK_INNER, 2.0)));
-    shape *= exp(-0.005 * pow(height / DISK_INNER, 2.0));
+    if (shape <= 0.0 || height < 4.0 || height > 35.0) return;
+    shape *= smoothstep(4.0, 6.0, height);
+    shape *= exp(-0.0025 * pow(height / DISK_INNER, 2.0));
     shape *= 1.0 - smoothstep(27.0, 35.0, height);
     KerrGeometry geo;
     ComputeGeometryScalars(x.xyz, PHYSICAL_A, 0.0, 1.0, 1.0, false, geo);
@@ -49,9 +49,14 @@ void integrateJet(vec4 x, vec4 p, float properLength, float transmission,
     float det = sqrt(max(0.0, bb * bb - 4.0 * aa * cc));
     float ut = bb < 0.0 ? 2.0 * cc / (-bb + det) : (-bb - det) / (2.0 * aa);
     float shift = clamp(1.0 / max(1e-5, -dot(p, vec4(us, ut))), 0.1, 2.5);
-    float dw = 0.5 * shape * properLength * transmission;
+    // Bake beaming into the stationary weight. Retain a circular phase, with
+    // two helical strands, instead of averaging wrapped azimuth angles.
+    // phase = 2 phi - k |y| + omega t_emit, omega/k = 0.8 in units c = 1.
+    float azimuth = atan(x.x, x.z);
+    float phase = 2.0 * azimuth - 0.92 * (height - 3.0) + 0.736 * x.w;
+    float dw = 0.5 * shape * properLength * transmission * min(shift * shift, 2.0);
     weight += dw;
-    weightedPosition += dw * vec3(x.y, x.w, shift);
+    weightedPosition += dw * vec3(x.y, cos(phase), sin(phase));
 }
 
 void main() {
@@ -89,12 +94,25 @@ void main() {
         vec4 previousP = p;
         StepGeodesicRK4_Optimized(x, p, energy, -dt, PHYSICAL_A, 0.0,
                                    1.0, 1.0, false, geo, k1);
-        vec4 middle = 0.5 * (previousX + x);
         vec3 chord = x.xyz - previousX.xyz;
         float ld = dot(geo.l_down.xyz, chord);
         float properLength = sqrt(max(0.0, dot(chord, chord) + geo.f * ld * ld));
-        integrateJet(middle, 0.5 * (previousP + p), properLength,
-                     transmission, jetWeight, jetPosition);
+        // Only jet emissivity gets finer quadrature. Geodesics and all three
+        // disk/sky transfer maps retain their original integration steps.
+        float maxJetHeight = max(abs(previousX.y), abs(x.y));
+        float maxJetWidth = 0.52 + 0.07 * max(maxJetHeight - 3.0, 0.0);
+        float closestFraction = clamp(-dot(previousX.xz, chord.xz) /
+                                       max(dot(chord.xz, chord.xz), 1e-8), 0.0, 1.0);
+        float closestRadius = length(previousX.xz + closestFraction * chord.xz);
+        if (maxJetHeight > 4.0 && closestRadius < 1.25 * maxJetWidth) {
+            int samples = clamp(int(ceil(length(chord) / 0.16)), 3, 32);
+            for (int jetSample = 0; jetSample < 32; ++jetSample) {
+                if (jetSample >= samples) break;
+                float fraction = (float(jetSample) + 0.5) / float(samples);
+                integrateJet(mix(previousX, x, fraction), mix(previousP, p, fraction),
+                             properLength / float(samples), transmission, jetWeight, jetPosition);
+            }
+        }
         if (previousX.y * x.y < 0.0) {
             float crossing = previousX.y / (previousX.y - x.y);
             vec4 hit = diskIntersection(mix(previousX, x, crossing),
@@ -109,5 +127,7 @@ void main() {
             }
         }
     }
-    if (jetWeight > 1e-6) jetRay = vec4(jetWeight, jetPosition / jetWeight);
+    // Premultiplied moments remain well-defined under bilinear interpolation
+    // at a narrow sheath's boundary, including between valid and empty texels.
+    if (jetWeight > 1e-6) jetRay = vec4(jetWeight, jetPosition);
 }

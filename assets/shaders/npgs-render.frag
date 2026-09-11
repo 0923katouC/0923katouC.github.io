@@ -136,12 +136,20 @@ void main() {
                 (farDisk.rgb + (1.0 - farDisk.a) * skyColor);
         vec4 jet = texture(uJet, mapUv);
         if (jet.x > 0.001) {
-            float emissionTime = uTime * 3.6 + jet.z;
-            float pulseTime = emissionTime - abs(jet.y) / 0.8;
-            float pulse = 0.72 + 0.28 * PerlinNoise1D(pulseTime * 0.40);
-            pulse *= 0.85 + 0.15 * sin(pulseTime * 1.7);
-            vec3 jetColor = KelvinToRgb(min(28000.0, 15000.0 * jet.w));
-            color += jetColor * jet.x * min(pow(jet.w, 2.0), 2.0) * pulse * 0.90;
+            float flowTime = uTime * 3.6;
+            float height = abs(jet.y / jet.x);
+            vec2 phaseMoment = jet.zw / jet.x;
+            float phase = 0.736 * flowTime;
+            float coil = dot(phaseMoment, vec2(cos(phase), -sin(phase)));
+            float ribbons = pow(clamp(0.5 + 0.5 * coil, 0.0, 1.0), 2.6);
+            // Outward-moving knots and smaller eddies modulate the two
+            // helical filaments, while a dim sheath connects the bright arcs.
+            float advected = height - 0.8 * flowTime;
+            float knots = 0.70 + 0.65 * pow(0.5 + 0.5 * PerlinNoise1D(advected * 0.72), 2.0);
+            float eddies = 0.88 + 0.12 * PerlinNoise(vec3(advected * 1.5, phaseMoment * 2.8));
+            float structure = (0.15 + 2.4 * ribbons) * knots * eddies;
+            vec3 jetColor = KelvinToRgb(18500.0);
+            color += jetColor * jet.x * structure * 3.2;
         }
     }
     float edge = max(abs(mapUv.x - 0.5), abs(mapUv.y - 0.5));

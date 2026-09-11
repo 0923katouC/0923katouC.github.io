@@ -18,7 +18,7 @@ body.academic-cosmos{
   z-index:0;
   overflow:hidden;
   pointer-events:none;
-  background:#030710 url("../images/academic-npgs-desktop.webp") center / cover no-repeat;
+  background:#030710 url("../images/academic-npgs-desktop.webp?v=20260911-npgs-jet2") center / cover no-repeat;
 }
 
 .academic-cosmos .cosmos-bg canvas{
@@ -163,7 +163,7 @@ body.academic-cosmos{
 
 @media(max-aspect-ratio:82/100){
   .academic-cosmos .cosmos-bg{
-    background-image:url("../images/academic-npgs-mobile.webp");
+    background-image:url("../images/academic-npgs-mobile.webp?v=20260911-npgs-jet2");
   }
 }
 

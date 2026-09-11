@@ -32,8 +32,11 @@ source of this component. They are also available in this website's GitHub repos
   shifts, with an artistic visible-temperature scale and bounded intensity.
 - The original volumetric disk is reduced to two thin-disk images. NPGS's
   widening jet sheath and normalized 0.8c velocity prescription are retained;
-  its variability uses emission-weighted coordinates from the cached ray.
-  Time-dependent shell twisting, full volume transfer, polarization, charge,
+  the revised sheath turns on smoothly at heights 4–6 and is more collimated.
+  Its brighter emission has two rotating helical filaments, advected knots,
+  and fine turbulence. Circular phase moments along the cached rays retain
+  the emission-time delay; Doppler beaming is baked into the jet weight.
+  Full time-dependent volume dynamics, polarization, charge,
   heat haze, movable observers and maximal spacetime extensions are omitted.
 - Cubemap sky assets are replaced by procedural stars sampled along the
   escaping rays. WebGL 2 replaces the desktop Vulkan interfaces. A small HDR
