@@ -16,7 +16,7 @@ body.home-page::before{
   background-position:center center;
   background-repeat:no-repeat;
   filter:blur(2px);
-  transform:scale(1.015);
+  transform:scale(1.218);
 }
 
 body.home-page::after{
@@ -150,7 +150,7 @@ body.home-page > *{
   body.home-page::before{
     inset:-2%;
     filter:blur(1.5px);
-    transform:scale(1.02);
+    transform:scale(1.224);
   }
 
   body.home-page::after{
