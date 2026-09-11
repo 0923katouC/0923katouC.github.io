@@ -176,7 +176,7 @@
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const hardwareThreads = navigator.hardwareConcurrency || 4;
-  const deviceMemory = navigator.deviceMemory || 4;
+  const deviceMemory = navigator.deviceMemory || 8;
   let lowPower = window.innerWidth <= 820 || hardwareThreads <= 4 || deviceMemory <= 4;
   let renderScale = lowPower ? 0.52 : 0.76;
   let frameInterval = lowPower ? 1000 / 30 : 1000 / 45;
