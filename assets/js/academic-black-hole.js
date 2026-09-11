@@ -61,8 +61,7 @@
       color += vec3(0.012, 0.022, 0.050) * galacticBand;
       color += vec3(0.012, 0.006, 0.022) * bell((p.y - 0.28 * p.x - 0.24) * 3.1);
 
-      // A slight pseudo-lensing of the background star coordinates makes the
-      // field bend around the compact object without an expensive ray marcher.
+      // Slight pseudo-lensing of the stellar background near the compact object.
       vec2 bendDirection = q / max(r, 0.035);
       float bendStrength = 0.0048 * exp(-r * 4.3) / (r + 0.075);
       vec2 starPixel = gl_FragCoord.xy + bendDirection * bendStrength * uResolution.y;
@@ -77,7 +76,7 @@
       ) - 0.5;
       float seedA = hash21(starIdA + vec2(41.0, 71.0));
       float distA = length(starLocalA - 0.76 * jitterA);
-      float starA = smoothstep(0.083, 0.0, distA) * step(0.78, seedA);
+      float starA = (1.0 - smoothstep(0.0, 0.083, distA)) * step(0.78, seedA);
       float twinkleA = 0.78 + 0.22 * sin(uTime * (0.28 + seedA * 0.62) + seedA * 31.0);
       vec3 tintA = mix(vec3(0.55, 0.72, 1.00), vec3(1.00, 0.83, 0.64), hash21(starIdA + vec2(9.0)));
       color += tintA * starA * twinkleA * (0.24 + 0.58 * seedA);
@@ -93,19 +92,18 @@
       vec2 brightDelta = starLocalB - 0.72 * jitterB;
       float seedB = hash21(starIdB + vec2(91.0, 37.0));
       float distB = length(brightDelta);
-      float coreB = smoothstep(0.072, 0.0, distB) * step(0.86, seedB);
+      float coreB = (1.0 - smoothstep(0.0, 0.072, distB)) * step(0.86, seedB);
       float rayB = (bell(brightDelta.x / 0.025) + bell(brightDelta.y / 0.025)) * 0.10 * step(0.94, seedB);
       float twinkleB = 0.80 + 0.20 * sin(uTime * (0.20 + seedB * 0.45) + seedB * 48.0);
       vec3 tintB = mix(vec3(0.68, 0.80, 1.00), vec3(1.00, 0.90, 0.72), hash21(starIdB + vec2(13.0)));
       color += tintB * (coreB * 1.32 + rayB) * twinkleB;
 
-      // Disk coordinates. Frame dragging is represented by a small near-hole
-      // shear; the shadow and photon ring below are separately displaced.
+      // Disk coordinates with a small near-hole frame-dragging shear.
       vec2 diskPlane = rotate2d(-0.14) * q;
       float drag = spin * 0.030 * exp(-r * 5.1) * diskPlane.y / max(r, 0.045);
       diskPlane.x += drag;
 
-      // Relativistic bipolar jet: broad sheath + bright narrow spine + knots.
+      // Bipolar jet: broad sheath, narrow spine, and moving knots.
       float axial = abs(diskPlane.y);
       float jetWidth = 0.010 + 0.080 * axial;
       float jetCore = bell(diskPlane.x / max(jetWidth * 0.48, 0.002));
@@ -121,7 +119,9 @@
       // Direct image of a thin, inclined accretion disk.
       float diskY = diskPlane.y / 0.205;
       float diskR = length(vec2(diskPlane.x, diskY));
-      float directDisk = smoothstep(0.575, 0.535, diskR) * smoothstep(0.145, 0.170, diskR);
+      float outerDiskMask = 1.0 - smoothstep(0.535, 0.575, diskR);
+      float innerDiskMask = smoothstep(0.145, 0.170, diskR);
+      float directDisk = outerDiskMask * innerDiskMask;
       float diskAngle = atan(diskY, diskPlane.x);
       float radialBands = 0.73
         + 0.17 * sin(diskR * 92.0 - uTime * 0.48 + sin(diskAngle * 5.0 - uTime * 0.19) * 1.7)
@@ -135,17 +135,17 @@
       vec3 diskColor = mix(coolDisk, hotDisk, innerHeat);
       diskColor = mix(diskColor, whiteHot, innerHeat * innerHeat * 0.46);
       float backDisk = directDisk * smoothstep(-0.045, 0.075, diskPlane.y);
-      float frontDisk = directDisk * smoothstep(0.055, -0.060, diskPlane.y);
+      float frontDisk = directDisk * (1.0 - smoothstep(-0.060, 0.055, diskPlane.y));
       color += diskColor * backDisk * radialBands * doppler * 1.62;
 
-      // Strong-field lensing: the far side of the disk is lifted into a broad
-      // arc over the shadow; a fainter secondary image appears underneath.
+      // Strong-field lensing: the far disk is lifted over the shadow and a
+      // fainter secondary image appears below it.
       float arcX = clamp(diskPlane.x / 0.57, -1.0, 1.0);
       float arcRoot = sqrt(max(0.0, 1.0 - arcX * arcX));
       float upperArcY = 0.047 + 0.190 * arcRoot + 0.018 * spin * arcX;
       float upperWidth = 0.015 + 0.030 * arcRoot;
-      float upperArc = bell((diskPlane.y - upperArcY) / upperWidth)
-        * smoothstep(0.59, 0.54, abs(diskPlane.x));
+      float upperXMask = 1.0 - smoothstep(0.54, 0.59, abs(diskPlane.x));
+      float upperArc = bell((diskPlane.y - upperArcY) / upperWidth) * upperXMask;
       float upperSourceR = 0.19 + 0.38 * (0.50 + 0.50 * arcRoot);
       float upperTexture = 0.76
         + 0.16 * sin(upperSourceR * 122.0 + diskPlane.x * 24.0 - uTime * 0.40)
@@ -155,12 +155,11 @@
       color += upperColor * upperArc * upperTexture * upperBoost * 1.26;
 
       float lowerArcY = -0.050 - 0.105 * arcRoot + 0.010 * spin * arcX;
-      float lowerArc = bell((diskPlane.y - lowerArcY) / (0.010 + 0.014 * arcRoot))
-        * smoothstep(0.50, 0.45, abs(diskPlane.x));
+      float lowerXMask = 1.0 - smoothstep(0.45, 0.50, abs(diskPlane.x));
+      float lowerArc = bell((diskPlane.y - lowerArcY) / (0.010 + 0.014 * arcRoot)) * lowerXMask;
       color += vec3(0.65, 0.18, 0.035) * lowerArc * (0.42 + 0.50 * approachingSide) * 0.52;
 
-      // Kerr-like shadow: horizontal displacement plus a weak D-shaped
-      // distortion. This is intentionally visual rather than a geodesic solve.
+      // Kerr-like shadow: horizontal displacement plus a weak D-shape.
       vec2 shadowQ = q + vec2(0.016 * spin, 0.0);
       float shadowPhi = atan(shadowQ.y, shadowQ.x);
       float shadowR = length(vec2(shadowQ.x * 0.985, shadowQ.y));
@@ -169,7 +168,7 @@
       float shadow = 1.0 - smoothstep(shadowEdge, shadowEdge + 0.006, shadowR);
       color = mix(color, vec3(0.00008, 0.00012, 0.00025), shadow);
 
-      // Offset, asymmetric photon ring and a thin secondary ring.
+      // Offset asymmetric photon ring and a thin secondary ring.
       vec2 ringQ = q + vec2(0.011 * spin, 0.0);
       float ringPhi = atan(ringQ.y, ringQ.x);
       float ringR = length(ringQ);
@@ -253,7 +252,7 @@
   let lowPower = window.innerWidth <= 820 || hardwareThreads <= 4 || deviceMemory <= 4;
   let renderScale = lowPower ? 0.50 : 0.74;
   let frameInterval = lowPower ? 1000 / 30 : 1000 / 45;
-  let maxPixels = lowPower ? 400000 : 920000;
+  let maxPixels = lowPower ? 360000 : 920000;
   let animationFrame = 0;
   let lastFrame = -Infinity;
   let startedAt = performance.now();
@@ -262,7 +261,7 @@
     lowPower = window.innerWidth <= 820 || hardwareThreads <= 4 || deviceMemory <= 4;
     renderScale = lowPower ? 0.50 : 0.74;
     frameInterval = lowPower ? 1000 / 30 : 1000 / 45;
-    maxPixels = lowPower ? 400000 : 920000;
+    maxPixels = lowPower ? 360000 : 920000;
 
     const dpr = Math.min(window.devicePixelRatio || 1, lowPower ? 1.0 : 1.15);
     let width = Math.max(1, Math.round(window.innerWidth * dpr * renderScale));
