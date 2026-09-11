@@ -2,7 +2,7 @@
   const canvas = document.getElementById('academic-black-hole');
   if (!canvas) return;
 
-  const gl = canvas.getContext('webgl', {
+  const gl = canvas.getContext('webgl2', {
     alpha: false,
     antialias: false,
     depth: false,
@@ -16,322 +16,457 @@
     return;
   }
 
-  const vertexSource = `
-    attribute vec2 aPosition;
+  const VERTEX = `#version 300 es
+    layout(location=0) in vec2 aPosition;
+    out vec2 vUv;
     void main() {
+      vUv = aPosition * 0.5 + 0.5;
       gl_Position = vec4(aPosition, 0.0, 1.0);
     }
   `;
 
-  const fragmentSource = `
-    precision mediump float;
+  // One-time screen-space beam tracing. The expensive geodesic integration is
+  // performed once into three lookup textures, not on every animation frame.
+  const PRECOMPUTE = `#version 300 es
+    precision highp float;
+    in vec2 vUv;
+    layout(location=0) out vec4 oSky;
+    layout(location=1) out vec4 oHit1;
+    layout(location=2) out vec4 oHit2;
 
-    uniform vec2 uResolution;
-    uniform float uTime;
-    uniform float uPortrait;
+    const float ROBS = 15.0;
+    const float XMAX = 1.35;
+    const float YMAX = 0.675;
+    const float RIN = 1.45;
+    const float ROUT = 8.50;
+    const float SPIN = 0.82;
+    const float DPHI = 0.055;
+    const int MAX_STEPS = 170;
 
-    float hash21(vec2 p) {
-      p = fract(p * vec2(123.34, 456.21));
-      p += dot(p, p + 45.32);
-      return fract(p.x * p.y);
+    vec3 rotateZ(vec3 p, float a) {
+      float c = cos(a), s = sin(a);
+      return vec3(c*p.x - s*p.y, s*p.x + c*p.y, p.z);
     }
 
-    mat2 rotate2d(float a) {
-      float c = cos(a);
-      float s = sin(a);
-      return mat2(c, -s, s, c);
-    }
-
-    float bell(float x) {
-      return exp(-x * x);
+    vec4 packHit(vec3 p, float g) {
+      return vec4(p.xy / ROUT * 0.5 + 0.5, (clamp(g,0.30,1.95)-0.30)/1.65, 1.0);
     }
 
     void main() {
-      vec2 p = (gl_FragCoord.xy - 0.5 * uResolution.xy) / uResolution.y;
-      float aspect = uResolution.x / uResolution.y;
+      vec2 screen = vec2(mix(-XMAX, XMAX, vUv.x), mix(-YMAX, YMAX, vUv.y));
+      float screenR = length(screen);
+      screen.x += SPIN * (0.021 + 0.012 * screen.x) * exp(-pow(screenR/0.32, 2.0));
 
-      vec2 center = mix(vec2(0.18, 0.015), vec2(0.0, 0.055), uPortrait);
-      float sceneScale = mix(1.0, 0.68, uPortrait);
-      vec2 q = (p - center) / sceneScale;
-      float r = length(q);
-      float spin = 0.86;
+      float inc = radians(74.0);
+      vec3 cam = vec3(0.0, -ROBS*sin(inc), ROBS*cos(inc));
+      vec3 n = normalize(cam);
+      vec3 forward = -n;
+      vec3 right = normalize(cross(forward, vec3(0.0,0.0,1.0)));
+      vec3 up = normalize(cross(right, forward));
+      float imageScale = 2.0 * tan(radians(29.0));
+      vec3 ray = normalize(forward + imageScale*screen.x*right + imageScale*screen.y*up);
 
-      vec3 color = vec3(0.0035, 0.0075, 0.016);
-      float galacticBand = bell((p.y + 0.16 * p.x + 0.10) * 2.55);
-      color += vec3(0.012, 0.022, 0.050) * galacticBand;
-      color += vec3(0.012, 0.006, 0.022) * bell((p.y - 0.28 * p.x - 0.24) * 3.1);
+      float ndotr = dot(ray, n);
+      vec3 tangentRaw = ray - ndotr*n;
+      float tangentMag = max(length(tangentRaw), 1e-6);
+      vec3 tangent = tangentRaw / tangentMag;
 
-      // Slight pseudo-lensing of the stellar background near the compact object.
-      vec2 bendDirection = q / max(r, 0.035);
-      float bendStrength = 0.0048 * exp(-r * 4.3) / (r + 0.075);
-      vec2 starPixel = gl_FragCoord.xy + bendDirection * bendStrength * uResolution.y;
+      float u = 1.0 / ROBS;
+      float du = -ndotr / tangentMag * u;
+      float phi = 0.0;
+      float drag = 0.0;
+      float lz = clamp(cross(cam, ray).z / ROBS, -1.0, 1.0);
+      vec3 previous = cam;
+      bool active = true;
+      bool escaped = false;
+      bool captured = false;
+      bool have1 = false;
+      bool have2 = false;
+      vec4 hit1 = vec4(0.5,0.5,0.5,0.0);
+      vec4 hit2 = vec4(0.5,0.5,0.5,0.0);
+      vec3 finalDir = ray;
 
-      // Dense faint star layer.
-      vec2 starCellA = starPixel / 15.0;
-      vec2 starIdA = floor(starCellA);
-      vec2 starLocalA = fract(starCellA) - 0.5;
-      vec2 jitterA = vec2(
-        hash21(starIdA + vec2(17.0, 3.0)),
-        hash21(starIdA + vec2(5.0, 29.0))
-      ) - 0.5;
-      float seedA = hash21(starIdA + vec2(41.0, 71.0));
-      float distA = length(starLocalA - 0.76 * jitterA);
-      float starA = (1.0 - smoothstep(0.0, 0.083, distA)) * step(0.78, seedA);
-      float twinkleA = 0.78 + 0.22 * sin(uTime * (0.28 + seedA * 0.62) + seedA * 31.0);
-      vec3 tintA = mix(vec3(0.55, 0.72, 1.00), vec3(1.00, 0.83, 0.64), hash21(starIdA + vec2(9.0)));
-      color += tintA * starA * twinkleA * (0.24 + 0.58 * seedA);
+      for (int i=0; i<MAX_STEPS; ++i) {
+        if (!active) break;
 
-      // Sparser, brighter stars with tiny diffraction-like cores.
-      vec2 starCellB = starPixel / 34.0;
-      vec2 starIdB = floor(starCellB);
-      vec2 starLocalB = fract(starCellB) - 0.5;
-      vec2 jitterB = vec2(
-        hash21(starIdB + vec2(73.0, 11.0)),
-        hash21(starIdB + vec2(19.0, 59.0))
-      ) - 0.5;
-      vec2 brightDelta = starLocalB - 0.72 * jitterB;
-      float seedB = hash21(starIdB + vec2(91.0, 37.0));
-      float distB = length(brightDelta);
-      float coreB = (1.0 - smoothstep(0.0, 0.072, distB)) * step(0.86, seedB);
-      float rayB = (bell(brightDelta.x / 0.025) + bell(brightDelta.y / 0.025)) * 0.10 * step(0.94, seedB);
-      float twinkleB = 0.80 + 0.20 * sin(uTime * (0.20 + seedB * 0.45) + seedB * 48.0);
-      vec3 tintB = mix(vec3(0.68, 0.80, 1.00), vec3(1.00, 0.90, 0.72), hash21(starIdB + vec2(13.0)));
-      color += tintB * (coreB * 1.32 + rayB) * twinkleB;
+        float un = u + du*DPHI;
+        float dun = du + (-un + 1.5*un*un)*DPHI;
+        float phin = phi + DPHI;
+        float dragn = drag + SPIN*0.035*un*un*DPHI;
 
-      // Disk coordinates with a small near-hole frame-dragging shear.
-      vec2 diskPlane = rotate2d(-0.14) * q;
-      float drag = spin * 0.030 * exp(-r * 5.1) * diskPlane.y / max(r, 0.045);
-      diskPlane.x += drag;
+        if (un >= 1.0) {
+          captured = true;
+          active = false;
+          break;
+        }
+        if (un <= 0.0) {
+          escaped = true;
+          active = false;
+          break;
+        }
 
-      // Bipolar jet: broad sheath, narrow spine, and moving knots.
-      float axial = abs(diskPlane.y);
-      float jetWidth = 0.010 + 0.080 * axial;
-      float jetCore = bell(diskPlane.x / max(jetWidth * 0.48, 0.002));
-      float jetSheath = bell(diskPlane.x / max(jetWidth * 2.15, 0.004));
-      float jetWindow = smoothstep(0.095, 0.145, axial) * (1.0 - smoothstep(0.42, 0.93, axial));
-      float jetKnots = 0.70 + 0.30 * sin(axial * 44.0 - uTime * 1.45 + 0.7 * sin(axial * 13.0));
-      float jetFade = 1.0 - smoothstep(0.18, 0.93, axial) * 0.62;
-      float jet = jetWindow * jetFade * jetKnots;
-      color += vec3(0.055, 0.24, 0.68) * jetSheath * jet * 1.55;
-      color += vec3(0.24, 0.62, 1.00) * jetCore * jet * 1.40;
-      color += vec3(0.72, 0.88, 1.00) * bell(diskPlane.x / max(jetWidth * 0.22, 0.0015)) * jet * 0.34;
+        vec3 pos = (cos(phin)*n + sin(phin)*tangent) / max(un, 1e-5);
+        pos = rotateZ(pos, dragn*(1.0 + 0.35*lz));
 
-      // Direct image of a thin, inclined accretion disk.
-      float diskY = diskPlane.y / 0.205;
-      float diskR = length(vec2(diskPlane.x, diskY));
-      float outerDiskMask = 1.0 - smoothstep(0.535, 0.575, diskR);
-      float innerDiskMask = smoothstep(0.145, 0.170, diskR);
-      float directDisk = outerDiskMask * innerDiskMask;
-      float diskAngle = atan(diskY, diskPlane.x);
-      float radialBands = 0.73
-        + 0.17 * sin(diskR * 92.0 - uTime * 0.48 + sin(diskAngle * 5.0 - uTime * 0.19) * 1.7)
-        + 0.10 * sin(diskR * 198.0 + diskAngle * 8.0 + uTime * 0.16);
-      float innerHeat = 1.0 - smoothstep(0.165, 0.50, diskR);
-      float approachingSide = smoothstep(-0.88, 0.76, diskPlane.x / max(diskR, 0.001));
-      float doppler = 0.38 + 1.42 * approachingSide;
-      vec3 coolDisk = vec3(0.26, 0.045, 0.007);
-      vec3 hotDisk = vec3(1.00, 0.73, 0.31);
-      vec3 whiteHot = vec3(1.00, 0.91, 0.71);
-      vec3 diskColor = mix(coolDisk, hotDisk, innerHeat);
-      diskColor = mix(diskColor, whiteHot, innerHeat * innerHeat * 0.46);
-      float backDisk = directDisk * smoothstep(-0.045, 0.075, diskPlane.y);
-      float frontDisk = directDisk * (1.0 - smoothstep(-0.060, 0.055, diskPlane.y));
-      color += diskColor * backDisk * radialBands * doppler * 1.62;
+        if (previous.z * pos.z <= 0.0 && abs(previous.z-pos.z) > 1e-6) {
+          float f = previous.z / (previous.z-pos.z);
+          vec3 h = mix(previous, pos, clamp(f,0.0,1.0));
+          float rr = length(h.xy);
+          if (rr >= RIN && rr <= ROUT && !have2) {
+            vec3 seg = normalize(pos-previous);
+            vec3 orbital = normalize(vec3(-h.y,h.x,0.0));
+            float vv = clamp(sqrt(max(0.5/max(rr-1.0,0.55),0.0)),0.0,0.76);
+            float gamma = inversesqrt(max(1.0-vv*vv,0.08));
+            float mu = dot(-seg,orbital);
+            float grav = sqrt(clamp(1.0-1.0/max(rr,1.001),0.03,1.0));
+            float g = grav/(gamma*max(1.0-vv*mu,0.20));
+            if (!have1) {
+              hit1 = packHit(h,g);
+              have1 = true;
+            } else {
+              hit2 = packHit(h,g);
+              have2 = true;
+            }
+          }
+        }
 
-      // Strong-field lensing: the far disk is lifted over the shadow and a
-      // fainter secondary image appears below it.
-      float arcX = clamp(diskPlane.x / 0.57, -1.0, 1.0);
-      float arcRoot = sqrt(max(0.0, 1.0 - arcX * arcX));
-      float upperArcY = 0.047 + 0.190 * arcRoot + 0.018 * spin * arcX;
-      float upperWidth = 0.015 + 0.030 * arcRoot;
-      float upperXMask = 1.0 - smoothstep(0.54, 0.59, abs(diskPlane.x));
-      float upperArc = bell((diskPlane.y - upperArcY) / upperWidth) * upperXMask;
-      float upperSourceR = 0.19 + 0.38 * (0.50 + 0.50 * arcRoot);
-      float upperTexture = 0.76
-        + 0.16 * sin(upperSourceR * 122.0 + diskPlane.x * 24.0 - uTime * 0.40)
-        + 0.08 * sin(diskPlane.x * 57.0 + uTime * 0.15);
-      float upperBoost = 0.50 + 1.30 * smoothstep(-0.52, 0.45, diskPlane.x);
-      vec3 upperColor = mix(vec3(0.46, 0.075, 0.008), vec3(1.00, 0.72, 0.29), arcRoot);
-      color += upperColor * upperArc * upperTexture * upperBoost * 1.26;
+        previous = pos;
+        u = un;
+        du = dun;
+        phi = phin;
+        drag = dragn;
+        finalDir = normalize(rotateZ(cos(phi)*n + sin(phi)*tangent, drag*(1.0+0.35*lz)));
+      }
 
-      float lowerArcY = -0.050 - 0.105 * arcRoot + 0.010 * spin * arcX;
-      float lowerXMask = 1.0 - smoothstep(0.45, 0.50, abs(diskPlane.x));
-      float lowerArc = bell((diskPlane.y - lowerArcY) / (0.010 + 0.014 * arcRoot)) * lowerXMask;
-      color += vec3(0.65, 0.18, 0.035) * lowerArc * (0.42 + 0.50 * approachingSide) * 0.52;
-
-      // Kerr-like shadow: horizontal displacement plus a weak D-shape.
-      vec2 shadowQ = q + vec2(0.016 * spin, 0.0);
-      float shadowPhi = atan(shadowQ.y, shadowQ.x);
-      float shadowR = length(vec2(shadowQ.x * 0.985, shadowQ.y));
-      float shadowEdge = 0.108
-        * (1.0 - 0.060 * spin * cos(shadowPhi) + 0.022 * spin * cos(2.0 * shadowPhi));
-      float shadow = 1.0 - smoothstep(shadowEdge, shadowEdge + 0.006, shadowR);
-      color = mix(color, vec3(0.00008, 0.00012, 0.00025), shadow);
-
-      // Offset asymmetric photon ring and a thin secondary ring.
-      vec2 ringQ = q + vec2(0.011 * spin, 0.0);
-      float ringPhi = atan(ringQ.y, ringQ.x);
-      float ringR = length(ringQ);
-      float ringTarget = 0.124 - 0.0075 * spin * cos(ringPhi);
-      float photonRing = bell((ringR - ringTarget) / 0.0046);
-      float secondaryRing = bell((ringR - (ringTarget + 0.0105)) / 0.0032);
-      float ringBoost = 0.48 + 1.20 * smoothstep(-0.86, 0.72, cos(ringPhi));
-      color += vec3(1.00, 0.72, 0.34) * photonRing * ringBoost * 1.02;
-      color += vec3(1.00, 0.38, 0.08) * secondaryRing * ringBoost * 0.22;
-
-      // Foreground disk crosses the lower part of the lensed image.
-      color += diskColor * frontDisk * radialBands * doppler * 1.86;
-
-      float lensGlow = bell((ringR - 0.158) / 0.050) * (1.0 - shadow);
-      color += vec3(0.080, 0.060, 0.095) * lensGlow * 0.24;
-
-      float vignetteRadius = length(vec2(p.x / max(aspect, 0.65), p.y) * vec2(0.78, 0.90));
-      float vignette = 1.0 - smoothstep(0.34, 0.88, vignetteRadius);
-      color *= 0.74 + 0.26 * vignette;
-
-      color = color / (1.0 + 0.48 * color);
-      color = pow(max(color, 0.0), vec3(0.86));
-      gl_FragColor = vec4(color, 1.0);
+      float skyMask = escaped && !captured ? 1.0 : 0.0;
+      oSky = vec4(finalDir*0.5+0.5, skyMask);
+      oHit1 = hit1;
+      oHit2 = hit2;
     }
   `;
 
-  const compileShader = (type, source) => {
+  const DISPLAY = `#version 300 es
+    precision highp float;
+    in vec2 vUv;
+    out vec4 fragColor;
+
+    uniform sampler2D uSkyMap;
+    uniform sampler2D uHit1;
+    uniform sampler2D uHit2;
+    uniform vec2 uResolution;
+    uniform vec2 uMapTexel;
+    uniform float uTime;
+    uniform float uPortrait;
+
+    const float PI = 3.141592653589793;
+    const float XMAX = 1.35;
+    const float YMAX = 0.675;
+    const float ROUT = 8.50;
+
+    float hash21(vec2 p) {
+      p = fract(p*vec2(123.34,456.21));
+      p += dot(p,p+45.32);
+      return fract(p.x*p.y);
+    }
+
+    float valueNoise(vec2 p) {
+      vec2 i=floor(p), f=fract(p);
+      f=f*f*(3.0-2.0*f);
+      float a=hash21(i);
+      float b=hash21(i+vec2(1.0,0.0));
+      float c=hash21(i+vec2(0.0,1.0));
+      float d=hash21(i+vec2(1.0,1.0));
+      return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);
+    }
+
+    float starLayer(vec2 uv, float cells, float threshold, float radius, float salt) {
+      vec2 p = uv*cells;
+      vec2 id = floor(p);
+      vec2 f = fract(p)-0.5;
+      float seed = hash21(id+salt);
+      vec2 jitter = vec2(hash21(id+salt+11.7),hash21(id+salt+43.1))-0.5;
+      float d = length(f-jitter*0.70);
+      return (1.0-smoothstep(0.0,radius,d))*step(threshold,seed);
+    }
+
+    vec3 skyColor(vec3 dir, vec2 screen, float escaped) {
+      float lon = atan(dir.y,dir.x)/(2.0*PI)+0.5;
+      float lat = asin(clamp(dir.z,-1.0,1.0))/PI+0.5;
+      vec2 suv=vec2(lon,lat);
+
+      vec3 galNormal=normalize(vec3(0.29,0.80,0.52));
+      float band=exp(-pow(abs(dot(dir,galNormal))*4.2,2.0));
+      float dust=valueNoise(suv*vec2(9.0,5.0)+vec2(3.1,8.7));
+      vec3 col=vec3(0.0025,0.0055,0.0120);
+      col += vec3(0.010,0.018,0.040)*band*(0.38+0.62*dust);
+
+      float s1=starLayer(suv,430.0,0.91,0.105,7.0);
+      float s2=starLayer(suv+vec2(0.17,0.09),180.0,0.935,0.085,31.0);
+      float tw=0.84+0.16*sin(uTime*0.38+hash21(floor(suv*180.0))*31.0);
+      vec3 tint=mix(vec3(0.62,0.78,1.00),vec3(1.00,0.84,0.65),hash21(floor(suv*180.0)+9.0));
+      col += tint*(0.46*s1+1.15*s2)*tw;
+
+      vec2 qp=screen*vec2(0.77,1.0)+vec2(0.31,0.62);
+      float clean=starLayer(qp,95.0,0.947,0.075,67.0);
+      clean *= smoothstep(0.34,0.56,length(screen));
+      col += vec3(0.83,0.90,1.0)*clean*1.45;
+      return col*escaped;
+    }
+
+    vec3 diskEmission(vec4 packed, float secondary) {
+      float valid=smoothstep(0.16,0.80,packed.a);
+      if (valid<=0.0) return vec3(0.0);
+      vec2 xy=(packed.rg*2.0-1.0)*ROUT;
+      float r=length(xy);
+      float g=mix(0.30,1.95,packed.b);
+      float phi=atan(xy.y,xy.x);
+      float kepler=uTime*0.68/pow(max(r,1.45),1.5);
+      float a=phi-kepler;
+
+      float n1=valueNoise(vec2(r*1.55,a*2.65+0.16*uTime));
+      float n2=valueNoise(vec2(r*3.15-0.08*uTime,a*5.10));
+      float spiral=0.5+0.5*sin(5.5*log(max(r,1.46))+8.0*a+1.6*n1);
+      float rings=0.5+0.5*sin(r*11.5-0.32*uTime+2.0*n2);
+      float structure=0.46+0.31*n1+0.15*n2+0.17*spiral+0.10*rings;
+
+      float heat=pow(clamp((ROUT-r)/(ROUT-1.45),0.0,1.0),0.66);
+      vec3 outer=vec3(0.31,0.030,0.0025);
+      vec3 warm=vec3(1.00,0.31,0.035);
+      vec3 hot=vec3(1.00,0.83,0.48);
+      vec3 color=mix(outer,warm,smoothstep(0.02,0.62,heat));
+      color=mix(color,hot,smoothstep(0.58,0.96,heat));
+
+      float edge=smoothstep(1.45,1.72,r)*(1.0-smoothstep(7.5,8.5,r));
+      float beam=clamp(pow(g,3.0),0.13,5.6);
+      float radial=0.20+1.55*pow(heat,1.58);
+      return color*structure*edge*beam*radial*valid*secondary;
+    }
+
+    vec3 jetColor(vec2 q) {
+      float ca=cos(-0.035), sa=sin(-0.035);
+      q=mat2(ca,-sa,sa,ca)*q;
+      float z=abs(q.y);
+      float width=0.010+0.082*z;
+      float spine=exp(-pow(q.x/max(width*0.34,0.002),2.0));
+      float sheath=exp(-pow(q.x/max(width*1.55,0.004),2.0));
+      float window=smoothstep(0.105,0.145,z)*(1.0-smoothstep(0.52,0.88,z));
+      float knots=0.64+0.36*sin(z*43.0-uTime*1.75+0.75*sin(z*14.0));
+      float turbulence=0.72+0.28*valueNoise(vec2(q.x*84.0,z*24.0-uTime*0.8));
+      float fade=1.0-0.62*smoothstep(0.18,0.88,z);
+      float j=window*knots*turbulence*fade;
+      return vec3(0.045,0.25,0.72)*sheath*j*1.72
+           + vec3(0.30,0.70,1.00)*spine*j*1.58;
+    }
+
+    void main() {
+      vec2 p=(gl_FragCoord.xy-0.5*uResolution.xy)/uResolution.y;
+      vec2 center=mix(vec2(0.20,-0.012),vec2(0.0,0.018),uPortrait);
+      float sceneScale=mix(0.96,0.76,uPortrait);
+      vec2 q=(p-center)/sceneScale;
+      vec2 mapUv=vec2(q.x/(2.0*XMAX)+0.5,q.y/(2.0*YMAX)+0.5);
+      mapUv=clamp(mapUv,uMapTexel*0.5,vec2(1.0)-uMapTexel*0.5);
+
+      vec4 sky=texture(uSkyMap,mapUv);
+      vec3 dir=normalize(sky.rgb*2.0-1.0);
+      float escaped=smoothstep(0.18,0.82,sky.a);
+      vec3 color=skyColor(dir,q,escaped);
+
+      color += jetColor(q);
+      vec4 h2=texture(uHit2,mapUv);
+      vec4 h1=texture(uHit1,mapUv);
+      vec3 d2=diskEmission(h2,0.58);
+      vec3 d1=diskEmission(h1,1.00);
+      color += d2+d1;
+
+      float diskAlpha=max(smoothstep(0.16,0.80,h1.a),smoothstep(0.16,0.80,h2.a));
+      float darkness=(1.0-escaped)*(1.0-diskAlpha);
+      color=mix(color,vec3(0.00005,0.00008,0.00015),darkness);
+
+      float ringBand=smoothstep(0.05,0.42,sky.a)*(1.0-smoothstep(0.42,0.90,sky.a));
+      float sideBoost=0.58+0.55*smoothstep(-0.25,0.32,q.x);
+      color += vec3(1.00,0.70,0.30)*ringBand*sideBoost*0.74;
+
+      float vignette=1.0-smoothstep(0.38,1.16,length(vec2(p.x*0.72,p.y)));
+      color*=0.74+0.26*vignette;
+      color=vec3(1.0)-exp(-color*1.34);
+      color=pow(max(color,0.0),vec3(0.88));
+      fragColor=vec4(color,1.0);
+    }
+  `;
+
+  const compile = (type, source) => {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      console.warn('Academic background shader compile failed:', gl.getShaderInfoLog(shader));
+      console.warn('Academic black-hole shader compile failed:', gl.getShaderInfoLog(shader));
       gl.deleteShader(shader);
       return null;
     }
     return shader;
   };
 
-  const vertexShader = compileShader(gl.VERTEX_SHADER, vertexSource);
-  const fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentSource);
-  if (!vertexShader || !fragmentShader) {
+  const makeProgram = fragmentSource => {
+    const vs = compile(gl.VERTEX_SHADER, VERTEX);
+    const fs = compile(gl.FRAGMENT_SHADER, fragmentSource);
+    if (!vs || !fs) return null;
+    const program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.warn('Academic black-hole shader link failed:', gl.getProgramInfoLog(program));
+      gl.deleteProgram(program);
+      return null;
+    }
+    return program;
+  };
+
+  const precomputeProgram = makeProgram(PRECOMPUTE);
+  const displayProgram = makeProgram(DISPLAY);
+  if (!precomputeProgram || !displayProgram) {
     document.body.classList.add('academic-cosmos-fallback');
     return;
   }
 
-  const program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.warn('Academic background shader link failed:', gl.getProgramInfoLog(program));
-    document.body.classList.add('academic-cosmos-fallback');
-    return;
-  }
-
-  gl.useProgram(program);
-
-  const vertices = new Float32Array([
-    -1, -1,
-     1, -1,
-    -1,  1,
-    -1,  1,
-     1, -1,
-     1,  1
-  ]);
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-
-  const position = gl.getAttribLocation(program, 'aPosition');
-  gl.enableVertexAttribArray(position);
-  gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-
-  const resolutionLocation = gl.getUniformLocation(program, 'uResolution');
-  const timeLocation = gl.getUniformLocation(program, 'uTime');
-  const portraitLocation = gl.getUniformLocation(program, 'uPortrait');
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    -1,-1, 1,-1, -1,1,
+    -1, 1, 1,-1, 1,1
+  ]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const hardwareThreads = navigator.hardwareConcurrency || 4;
   const deviceMemory = navigator.deviceMemory || 8;
-  let lowPower = window.innerWidth <= 820 || hardwareThreads <= 4 || deviceMemory <= 4;
-  let renderScale = lowPower ? 0.50 : 0.74;
-  let frameInterval = lowPower ? 1000 / 30 : 1000 / 45;
-  let maxPixels = lowPower ? 360000 : 920000;
-  let animationFrame = 0;
-  let lastFrame = -Infinity;
-  let startedAt = performance.now();
+  const lowPower = window.innerWidth <= 820 || hardwareThreads <= 4 || deviceMemory <= 4;
+  const mapWidth = lowPower ? 384 : 512;
+  const mapHeight = lowPower ? 192 : 256;
+
+  const makeMapTexture = () => {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,mapWidth,mapHeight,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+    return texture;
+  };
+
+  const maps = [makeMapTexture(),makeMapTexture(),makeMapTexture()];
+  const framebuffer = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+  maps.forEach((texture,index) => {
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0+index, gl.TEXTURE_2D, texture, 0);
+  });
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0,gl.COLOR_ATTACHMENT1,gl.COLOR_ATTACHMENT2]);
+  if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+    document.body.classList.add('academic-cosmos-fallback');
+    return;
+  }
+
+  gl.viewport(0,0,mapWidth,mapHeight);
+  gl.useProgram(precomputeProgram);
+  gl.drawArrays(gl.TRIANGLES,0,6);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  gl.deleteFramebuffer(framebuffer);
+  gl.deleteProgram(precomputeProgram);
+
+  gl.useProgram(displayProgram);
+  const resolutionLoc=gl.getUniformLocation(displayProgram,'uResolution');
+  const texelLoc=gl.getUniformLocation(displayProgram,'uMapTexel');
+  const timeLoc=gl.getUniformLocation(displayProgram,'uTime');
+  const portraitLoc=gl.getUniformLocation(displayProgram,'uPortrait');
+  gl.uniform2f(texelLoc,1/mapWidth,1/mapHeight);
+  maps.forEach((texture,index) => {
+    gl.activeTexture(gl.TEXTURE0+index);
+    gl.bindTexture(gl.TEXTURE_2D,texture);
+  });
+  gl.uniform1i(gl.getUniformLocation(displayProgram,'uSkyMap'),0);
+  gl.uniform1i(gl.getUniformLocation(displayProgram,'uHit1'),1);
+  gl.uniform1i(gl.getUniformLocation(displayProgram,'uHit2'),2);
+
+  let animationFrame=0;
+  let lastFrame=-Infinity;
+  let startedAt=performance.now();
+  let renderScale=lowPower ? 0.62 : 0.82;
+  let maxPixels=lowPower ? 460000 : 1050000;
+  let frameInterval=lowPower ? 1000/30 : 1000/45;
 
   const resize = () => {
-    lowPower = window.innerWidth <= 820 || hardwareThreads <= 4 || deviceMemory <= 4;
-    renderScale = lowPower ? 0.50 : 0.74;
-    frameInterval = lowPower ? 1000 / 30 : 1000 / 45;
-    maxPixels = lowPower ? 360000 : 920000;
-
-    const dpr = Math.min(window.devicePixelRatio || 1, lowPower ? 1.0 : 1.15);
-    let width = Math.max(1, Math.round(window.innerWidth * dpr * renderScale));
-    let height = Math.max(1, Math.round(window.innerHeight * dpr * renderScale));
-    const pixelCount = width * height;
-    if (pixelCount > maxPixels) {
-      const correction = Math.sqrt(maxPixels / pixelCount);
-      width = Math.max(1, Math.round(width * correction));
-      height = Math.max(1, Math.round(height * correction));
+    const mobile=window.innerWidth<=820;
+    renderScale=mobile ? 0.62 : (lowPower ? 0.70 : 0.82);
+    maxPixels=mobile ? 460000 : (lowPower ? 690000 : 1050000);
+    frameInterval=mobile ? 1000/30 : (lowPower ? 1000/36 : 1000/45);
+    const dpr=Math.min(window.devicePixelRatio||1,mobile ? 1.0 : 1.15);
+    let width=Math.max(1,Math.round(window.innerWidth*dpr*renderScale));
+    let height=Math.max(1,Math.round(window.innerHeight*dpr*renderScale));
+    const pixels=width*height;
+    if (pixels>maxPixels) {
+      const factor=Math.sqrt(maxPixels/pixels);
+      width=Math.max(1,Math.round(width*factor));
+      height=Math.max(1,Math.round(height*factor));
     }
-
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-      gl.viewport(0, 0, width, height);
+    if (canvas.width!==width || canvas.height!==height) {
+      canvas.width=width;
+      canvas.height=height;
     }
-
-    gl.uniform2f(resolutionLocation, width, height);
-    gl.uniform1f(portraitLocation, window.innerWidth / Math.max(window.innerHeight, 1) < 0.82 ? 1 : 0);
+    gl.viewport(0,0,width,height);
+    gl.useProgram(displayProgram);
+    gl.uniform2f(resolutionLoc,width,height);
+    gl.uniform1f(portraitLoc,window.innerWidth/Math.max(window.innerHeight,1)<0.82 ? 1 : 0);
   };
 
   const draw = now => {
-    animationFrame = 0;
+    animationFrame=0;
     if (document.hidden) return;
-    if (now - lastFrame < frameInterval) {
-      animationFrame = requestAnimationFrame(draw);
+    if (now-lastFrame<frameInterval) {
+      animationFrame=requestAnimationFrame(draw);
       return;
     }
-
-    lastFrame = now;
-    gl.uniform1f(timeLocation, (now - startedAt) * 0.001);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-    if (!reducedMotion.matches) animationFrame = requestAnimationFrame(draw);
+    lastFrame=now;
+    gl.useProgram(displayProgram);
+    gl.uniform1f(timeLoc,(now-startedAt)*0.001);
+    gl.drawArrays(gl.TRIANGLES,0,6);
+    if (!reducedMotion.matches) animationFrame=requestAnimationFrame(draw);
   };
 
   const start = () => {
     if (animationFrame || document.hidden) return;
     if (reducedMotion.matches) {
-      gl.uniform1f(timeLocation, 11.0);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.uniform1f(timeLoc,9.0);
+      gl.drawArrays(gl.TRIANGLES,0,6);
       return;
     }
-    startedAt = performance.now();
-    lastFrame = -Infinity;
-    animationFrame = requestAnimationFrame(draw);
+    startedAt=performance.now();
+    lastFrame=-Infinity;
+    animationFrame=requestAnimationFrame(draw);
   };
 
   const stop = () => {
     if (animationFrame) cancelAnimationFrame(animationFrame);
-    animationFrame = 0;
+    animationFrame=0;
   };
 
-  window.addEventListener('resize', () => {
+  window.addEventListener('resize',() => {
     resize();
     if (reducedMotion.matches) {
-      gl.uniform1f(timeLocation, 11.0);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.uniform1f(timeLoc,9.0);
+      gl.drawArrays(gl.TRIANGLES,0,6);
     }
-  }, { passive: true });
+  },{passive:true});
 
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stop();
-    else start();
+  document.addEventListener('visibilitychange',() => {
+    if (document.hidden) stop(); else start();
   });
-
-  reducedMotion.addEventListener('change', () => {
-    stop();
-    start();
-  });
+  reducedMotion.addEventListener('change',() => { stop(); start(); });
 
   resize();
   start();
