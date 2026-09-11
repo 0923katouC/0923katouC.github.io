@@ -1,10 +1,21 @@
-/* Image covers for the four photography themes only. */
-.ui-page.photography-topics .topic-card{
+/* Photo-led links on the photography themes page. */
+.ui-page.photography-topics a.topic-card{
+  display:flex;
+  align-items:flex-end;
+  min-height:220px;
   overflow:hidden;
   isolation:isolate;
   background:#17212d;
+  border-color:rgba(25,34,45,.15);
+  box-shadow:0 8px 24px rgba(25,34,45,.10);
   -webkit-backdrop-filter:none;
   backdrop-filter:none;
+  cursor:pointer;
+  text-decoration:none;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  transform:none;
+  transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;
 }
 
 .photography-topics .topic-cover{
@@ -17,6 +28,7 @@
   object-fit:cover;
   object-position:center;
   pointer-events:none;
+  transition:transform .45s cubic-bezier(.2,.65,.3,1);
 }
 
 .photography-topics .topic-card--conventions .topic-cover{
@@ -30,23 +42,74 @@
 .photography-topics .topic-card::after{
   content:"";
   position:absolute;
-  inset:0;
+  inset:auto 0 0;
+  height:84px;
   z-index:1;
   pointer-events:none;
-  background:linear-gradient(180deg,rgba(8,13,22,.32) 0%,rgba(8,13,22,.10) 22%,rgba(8,13,22,.64) 48%,rgba(8,13,22,.88) 100%);
+  background:linear-gradient(0deg,rgba(8,13,22,.60),rgba(8,13,22,.20) 55%,transparent);
 }
 
-.ui-page.photography-topics .topic-card > :is(.entry-index,h2,p){
+.ui-page.photography-topics .topic-card h2{
   position:relative;
   z-index:2;
+  margin:0;
   color:#fff;
-  text-shadow:0 1px 5px rgba(0,0,0,.75);
+  font-size:1.65rem;
+  line-height:1.2;
+  overflow-wrap:anywhere;
+  text-shadow:0 1px 2px rgba(0,0,0,.95),0 2px 12px rgba(0,0,0,.60);
 }
 
-.ui-page.photography-topics .topic-card .entry-index{
-  display:inline-block;
-  padding:0 6px;
-  margin-left:-6px;
-  border-radius:3px;
-  background:rgba(8,13,22,.48);
+.ui-page.photography-topics a.topic-card:focus-visible{
+  outline:3px solid #1f4b7a;
+  outline-offset:4px;
+}
+
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  .ui-page.photography-topics a.topic-card:hover{
+    transform:translateY(-7px) scale(1.015);
+    border-color:rgba(25,34,45,.30);
+    box-shadow:0 18px 36px rgba(25,34,45,.23);
+  }
+
+  .photography-topics a.topic-card:hover .topic-cover{
+    transform:scale(1.065);
+  }
+}
+
+@media(prefers-reduced-motion:no-preference){
+  .ui-page.photography-topics a.topic-card:active{
+    transform:translateY(-1px) scale(.98);
+    transition-duration:.10s;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .ui-page.photography-topics a.topic-card,
+  .photography-topics .topic-cover{
+    transition:none;
+  }
+}
+
+/* Individual theme pages display the existing photographs without cropping. */
+.photography-gallery .theme-gallery{
+  padding:14px 0 54px;
+}
+
+.photography-gallery .theme-photo{
+  width:min(100%,960px);
+  margin:0 auto;
+}
+
+.photography-gallery .theme-photo img{
+  display:block;
+  width:100%;
+  height:auto;
+  border-radius:8px;
+}
+
+@media(max-width:640px){
+  .ui-page.photography-topics a.topic-card{
+    min-height:200px;
+  }
 }
