@@ -31,3 +31,10 @@ The publication block in `academics.html` is synchronized with INSPIRE author re
 ## Security notes
 
 The site is fully static and contains no server-side secrets. Pages use a restrictive Content Security Policy and conservative referrer settings. The invitation gate on the essay page is intended only as a lightweight browsing barrier; content requiring real confidentiality must not be stored in this public repository or shipped to the browser.
+
+
+## Academic background renderer
+
+The academic page uses a WebGL 2 adaptation of [baopinshui/NPGS](https://github.com/baopinshui/NPGS).
+See the [upstream attribution, GPLv3 license and adaptation notes](assets/vendor/npgs/README.md)
+for the rendering scope and source details.
