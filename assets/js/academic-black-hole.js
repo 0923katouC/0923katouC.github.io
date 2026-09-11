@@ -54,12 +54,9 @@
     void main() {
       vec2 screen = vec2(mix(-XMAX, XMAX, vUv.x), mix(-YMAX, YMAX, vUv.y));
       float sr = length(screen);
-
-      // Small Kerr-like screen shear. The strong lensing itself comes from
-      // the Schwarzschild null-geodesic integration below.
       screen.x += SPIN * (0.023 + 0.012 * screen.x) * exp(-pow(sr / 0.38, 2.0));
 
-      float inc = 1.2915436465; // 74 deg
+      float inc = 1.2915436465;
       vec3 cam = vec3(0.0, -ROBS * sin(inc), ROBS * cos(inc));
       vec3 n = normalize(cam);
       vec3 forward = -n;
@@ -102,7 +99,6 @@
       for (int i = 0; i < MAX_STEPS; ++i) {
         if (!active) break;
 
-        // Symplectic-ish leapfrog update for u(phi): u'' = -u + 3u^2/2.
         float acc0 = -u + 1.5 * u * u;
         float duh = du + 0.5 * acc0 * DPHI;
         float un = u + duh * DPHI;
@@ -227,7 +223,6 @@
       vec3 tint = mix(vec3(0.58, 0.74, 1.00), vec3(1.00, 0.84, 0.63), hash21(floor(suv * 190.0) + 9.0));
       col += tint * (0.46 * s1 + 1.05 * s2 + 1.85 * s3) * tw;
 
-      // A sparse screen-space layer keeps visible star points far from the lens.
       vec2 qp = screen * vec2(0.80, 1.0) + vec2(0.31, 0.62);
       float clean = starLayer(qp, 92.0, 0.94, 0.078, 67.0);
       clean *= smoothstep(0.30, 0.52, length(screen));
@@ -264,7 +259,6 @@
       color = mix(color, hot, smoothstep(0.56, 0.88, heat));
       color = mix(color, whiteHot, smoothstep(0.86, 0.995, heat) * 0.66);
 
-      // Cheap relativistic beaming surrogate evaluated from the disk hit.
       float v = clamp(sqrt(0.52 / max(r - 0.88, 0.72)), 0.0, 0.73);
       float gamma = inversesqrt(max(1.0 - v * v, 0.10));
       float mu = -0.96 * cos(phi);
@@ -316,7 +310,6 @@
       float v1 = hitValid(h1) * inside;
       float v2 = hitValid(h2) * inside;
 
-      // Secondary image is rendered first, then the primary disk image.
       color += diskEmission(h2, 0.50 * v2, q);
       color += jetColor(q);
       color += diskEmission(h1, 1.00 * v1, q);
@@ -325,8 +318,6 @@
       float darkness = (1.0 - escaped) * (1.0 - diskAlpha);
       color = mix(color, vec3(0.00004, 0.00006, 0.00012), darkness);
 
-      // Thin highlight near the capture/escape separatrix. This is derived from
-      // the low-resolution beam map, so it follows the actual strong-field lens.
       float aL = texture2D(uSkyMap, safeUv - vec2(uMapTexel.x, 0.0)).a;
       float aR = texture2D(uSkyMap, safeUv + vec2(uMapTexel.x, 0.0)).a;
       float aD = texture2D(uSkyMap, safeUv - vec2(0.0, uMapTexel.y)).a;
@@ -335,7 +326,6 @@
       float sideBoost = 0.55 + 0.70 * smoothstep(-0.28, 0.62, q.x);
       color += vec3(1.00, 0.58, 0.20) * boundary * sideBoost * 0.55;
 
-      // Outside the beam-map rectangle, continue with a simple star field.
       float outsideStar = starLayer(p + vec2(0.37, 0.61), 105.0, 0.945, 0.078, 83.0) * (1.0 - inside);
       color += vec3(0.75, 0.86, 1.0) * outsideStar * 1.10;
       color += vec3(0.0025, 0.0050, 0.0110) * (1.0 - inside);
@@ -344,7 +334,7 @@
       color *= 0.74 + 0.26 * vignette;
       color = color / (1.0 + 0.44 * color);
       color = pow(max(color, 0.0), vec3(0.86));
-      fragColor = vec4(color, 1.0);
+      gl_FragColor = vec4(color, 1.0);
     }
   `;
 
@@ -446,7 +436,6 @@
     diskMap = makeTexture(mapWidth, mapHeight);
     framebuffer = gl.createFramebuffer();
 
-    // Make the canvas visibly dark-blue immediately while the GPU builds maps.
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, canvas.width || 1, canvas.height || 1);
     gl.clearColor(0.003, 0.007, 0.016, 1.0);
@@ -556,8 +545,8 @@
       const newLowPower = mobileQuery.matches || (navigator.hardwareConcurrency || 4) <= 4;
       if (newLowPower !== oldLowPower) {
         rebuild();
-      } else if (mapsReady) {
-        if (reducedMotion.matches) draw(performance.now());
+      } else if (mapsReady && reducedMotion.matches) {
+        draw(performance.now());
       }
     }, 140);
   }, { passive: true });
