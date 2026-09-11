@@ -40,13 +40,19 @@ body.academic-cosmos{
     linear-gradient(180deg,rgba(1,3,8,.12) 0%,rgba(1,3,8,.22) 58%,rgba(1,3,8,.34) 100%);
 }
 
+.academic-cosmos-fallback .cosmos-bg canvas{display:none}
 .academic-cosmos-fallback .cosmos-bg{
   background:
-    radial-gradient(circle at 70% 38%,rgba(88,45,18,.22),transparent 12%),
-    radial-gradient(ellipse at 70% 38%,transparent 0 8%,rgba(222,105,28,.22) 8.5%,transparent 13%),
-    radial-gradient(circle at 70% 38%,#000 0 7%,transparent 7.5%),
-    radial-gradient(circle at 72% 30%,rgba(31,64,106,.25),transparent 32%),
+    radial-gradient(ellipse at 70% 42%,transparent 0 7.0%,rgba(255,190,110,.96) 7.4%,rgba(255,91,14,.72) 8.2%,rgba(122,28,5,.22) 10.5%,transparent 13%),
+    radial-gradient(circle at 70% 42%,#000 0 6.5%,rgba(0,0,0,.98) 7.0%,transparent 7.3%),
+    linear-gradient(88deg,transparent 0 64%,rgba(255,91,18,.13) 69%,rgba(255,184,92,.42) 70%,rgba(255,91,18,.13) 71%,transparent 77%),
+    radial-gradient(circle at 18% 22%,rgba(255,255,255,.90) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 72% 17%,rgba(184,214,255,.88) 0 1px,transparent 1.4px),
+    radial-gradient(circle at 42% 76%,rgba(255,222,184,.82) 0 1px,transparent 1.3px),
+    radial-gradient(circle at 82% 69%,rgba(255,255,255,.75) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 68% 34%,rgba(30,57,96,.34),transparent 34%),
     linear-gradient(180deg,#040912 0%,#010308 100%);
+  background-size:auto,auto,auto,113px 97px,149px 131px,173px 151px,211px 181px,auto,auto;
 }
 
 .academic-cosmos .page-head,
