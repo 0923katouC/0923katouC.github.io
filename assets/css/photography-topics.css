@@ -1,0 +1,52 @@
+/* Image covers for the four photography themes only. */
+.ui-page.photography-topics .topic-card{
+  overflow:hidden;
+  isolation:isolate;
+  background:#17212d;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+
+.photography-topics .topic-cover{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  pointer-events:none;
+}
+
+.photography-topics .topic-card--conventions .topic-cover{
+  object-position:44% 24%;
+}
+
+.photography-topics .topic-card--outdoor .topic-cover{
+  object-position:50% 55%;
+}
+
+.photography-topics .topic-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(8,13,22,.32) 0%,rgba(8,13,22,.10) 22%,rgba(8,13,22,.64) 48%,rgba(8,13,22,.88) 100%);
+}
+
+.ui-page.photography-topics .topic-card > :is(.entry-index,h2,p){
+  position:relative;
+  z-index:2;
+  color:#fff;
+  text-shadow:0 1px 5px rgba(0,0,0,.75);
+}
+
+.ui-page.photography-topics .topic-card .entry-index{
+  display:inline-block;
+  padding:0 6px;
+  margin-left:-6px;
+  border-radius:3px;
+  background:rgba(8,13,22,.48);
+}
