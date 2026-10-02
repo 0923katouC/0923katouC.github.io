@@ -6,7 +6,7 @@
   'use strict';
   const canvas = document.getElementById('academic-black-hole');
   if (!canvas) return;
-  const VERSION = '20260911-npgs-jet2';
+  const VERSION = '20261002-composition2';
   const baseUrl = new URL('../shaders/', document.currentScript.src);
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobile = matchMedia('(max-width: 820px)');
@@ -27,7 +27,7 @@
     const float MAP_SPAN = 48.0;
     const vec3 CAMERA = vec3(0.0, 4.8621489747, 27.5746170843);
     vec3 sceneDirection(vec2 plane) {
-      plane = mat2(0.984807753, -0.173648178, 0.173648178, 0.984807753) * plane;
+      plane = mat2(0.951056516, -0.309016994, 0.309016994, 0.951056516) * plane;
       vec3 up = vec3(0.0, 0.984807753, -0.173648178);
       return normalize(-CAMERA + vec3(plane.x, 0.0, 0.0) + up * plane.y);
     }
@@ -216,8 +216,10 @@
     bindTexture(render, 'uNoise', 4, noise, gl.TEXTURE_3D);
     gl.uniform2f(location(render, 'uResolution'), canvas.width, canvas.height);
     const portrait = innerWidth / Math.max(innerHeight, 1) < 0.82;
-    gl.uniform2f(location(render, 'uCenter'), portrait ? 0.52 : 0.72, portrait ? 0.72 : 0.66);
-    gl.uniform1f(location(render, 'uViewSpan'), portrait ? 48 : 34);
+    // Keep the enlarged disk clear of the desktop title; portrait framing
+    // leaves the left edge quieter for headings and contact links.
+    gl.uniform2f(location(render, 'uCenter'), portrait ? 0.64 : 0.735, portrait ? 0.68 : 0.60);
+    gl.uniform1f(location(render, 'uViewSpan'), portrait ? 42 : 28);
     gl.uniform1f(location(render, 'uTime'), elapsed);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);

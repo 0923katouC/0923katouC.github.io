@@ -32,7 +32,7 @@ source of this component. They are also available in this website's GitHub repos
   shifts, with an artistic visible-temperature scale and bounded intensity.
 - The original volumetric disk is reduced to two thin-disk images. NPGS's
   widening jet sheath and normalized 0.8c velocity prescription are retained;
-  the revised sheath turns on smoothly at heights 4–6 and is more collimated.
+  the revised sheath turns on smoothly at heights 2.2–4 and is more collimated.
   Its brighter emission has two rotating helical filaments, advected knots,
   and fine turbulence. Circular phase moments along the cached rays retain
   the emission-time delay; Doppler beaming is baked into the jet weight.
@@ -49,3 +49,13 @@ source of this component. They are also available in this website's GitHub repos
 
 This is a performance-oriented web adaptation. It does not reproduce every
 mode or the full volumetric accuracy of the desktop NPGS renderer.
+
+## Framing update on 2026-10-02
+
+The screen-plane roll is 18 degrees; the camera remains at 10 degrees above
+the disk. Disk, jets and lensed sky use the same rotated rays. The closer jet
+onset keeps the visible sheath connected to the poles without shifting it off
+the spin axis. Desktop framing uses a view span of 28 (previously 34), while
+portrait framing uses 42 (previously 48), with the scene moved down and to the
+right to leave room for page text. Both fallback images are rendered from the
+same shaders at the initial animation time.
