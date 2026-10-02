@@ -6,10 +6,10 @@
   'use strict';
   const canvas = document.getElementById('academic-black-hole');
   if (!canvas) return;
-  const VERSION = '20261002-composition3';
+  const VERSION = '20261002-tidal3';
   const baseUrl = new URL('../shaders/', document.currentScript.src);
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  const mobile = matchMedia('(max-width: 820px)');
+  const mobile = matchMedia('(max-width: 820px), (pointer: coarse)');
   const HEADER = '#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\n';
   const VERTEX = `
     out vec2 vUv;
@@ -24,7 +24,17 @@
     const float HORIZON = 0.75514701644;
     const float DISK_INNER = 1.28671550559;
     const float DISK_OUTER = 9.0;
-    const float MAP_SPAN = 48.0;
+    const float MAP_SPAN = 36.0;
+    // Invertible ray-grid refinement: spend more actual rays near the hole.
+    vec2 mapToPlane(vec2 uv) {
+      vec2 q = uv * 2.0 - 1.0;
+      return 0.5 * MAP_SPAN * q * (0.55 + 0.45 * abs(q));
+    }
+    vec2 planeToMap(vec2 plane) {
+      vec2 q = abs(plane) / (0.5 * MAP_SPAN);
+      q = (sqrt(0.3025 + 1.8 * q) - 0.55) / 0.9;
+      return 0.5 + 0.5 * sign(plane) * q;
+    }
     const vec3 CAMERA = vec3(0.0, 4.8621489747, 27.5746170843);
     vec3 sceneDirection(vec2 plane) {
       plane = mat2(0.951056516, -0.309016994, 0.309016994, 0.951056516) * plane;
@@ -47,20 +57,23 @@
     return;
   }
   const shaderNames = ['npgs-kerr.glsl', 'npgs-emission.glsl', 'npgs-trace.frag',
-                       'npgs-render.frag', 'npgs-compose.frag'];
+                       'npgs-render.frag', 'npgs-compose.frag', 'npgs-transfer.glsl', 'npgs-tidal.frag'];
   let sources;
   let generation = 0;
   let programs = [];
   let textures = [];
   let framebuffers = [];
   let vao;
-  let trace, render, compose;
+  let trace, tidalTrace, render, compose;
   let maps = [];
   let noise;
   let scene;
   let sceneWidth = 0;
   let sceneHeight = 0;
   let mapFramebuffer;
+  let tidalFramebuffer;
+  let debrisTexture;
+  let debris;
   let sceneFramebuffer;
   let mapSize = 0;
   let completedRows = 0;
@@ -75,8 +88,17 @@
   let timerExtension;
   let pendingQuery = null;
   let slowSamples = 0;
-  const lowPower = () => mobile.matches || (navigator.hardwareConcurrency || 4) <= 4 ||
-                         Boolean(navigator.connection && navigator.connection.saveData);
+  let traceQuery = null;
+  let traceRows = 4;
+  let traceStarted = 0;
+  let tracePausedAt = 0;
+  let warmup = 24;
+  let drawSamples = [];
+  let cpuSamples = [];
+  let gpuSamples = [];
+  let slowWindows = 0;
+  const lowPower = () => mobile.matches || Boolean(navigator.connection && navigator.connection.saveData);
+  const economyDesktop = () => (navigator.hardwareConcurrency || 4) <= 4;
   const location = (program, name) => program.uniforms[name];
   const setState = state => { canvas.dataset.state = state; };
   const stop = () => {
@@ -93,6 +115,7 @@
     stop();
     setState('fallback');
     document.body.classList.add('academic-cosmos-fallback');
+    release();
     console.warn('NPGS background: using the rendered fallback frame.', error);
   };
   function makeProgram(fragment, names) {
@@ -161,11 +184,55 @@
     gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, 32, 32, 32, 0, gl.RED, gl.UNSIGNED_BYTE, data);
     return texture;
   }
+  function makeDebrisTexture() {
+    const count = debris.points.length / 4;
+    const data = new Float32Array(count * 8);
+    data.set(debris.points);
+    data.set(debris.velocities, count * 4);
+    const texture = gl.createTexture();
+    textures.push(texture);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, count, 2, 0, gl.RGBA, gl.FLOAT, data);
+    return texture;
+  }
+  function resetMetrics() {
+    warmup = 24;
+    drawSamples = []; cpuSamples = []; gpuSamples = [];
+    slowWindows = 0; slowSamples = 0;
+    canvas.dataset.sampleFrames = '0';
+    canvas.dataset.drawFps = reducedMotion.matches ? 'still' : 'warming';
+    canvas.dataset.gpuAvgMs = reducedMotion.matches ? 'not-sampled' : timerExtension ? 'warming' : 'unavailable';
+  }
+  function recordDraw(now, cpuMs) {
+    if (reducedMotion.matches) { canvas.dataset.drawFps = 'still'; return; }
+    if (warmup > 0) { --warmup; return; }
+    drawSamples.push(now); cpuSamples.push(cpuMs);
+    if (drawSamples.length < 120) return;
+    const duration = drawSamples.at(-1) - drawSamples[0];
+    const fps = 1000 * (drawSamples.length - 1) / duration;
+    const intervals = drawSamples.slice(1).map((time, i) => time - drawSamples[i]).sort((a,b) => a-b);
+    canvas.dataset.drawFps = fps.toFixed(1);
+    canvas.dataset.sampleFrames = String(drawSamples.length);
+    canvas.dataset.sampleDurationMs = duration.toFixed(0);
+    canvas.dataset.drawIntervalP95Ms = intervals[Math.floor(intervals.length * .95)].toFixed(1);
+    canvas.dataset.cpuSubmitAvgMs = (cpuSamples.reduce((a,b) => a+b,0) / cpuSamples.length).toFixed(2);
+    if (gpuSamples.length) canvas.dataset.gpuAvgMs = (gpuSamples.reduce((a,b) => a+b,0) / gpuSamples.length).toFixed(2);
+    // Also handles GPUs without timer-query support; require sustained pressure.
+    slowWindows = fps < 24 ? slowWindows + 1 : 0;
+    drawSamples = []; cpuSamples = []; gpuSamples = [];
+    if (slowWindows >= 2 && scale > .55) {
+      scale = Math.max(.55, scale * .84); slowWindows = 0; resize();
+    }
+  }
   function resize() {
     if (!scene || gl.isContextLost()) return;
     const low = lowPower();
-    const cap = (low ? 230000 : 680000) * scale * scale;
-    const dpr = Math.min(devicePixelRatio || 1, low ? 1 : 1.25);
+    const cap = (low ? 230000 : economyDesktop() ? 1100000 : 2100000) * scale * scale;
+    const dpr = Math.min(devicePixelRatio || 1, low ? 1 : 1.5);
     let width = Math.max(1, Math.round(innerWidth * dpr));
     let height = Math.max(1, Math.round(innerHeight * dpr));
     const correction = Math.min(1, Math.sqrt(cap / (width * height)));
@@ -180,6 +247,8 @@
       sceneHeight = height;
     }
     canvas.dataset.resolution = `${width}x${height}`;
+    canvas.dataset.qualityScale = scale.toFixed(2);
+    resetMetrics();
     lastDraw = -Infinity;
   }
   function bindTexture(program, name, unit, texture, target = gl.TEXTURE_2D) {
@@ -195,6 +264,7 @@
     gl.deleteQuery(pendingQuery);
     pendingQuery = null;
     if (disjoint) return;
+    if (warmup === 0) gpuSamples.push(ms);
     slowSamples = ms > 27 ? slowSamples + 1 : Math.max(0, slowSamples - 1);
     if (slowSamples >= 3 && scale > 0.55) {
       scale = Math.max(0.55, scale * 0.84);
@@ -212,13 +282,13 @@
     gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFramebuffer);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.useProgram(render.handle);
-    ['uDiskNear', 'uDiskFar', 'uSky', 'uJet'].forEach((name, index) => bindTexture(render, name, index, maps[index]));
-    bindTexture(render, 'uNoise', 4, noise, gl.TEXTURE_3D);
+    ['uDiskNear', 'uDiskFar', 'uSky', 'uJet', 'uStream', 'uStar'].forEach((name, index) => bindTexture(render, name, index, maps[index]));
+    bindTexture(render, 'uNoise', 6, noise, gl.TEXTURE_3D);
     gl.uniform2f(location(render, 'uResolution'), canvas.width, canvas.height);
     const portrait = innerWidth / Math.max(innerHeight, 1) < 0.82;
-    // Let the black hole fill the central page, including behind the content.
-    gl.uniform2f(location(render, 'uCenter'), portrait ? 0.52 : 0.58, portrait ? 0.61 : 0.52);
-    gl.uniform1f(location(render, 'uViewSpan'), portrait ? 36 : 20);
+    // Keep the black hole prominent and include the donor core in portrait.
+    gl.uniform2f(location(render, 'uCenter'), portrait ? 0.40 : 0.58, portrait ? 0.61 : 0.52);
+    gl.uniform1f(location(render, 'uViewSpan'), portrait ? 40 : 20);
     gl.uniform1f(location(render, 'uTime'), elapsed);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -233,8 +303,16 @@
     if (document.hidden || gl.isContextLost() || failed || !trace) return;
     try {
       if (completedRows < mapSize) {
-        // Small scissored batches keep the expensive one-time trace bounded.
-        const rows = Math.min(lowPower() ? 8 : 12, mapSize - completedRows);
+        if (traceQuery && gl.getQueryParameter(traceQuery, gl.QUERY_RESULT_AVAILABLE)) {
+          const disjoint = gl.getParameter(timerExtension.GPU_DISJOINT_EXT);
+          const ms = gl.getQueryParameter(traceQuery, gl.QUERY_RESULT) / 1e6;
+          gl.deleteQuery(traceQuery); traceQuery = null;
+          if (!disjoint) traceRows = Math.max(1, Math.min(lowPower() ? 6 : 10, Math.round(traceRows * 8 / Math.max(ms, .1))));
+        }
+        // Two passes respect WebGL 2's guaranteed four-MRT minimum.
+        const timedTrace = timerExtension && !traceQuery;
+        if (timedTrace) { traceQuery = gl.createQuery(); gl.beginQuery(timerExtension.TIME_ELAPSED_EXT, traceQuery); }
+        const rows = Math.min(traceRows, mapSize - completedRows);
         gl.bindFramebuffer(gl.FRAMEBUFFER, mapFramebuffer);
         gl.viewport(0, 0, mapSize, mapSize);
         gl.useProgram(trace.handle);
@@ -242,11 +320,18 @@
         gl.enable(gl.SCISSOR_TEST);
         gl.scissor(0, completedRows, mapSize, rows);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, tidalFramebuffer);
+        gl.useProgram(tidalTrace.handle);
+        bindTexture(tidalTrace, 'uDebris', 0, debrisTexture);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
         gl.disable(gl.SCISSOR_TEST);
+        if (timedTrace) gl.endQuery(timerExtension.TIME_ELAPSED_EXT);
         completedRows += rows;
+        canvas.dataset.traceProgress = (100 * completedRows / mapSize).toFixed(0);
         if (completedRows < mapSize) { schedule(); return; }
         if (gl.getError() !== gl.NO_ERROR) throw new Error('Transfer-map rendering failed');
         ready = true;
+        canvas.dataset.traceWallMs = (performance.now() - traceStarted).toFixed(0);
         draw();
         if (gl.getError() !== gl.NO_ERROR) throw new Error('Background rendering failed');
         setState(reducedMotion.matches ? 'still' : 'ready');
@@ -258,8 +343,14 @@
         lastTick = now;
         const interval = 1000 / 30;
         if (now - lastDraw >= interval - 0.5 || reducedMotion.matches) {
+          const submitted = performance.now();
           draw();
-          lastDraw = now - ((now - lastDraw) % interval || 0);
+          recordDraw(now, performance.now() - submitted);
+          // Advance at least one interval even when the half-ms tolerance
+          // admits an early frame. Keep the phase without catch-up overdraw.
+          lastDraw = Number.isFinite(lastDraw)
+            ? lastDraw + interval * Math.max(1, Math.floor((now - lastDraw + 0.5) / interval))
+            : now;
         }
       }
       if (!reducedMotion.matches || !ready) schedule();
@@ -269,11 +360,15 @@
     stop();
     if (pendingQuery) gl.deleteQuery(pendingQuery);
     pendingQuery = null;
+    if (traceQuery) gl.deleteQuery(traceQuery);
+    traceQuery = null;
     textures.forEach(texture => gl.deleteTexture(texture));
     framebuffers.forEach(framebuffer => gl.deleteFramebuffer(framebuffer));
     programs.forEach(program => gl.deleteProgram(program));
     if (vao) gl.deleteVertexArray(vao);
     textures = []; framebuffers = []; programs = [];
+    scene = null;
+    vao = null;
   }
   async function initialize() {
     const currentGeneration = ++generation;
@@ -298,28 +393,65 @@
       if (!gl.getExtension('EXT_color_buffer_float')) throw new Error('Floating-point targets unavailable');
       timerExtension = gl.getExtension('EXT_disjoint_timer_query_webgl2');
       release();
+      if (gl.getParameter(gl.MAX_DRAW_BUFFERS) < 4 || gl.getParameter(gl.MAX_COLOR_ATTACHMENTS) < 4) throw new Error('Four render targets unavailable');
+      if (!debris) {
+        if (!window.AcademicTidalStream) throw new Error('Tidal snapshot generator unavailable');
+        debris = window.AcademicTidalStream.generate({samples:64,spin:.43});
+        canvas.dataset.massShellError = debris.diagnostics.maxMassShellError.toExponential(2);
+      }
       vao = gl.createVertexArray();
       gl.bindVertexArray(vao);
       gl.disable(gl.DEPTH_TEST);
       gl.disable(gl.BLEND);
       gl.disable(gl.DITHER);
-      trace = makeProgram(SCENE + sources[0] + sources[2], ['uMapSize']);
-      render = makeProgram(SCENE + sources[1] + sources[3],
-        ['uDiskNear', 'uDiskFar', 'uSky', 'uJet', 'uNoise', 'uResolution', 'uCenter', 'uViewSpan', 'uTime']);
+      const transferSource = SCENE + sources[0] + sources[5];
+      trace = makeProgram(transferSource + sources[2], ['uMapSize', 'uStarPosition', 'uStarRadius']);
+      tidalTrace = makeProgram(transferSource + sources[6],
+        ['uMapSize','uDebris','uDebrisCount','uGroupMin[0]','uGroupMax[0]','uStarPosition','uStarVelocity','uStarRadius']);
+      render = makeProgram(transferSource + sources[1] + sources[3],
+        ['uDiskNear', 'uDiskFar', 'uSky', 'uJet', 'uStream', 'uStar', 'uNoise', 'uResolution', 'uCenter', 'uViewSpan', 'uTime']);
       compose = makeProgram(sources[4], ['uScene', 'uTexel']);
-      mapSize = lowPower() || reducedMotion.matches ? 512 : 832;
-      maps = Array.from({ length: 4 }, () => makeTexture(mapSize, mapSize, gl.NEAREST));
-      for (const texture of [maps[2], maps[3]]) {
+      mapSize = lowPower() ? 512 : economyDesktop() ? 832 : 1152;
+      canvas.dataset.qualityTier = lowPower() ? 'mobile' : economyDesktop() ? 'economy' : 'desktop';
+      mapSize = Math.min(mapSize, gl.getParameter(gl.MAX_TEXTURE_SIZE));
+      canvas.dataset.mapResolution = `${mapSize}x${mapSize}`;
+      maps = Array.from({ length: 6 }, () => makeTexture(mapSize, mapSize, gl.NEAREST));
+      for (const texture of maps.slice(2)) {
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       }
-      mapFramebuffer = makeFramebuffer(maps);
+      mapFramebuffer = makeFramebuffer(maps.slice(0,4));
+      tidalFramebuffer = makeFramebuffer(maps.slice(4));
+      debrisTexture = makeDebrisTexture();
+      const groupMin = new Float32Array(32), groupMax = new Float32Array(32);
+      for (let group = 0; group < 8; ++group) {
+        const lo = [Infinity,Infinity,Infinity], hi = [-Infinity,-Infinity,-Infinity];
+        for (let i = group * 8; i <= Math.min(group * 8 + 8,63); ++i) {
+          const radius = debris.points[i*4+3] * 3;
+          for (let j = 0; j < 3; ++j) {lo[j] = Math.min(lo[j],debris.points[i*4+j]-radius); hi[j] = Math.max(hi[j],debris.points[i*4+j]+radius);}
+        }
+        groupMin.set([...lo,0],group*4); groupMax.set([...hi,0],group*4);
+      }
+      for (const program of [trace,tidalTrace]) {
+        gl.useProgram(program.handle);
+        gl.uniform2f(location(program,'uMapSize'),mapSize,mapSize);
+        gl.uniform3fv(location(program,'uStarPosition'),debris.star.position);
+        gl.uniform1f(location(program,'uStarRadius'),debris.star.radius);
+      }
+      gl.useProgram(tidalTrace.handle);
+      bindTexture(tidalTrace,'uDebris',0,debrisTexture);
+      gl.uniform1i(location(tidalTrace,'uDebrisCount'),64);
+      gl.uniform4fv(location(tidalTrace,'uGroupMin[0]'),groupMin);
+      gl.uniform4fv(location(tidalTrace,'uGroupMax[0]'),groupMax);
+      gl.uniform4fv(location(tidalTrace,'uStarVelocity'),debris.star.velocity);
       noise = makeNoise();
       scene = makeTexture(1, 1);
       sceneWidth = sceneHeight = 1;
       sceneFramebuffer = makeFramebuffer([scene]);
       completedRows = 0;
+      traceRows = 4;
+      traceStarted = performance.now();
       resize();
       setState('tracing');
       schedule();
@@ -332,11 +464,12 @@
     resizeTimer = setTimeout(() => { resize(); schedule(); }, 120);
   }, { passive: true });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { stop(); if (ready) setState('paused'); }
-    else { lastDraw = -Infinity; if (ready) setState(reducedMotion.matches ? 'still' : 'ready'); schedule(); }
+    if (document.hidden) { stop(); tracePausedAt=performance.now(); if (ready) setState('paused'); }
+    else { if(tracePausedAt) traceStarted+=performance.now()-tracePausedAt; tracePausedAt=0; resetMetrics(); lastDraw = -Infinity; if (ready) setState(reducedMotion.matches ? 'still' : 'ready'); schedule(); }
   });
   reducedMotion.addEventListener('change', () => {
     stop(); lastDraw = -Infinity;
+    resetMetrics();
     if (ready) setState(reducedMotion.matches ? 'still' : 'ready');
     schedule();
   });
@@ -344,6 +477,7 @@
     event.preventDefault();
     ++generation;
     stop(); ready = false;
+    pendingQuery = null; traceQuery = null;
     setState('context-lost');
     document.body.classList.add('academic-cosmos-fallback');
   });

@@ -41,3 +41,8 @@ The site is fully static and contains no server-side secrets. Pages use a restri
 The academic page uses a WebGL 2 adaptation of [baopinshui/NPGS](https://github.com/baopinshui/NPGS).
 See the [upstream attribution, GPLv3 license and adaptation notes](assets/vendor/npgs/README.md)
 for the rendering scope and source details.
+
+The white-dwarf scene uses a numerically integrated Kerr ballistic-debris
+snapshot, with curved-ray volume/surface transfer for the stream, star and
+jets. It is an illustration rather than a hydrodynamic disruption simulation.
+Run `node tests/test_tidal_stream.js` for its numerical regression checks.

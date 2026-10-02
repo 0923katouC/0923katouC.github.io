@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Stationary-camera transfer maps using NPGS's analytic Hamiltonian + RK4.
  * Outputs: two equatorial disk intersections; escaping sky direction;
- * line-integrated jet emissivity, height and rotating helical phase moments.
+ * covariantly integrated jet intensity, harmonic moments and absolute height.
  */
 uniform vec2 uMapSize;
+uniform vec3 uStarPosition;
+uniform float uStarRadius;
 layout(location = 0) out vec4 diskNear;
 layout(location = 1) out vec4 diskFar;
 layout(location = 2) out vec4 skyRay;
@@ -25,42 +27,77 @@ vec4 diskIntersection(vec4 x, vec4 p, float energy) {
     return vec4(x.x, x.z, x.w, shift);
 }
 
-void integrateJet(vec4 x, vec4 p, float properLength, float transmission,
-                  inout float weight, inout vec3 weightedPosition) {
+float jetWidthAtHeight(float height) {
+    return 0.22 + 0.045 * max(height - 1.0, 0.0);
+}
+
+void integrateJet(vec4 x, vec4 p, float affineLength, float transmission,
+                  inout vec4 moments) {
     float height = abs(x.y);
     float rho = length(x.xz);
-    // A collimated sheath becomes visible above the central disk/black hole.
-    // The cutoff is in emitter space, so its base follows the lensed ray.
-    float width = 0.52 + 0.07 * max(height - 3.0, 0.0);
-    float shape = max(0.0, 1.0 - 2.0 * abs(1.0 - pow(rho / width, 2.0))) / width;
-    if (shape <= 0.0 || height < 2.2 || height > 35.0) return;
-    shape *= smoothstep(2.2, 4.0, height);
+    if (height <= 1.0 || height >= 35.0) return;
+    // Both lobes launch on the spin axis in emitter coordinates. The soft
+    // spine joins the narrower sheath without shifting its lensed image.
+    float width = jetWidthAtHeight(height);
+    float radius = rho / width;
+    if (radius >= 1.5) return;
+    float sheath = max(0.0, 1.0 - 2.0 * abs(1.0 - radius * radius));
+    float spine = 0.12 * exp(-3.0 * radius * radius);
+    float shape = (sheath + spine) * (1.0 - smoothstep(1.2, 1.5, radius)) / width;
+    shape *= smoothstep(1.0, 1.8, height);
+    // Prescribed heating is strongest in the launch zone. Its lensed image
+    // follows the Kerr rays; far from the hole the jet remains nearly straight.
+    shape *= 0.25 + 5.0 * exp(-0.5 * pow((height - 2.6) / 1.4, 2.0));
+    // Mild comoving density structure, sampled on the curved ray itself.
+    shape *= 0.75 + 0.25 * sin(4.2 * height +
+              1.1 * sin(5.0 * x.x) + 0.8 * cos(5.0 * x.z));
     shape *= exp(-0.0025 * pow(height / DISK_INNER, 2.0));
     shape *= 1.0 - smoothstep(27.0, 35.0, height);
-    KerrGeometry geo;
-    ComputeGeometryScalars(x.xyz, PHYSICAL_A, 0.0, 1.0, 1.0, false, geo);
-    if (geo.f >= 0.98) return;
-    // NPGS's 0.8c jet prescription, normalized in the local metric.
-    vec3 us = vec3(0.0, sign(x.y) * 1.3333333333, 0.0);
-    float ldu = dot(geo.l_down.xyz, us);
-    float aa = -1.0 + geo.f;
-    float bb = 2.0 * geo.f * ldu;
-    float cc = dot(us, us) + geo.f * ldu * ldu + 1.0;
-    float det = sqrt(max(0.0, bb * bb - 4.0 * aa * cc));
-    float ut = bb < 0.0 ? 2.0 * cc / (-bb + det) : (-bb - det) / (2.0 * aa);
-    float shift = clamp(1.0 / max(1e-5, -dot(p, vec4(us, ut))), 0.1, 2.5);
-    // Bake beaming into the stationary weight. Retain a circular phase, with
-    // two helical strands, instead of averaging wrapped azimuth angles.
-    // phase = 2 phi - k |y| + omega t_emit, omega/k = 0.8 in units c = 1.
-    float azimuth = atan(x.x, x.z);
-    float phase = 2.0 * azimuth - 0.92 * (height - 3.0) + 0.736 * x.w;
-    float dw = 0.5 * shape * properLength * transmission * min(shift * shift, 2.0);
-    weight += dw;
-    weightedPosition += dw * vec3(x.y, cos(phase), sin(phase));
+    vec4 velocity;
+    if (!jetEmitterVelocity(x.xyz, velocity)) return;
+    float emissionEnergy = emitterPhotonEnergy(p, velocity);
+    if (!(emissionEnergy > 0.0) || isinf(emissionEnergy)) return;
+    // The camera tetrad initializes observed photon energy to one. For
+    // bolometric comoving emissivity, dI_obs = g^4 * j * dl_emit * T.
+    float shift = 1.0 / emissionEnergy;
+    float emittedLength = emissionEnergy * affineLength;
+    float shift2 = shift * shift;
+    float dw = 0.5 * shape * emittedLength * shift2 * shift2 * transmission;
+    if (!(dw > 0.0) || isinf(dw)) return;
+    // Linear harmonic moments reproduce the integral of j0*(1+A*cos(phi))
+    // exactly under the chosen segment quadrature, including retarded time.
+    float azimuth = rho > 1e-8 ? atan(x.x, x.z) : 0.0;
+    float phase = 2.0 * azimuth - 0.92 * (height - 1.0) + 0.736 * x.w;
+    // Keep the spine steady; an azimuthal mode is undefined on the axis.
+    float harmonicFraction = sheath / (sheath + spine);
+    moments += dw * vec4(1.0, harmonicFraction * cos(phase),
+                        harmonicFraction * sin(phase), height);
+}
+
+void integrateJetSegment(vec4 startX, vec4 endX, vec4 startP, vec4 endP,
+                         float affineLength, float transmission, inout vec4 moments) {
+    if (affineLength <= 0.0 || transmission <= 0.0) return;
+    vec3 chord = endX.xyz - startX.xyz;
+    float maxHeight = max(abs(startX.y), abs(endX.y));
+    float minHeight = startX.y * endX.y < 0.0 ? 0.0 : min(abs(startX.y), abs(endX.y));
+    if (maxHeight <= 1.0 || minHeight >= 35.0) return;
+    float closestFraction = clamp(-dot(startX.xz, chord.xz) /
+                                  max(dot(chord.xz, chord.xz), 1e-8), 0.0, 1.0);
+    float closestRadius = length(startX.xz + closestFraction * chord.xz);
+    if (closestRadius >= 1.5 * jetWidthAtHeight(maxHeight)) return;
+    // Resolve the small launch region more finely, with bounded quadrature.
+    float spacing = clamp(0.45 * jetWidthAtHeight(minHeight), 0.045, 0.16);
+    int samples = clamp(int(ceil(length(chord) / spacing)), 3, 32);
+    for (int sampleIndex = 0; sampleIndex < 32; ++sampleIndex) {
+        if (sampleIndex >= samples) break;
+        float fraction = (float(sampleIndex) + 0.5) / float(samples);
+        integrateJet(mix(startX, endX, fraction), mix(startP, endP, fraction),
+                     affineLength / float(samples), transmission, moments);
+    }
 }
 
 void main() {
-    vec2 plane = (gl_FragCoord.xy / uMapSize - 0.5) * MAP_SPAN;
+    vec2 plane = mapToPlane(gl_FragCoord.xy / uMapSize);
     vec4 x = vec4(CAMERA, 0.0);
     vec4 p = GetInitialMomentum(sceneDirection(plane), x, 0, 1.0,
                                 PHYSICAL_A, 0.0, 1.0, false);
@@ -69,14 +106,14 @@ void main() {
     diskFar = vec4(0.0);
     skyRay = vec4(0.0);
     jetRay = vec4(0.0);
-    float jetWeight = 0.0;
-    vec3 jetPosition = vec3(0.0);
+    vec4 jetMoments = vec4(0.0);
     float transmission = 1.0;
     int hits = 0;
     for (int stepIndex = 0; stepIndex < 420; ++stepIndex) {
         KerrGeometry geo;
         ComputeGeometryScalars(x.xyz, PHYSICAL_A, 0.0, 1.0, 1.0, false, geo);
-        if (geo.r < HORIZON + 0.012 || any(isnan(x)) || any(isinf(x))) break;
+        if (geo.r < HORIZON + 0.012 || any(isnan(x)) || any(isinf(x)) ||
+            any(isnan(p)) || any(isinf(p))) break;
         State s; s.X = x; s.P = p;
         State k1 = GetDerivativesAnalytic(s, PHYSICAL_A, 0.0, 1.0, false, geo);
         if (geo.r > 90.0 && dot(x.xyz, -k1.X.xyz) > 0.0) {
@@ -94,40 +131,41 @@ void main() {
         vec4 previousP = p;
         StepGeodesicRK4_Optimized(x, p, energy, -dt, PHYSICAL_A, 0.0,
                                    1.0, 1.0, false, geo, k1);
-        vec3 chord = x.xyz - previousX.xyz;
-        float ld = dot(geo.l_down.xyz, chord);
-        float properLength = sqrt(max(0.0, dot(chord, chord) + geo.f * ld * ld));
-        // Only jet emissivity gets finer quadrature. Geodesics and all three
-        // disk/sky transfer maps retain their original integration steps.
-        float maxJetHeight = max(abs(previousX.y), abs(x.y));
-        float maxJetWidth = 0.52 + 0.07 * max(maxJetHeight - 3.0, 0.0);
-        float closestFraction = clamp(-dot(previousX.xz, chord.xz) /
-                                       max(dot(chord.xz, chord.xz), 1e-8), 0.0, 1.0);
-        float closestRadius = length(previousX.xz + closestFraction * chord.xz);
-        if (maxJetHeight > 2.2 && closestRadius < 1.25 * maxJetWidth) {
-            int samples = clamp(int(ceil(length(chord) / 0.16)), 3, 32);
-            for (int jetSample = 0; jetSample < 32; ++jetSample) {
-                if (jetSample >= samples) break;
-                float fraction = (float(jetSample) + 0.5) / float(samples);
-                integrateJet(mix(previousX, x, fraction), mix(previousP, p, fraction),
-                             properLength / float(samples), transmission, jetWeight, jetPosition);
-            }
+        if (any(isnan(x)) || any(isinf(x)) || any(isnan(p)) || any(isinf(p))) break;
+        // The star is opaque: only surface crossings and jet emission in
+        // front of its first intersection contribute to the base scene.
+        float starFraction = whiteDwarfIntersection(previousX.xyz, x.xyz, uStarPosition, uStarRadius);
+        bool hitStar = starFraction <= 1.0;
+        float segmentFraction = hitStar ? starFraction : 1.0;
+        vec4 segmentX = mix(previousX, x, segmentFraction);
+        vec4 segmentP = mix(previousP, p, segmentFraction);
+        float segmentLength = dt * segmentFraction;
+        float crossing = 1.0;
+        vec4 hit = vec4(0.0);
+        if (previousX.y * segmentX.y < 0.0) {
+            crossing = previousX.y / (previousX.y - segmentX.y);
+            hit = diskIntersection(mix(previousX, segmentX, crossing),
+                                   mix(previousP, segmentP, crossing), energy);
         }
-        if (previousX.y * x.y < 0.0) {
-            float crossing = previousX.y / (previousX.y - x.y);
-            vec4 hit = diskIntersection(mix(previousX, x, crossing),
-                                        mix(previousP, p, crossing), energy);
-            if (hit.w > 0.0) {
-                if (hits == 0) diskNear = hit;
-                else if (hits == 1) diskFar = hit;
-                ++hits;
-                transmission *= 0.10;
-                // Only the first two luminous intersections are retained.
-                if (hits >= 2) break;
-            }
+        if (hit.w > 0.0) {
+            vec4 crossingX = mix(previousX, segmentX, crossing);
+            vec4 crossingP = mix(previousP, segmentP, crossing);
+            integrateJetSegment(previousX, crossingX, previousP, crossingP,
+                                segmentLength * crossing, transmission, jetMoments);
+            if (hits == 0) diskNear = hit;
+            else if (hits == 1) diskFar = hit;
+            ++hits;
+            transmission *= 1.0 - diskOpacityAtRadius(KerrSchildRadius(crossingX.xyz, PHYSICAL_A, 1.0));
+            if (transmission < 0.005) break;
+            integrateJetSegment(crossingX, segmentX, crossingP, segmentP,
+                                segmentLength * (1.0 - crossing), transmission, jetMoments);
+        } else {
+            integrateJetSegment(previousX, segmentX, previousP, segmentP,
+                                segmentLength, transmission, jetMoments);
         }
+        if (hitStar) break;
     }
     // Premultiplied moments remain well-defined under bilinear interpolation
     // at a narrow sheath's boundary, including between valid and empty texels.
-    if (jetWeight > 1e-6) jetRay = vec4(jetWeight, jetPosition);
+    if (jetMoments.x > 1e-6) jetRay = jetMoments;
 }

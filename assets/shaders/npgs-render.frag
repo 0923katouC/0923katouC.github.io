@@ -8,6 +8,8 @@ uniform sampler2D uDiskNear;
 uniform sampler2D uDiskFar;
 uniform sampler2D uSky;
 uniform sampler2D uJet;
+uniform sampler2D uStream;
+uniform sampler2D uStar;
 uniform vec2 uResolution;
 uniform vec2 uCenter;
 uniform float uViewSpan;
@@ -99,7 +101,9 @@ vec4 diskEmission(vec4 hit, float coverage, float imageOrder) {
     // Circular embedding avoids an azimuth seam without an extra noise pass.
     vec3 noisePoint = vec3(0.28 * advectedR, 0.58 * cos(phase), 0.58 * sin(phase));
     float turbulence = GenerateAccretionDiskNoise(noisePoint, 2.0, 4.0, 45.0);
-    float filaments = 0.72 + 0.28 * sin(15.0 * r + 4.0 * phase + 2.6 * turbulence);
+    float filamentPhase = 15.0 * r + 4.0 * phase + 2.6 * turbulence;
+    float footprint = fwidth(filamentPhase);
+    float filaments = 0.78 + 0.22 * sin(filamentPhase) * exp(-0.3 * footprint * footprint);
     float textureValue = clamp(0.28 + 1.2 * turbulence, 0.25, 2.4) * filaments;
     float envelope = Shape(radial, 0.9, 1.5);
     // NPGS's standard thin-disk T(r), normalized here for a warm visible palette.
@@ -111,14 +115,13 @@ vec4 diskEmission(vec4 hit, float coverage, float imageOrder) {
     float emission = (0.22 + 1.65 * pow(tempProfile, 1.4)) * textureValue;
     emission *= (0.24 + 0.76 * envelope) * min(pow(hit.w, 2.5), 2.8);
     emission *= 1.0 + 0.24 * imageOrder;
-    float edge = smoothstep(0.0, 0.025, radial) * (1.0 - smoothstep(0.82, 1.0, radial));
-    float alpha = coverage * edge * (0.90 + 0.08 * envelope);
+    float alpha = coverage * diskOpacityAtRadius(r);
     return vec4(color * emission * alpha * 1.65, alpha);
 }
 
 void main() {
     vec2 plane = (vUv * uResolution - uCenter * uResolution) / uResolution.y * uViewSpan;
-    vec2 mapUv = plane / MAP_SPAN + 0.5;
+    vec2 mapUv = planeToMap(plane);
     vec3 color;
     if (any(lessThan(mapUv, vec2(0.001))) || any(greaterThan(mapUv, vec2(0.999)))) {
         color = background(sceneDirection(plane));
@@ -135,22 +138,19 @@ void main() {
         color = nearDisk.rgb + (1.0 - nearDisk.a) *
                 (farDisk.rgb + (1.0 - farDisk.a) * skyColor);
         vec4 jet = texture(uJet, mapUv);
-        if (jet.x > 0.001) {
-            float flowTime = uTime * 3.6;
-            float height = abs(jet.y / jet.x);
-            vec2 phaseMoment = jet.zw / jet.x;
-            float phase = 0.736 * flowTime;
-            float coil = dot(phaseMoment, vec2(cos(phase), -sin(phase)));
-            float ribbons = pow(clamp(0.5 + 0.5 * coil, 0.0, 1.0), 2.6);
-            // Outward-moving knots and smaller eddies modulate the two
-            // helical filaments, while a dim sheath connects the bright arcs.
-            float advected = height - 0.8 * flowTime;
-            float knots = 0.70 + 0.65 * pow(0.5 + 0.5 * PerlinNoise1D(advected * 0.72), 2.0);
-            float eddies = 0.88 + 0.12 * PerlinNoise(vec3(advected * 1.5, phaseMoment * 2.8));
-            float structure = (0.15 + 2.4 * ribbons) * knots * eddies;
-            vec3 jetColor = KelvinToRgb(18500.0);
-            color += jetColor * jet.x * structure * 3.2;
-        }
+        // Linear harmonic moments preserve the ray integral under animation,
+        // including rays that visit both lobes or wind around the hole.
+        float jetPhase = 0.736 * uTime * 3.6;
+        float jetLight = max(0.0, jet.x + 0.6 * dot(jet.yz, vec2(cos(jetPhase), -sin(jetPhase))));
+        color += KelvinToRgb(18500.0) * jetLight * 3.2;
+        vec4 stream = texture(uStream, mapUv);
+        float streamPhase = 0.8 * uTime * 3.6;
+        float streamLight = max(0.0, stream.x + 0.65 * dot(stream.yz, vec2(cos(streamPhase), -sin(streamPhase))));
+        float streamTemperature = stream.x > 1e-5 ? 10000.0 * stream.w / stream.x : 12000.0;
+        color += KelvinToRgb(clamp(streamTemperature, 3000.0, 40000.0)) * streamLight;
+        // Both passes stop at the same opaque WD surface. Disk transmission
+        // is already in this radiance; do not apply it a second time here.
+        color += texture(uStar, mapUv).rgb;
     }
     float edge = max(abs(mapUv.x - 0.5), abs(mapUv.y - 0.5));
     if (edge > 0.46 && edge < 0.5) {
