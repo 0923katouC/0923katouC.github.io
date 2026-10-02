@@ -184,7 +184,8 @@ def update_page(block: str) -> bool:
     pattern = re.compile(re.escape(START) + r".*?" + re.escape(END), re.DOTALL)
     if not pattern.search(original):
         raise RuntimeError("Publication synchronization markers are missing from academics.html")
-    updated = pattern.sub(block, original, count=1)
+    # Treat backslashes in publication text (for example LaTeX) as literal text.
+    updated = pattern.sub(lambda _: block, original, count=1)
     if updated == original:
         return False
     PAGE.write_text(updated, encoding="utf-8")

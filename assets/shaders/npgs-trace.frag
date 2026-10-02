@@ -33,8 +33,8 @@ void integrateJet(vec4 x, vec4 p, float properLength, float transmission,
     // The cutoff is in emitter space, so its base follows the lensed ray.
     float width = 0.52 + 0.07 * max(height - 3.0, 0.0);
     float shape = max(0.0, 1.0 - 2.0 * abs(1.0 - pow(rho / width, 2.0))) / width;
-    if (shape <= 0.0 || height < 4.0 || height > 35.0) return;
-    shape *= smoothstep(4.0, 6.0, height);
+    if (shape <= 0.0 || height < 2.2 || height > 35.0) return;
+    shape *= smoothstep(2.2, 4.0, height);
     shape *= exp(-0.0025 * pow(height / DISK_INNER, 2.0));
     shape *= 1.0 - smoothstep(27.0, 35.0, height);
     KerrGeometry geo;
@@ -104,7 +104,7 @@ void main() {
         float closestFraction = clamp(-dot(previousX.xz, chord.xz) /
                                        max(dot(chord.xz, chord.xz), 1e-8), 0.0, 1.0);
         float closestRadius = length(previousX.xz + closestFraction * chord.xz);
-        if (maxJetHeight > 4.0 && closestRadius < 1.25 * maxJetWidth) {
+        if (maxJetHeight > 2.2 && closestRadius < 1.25 * maxJetWidth) {
             int samples = clamp(int(ceil(length(chord) / 0.16)), 3, 32);
             for (int jetSample = 0; jetSample < 32; ++jetSample) {
                 if (jetSample >= samples) break;

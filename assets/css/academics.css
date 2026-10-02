@@ -18,7 +18,7 @@ body.academic-cosmos{
   z-index:0;
   overflow:hidden;
   pointer-events:none;
-  background:#030710 url("../images/academic-npgs-desktop.webp?v=20260911-npgs-jet2") center / cover no-repeat;
+  background:#030710 url("../images/academic-npgs-desktop.webp?v=20261002-composition3") center / cover no-repeat;
 }
 
 .academic-cosmos .cosmos-bg canvas{
@@ -38,7 +38,8 @@ body.academic-cosmos{
     linear-gradient(180deg,rgba(1,3,8,.12) 0%,rgba(1,3,8,.22) 58%,rgba(1,3,8,.34) 100%);
 }
 
-.academic-cosmos-fallback .cosmos-bg canvas{opacity:0}
+/* Keep the fallback visible even when mobile canvas styles apply. */
+.academic-cosmos.academic-cosmos-fallback .cosmos-bg canvas{opacity:0}
 
 .academic-cosmos .page-head,
 .academic-cosmos .academic-overview,
@@ -163,7 +164,13 @@ body.academic-cosmos{
 
 @media(max-aspect-ratio:82/100){
   .academic-cosmos .cosmos-bg{
-    background-image:url("../images/academic-npgs-mobile.webp?v=20260911-npgs-jet2");
+    background-image:url("../images/academic-npgs-mobile.webp?v=20261002-composition3");
+  }
+
+  .academic-cosmos .cosmos-bg::after{
+    background:
+      linear-gradient(180deg,rgba(1,4,9,.36) 0%,rgba(1,4,9,.46) 52%,rgba(1,4,9,.60) 100%),
+      linear-gradient(90deg,rgba(1,4,9,.34) 0%,rgba(1,4,9,.22) 55%,rgba(1,4,9,.12) 100%);
   }
 }
 

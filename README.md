@@ -26,7 +26,10 @@ The publication block in `academics.html` is synchronized with INSPIRE author re
 - `.github/workflows/sync-inspire.yml` runs once per week and can also be started manually from GitHub Actions.
 - `scripts/sync_inspire_publications.py` resolves the author's current INSPIRE BAI, queries the INSPIRE Literature API, and updates only the HTML between `INSPIRE_PUBLICATIONS_START` and `INSPIRE_PUBLICATIONS_END`.
 - If the INSPIRE list has not changed, the workflow makes no commit.
+- After a successful sync on `main`, the workflow explicitly requests a GitHub Pages build using `pages: write`, because pushes made with `GITHUB_TOKEN` do not trigger branch-based Pages builds. No-change runs also request a build so retries can recover a previous build-request failure.
 - If the INSPIRE API returns no publications or fails unexpectedly, the script exits without erasing the existing publication list.
+
+Run publication-sync regression tests with `python -B -m unittest discover -s tests -v`.
 
 ## Security notes
 
