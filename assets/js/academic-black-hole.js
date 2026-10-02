@@ -6,7 +6,7 @@
   'use strict';
   const canvas = document.getElementById('academic-black-hole');
   if (!canvas) return;
-  const VERSION = '20261002-composition2';
+  const VERSION = '20261002-composition3';
   const baseUrl = new URL('../shaders/', document.currentScript.src);
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobile = matchMedia('(max-width: 820px)');
@@ -216,10 +216,9 @@
     bindTexture(render, 'uNoise', 4, noise, gl.TEXTURE_3D);
     gl.uniform2f(location(render, 'uResolution'), canvas.width, canvas.height);
     const portrait = innerWidth / Math.max(innerHeight, 1) < 0.82;
-    // Keep the enlarged disk clear of the desktop title; portrait framing
-    // leaves the left edge quieter for headings and contact links.
-    gl.uniform2f(location(render, 'uCenter'), portrait ? 0.64 : 0.735, portrait ? 0.68 : 0.60);
-    gl.uniform1f(location(render, 'uViewSpan'), portrait ? 42 : 28);
+    // Let the black hole fill the central page, including behind the content.
+    gl.uniform2f(location(render, 'uCenter'), portrait ? 0.52 : 0.58, portrait ? 0.61 : 0.52);
+    gl.uniform1f(location(render, 'uViewSpan'), portrait ? 36 : 20);
     gl.uniform1f(location(render, 'uTime'), elapsed);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
