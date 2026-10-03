@@ -107,6 +107,20 @@ vec2 diskBirthCoordinates(float r, float theta, float age) {
                   + diskOmega(birthR));
     return vec2(birthR,theta-orbit);
 }
+// Anisotropic polar noise: fine radial structure, long azimuthal filaments.
+// Based on NPGS's separate radial/azimuthal coordinates, without circular
+// noise embedding or noise-displaced sine contours that produced eye shapes.
+float polarDiskNoise(vec2 point, vec2 dx, vec2 dy, vec3 seed) {
+    float accumulation = 1.0;
+    for (int i=0;i<3;++i) {
+        float frequency = pow(3.0,float(i)+2.0);
+        float footprint = max(length(dx),length(dy))*frequency;
+        float weight = (1.0-smoothstep(0.2,0.8,footprint)) * (i==2 ? 0.45 : 1.0);
+        float value = PerlinNoise(vec3(point.x*frequency,seed.y,point.y*frequency)+seed);
+        accumulation *= 1.0 + 0.1*value*weight;
+    }
+    return log(1.0+pow(accumulation,28.0));
+}
 float diskFeature(float r, float theta, float time, float offset,
                   vec2 dr, vec2 dtheta, vec2 dt) {
     float cycle = floor((time + offset) / FEATURE_LIFETIME);
@@ -121,19 +135,22 @@ float diskFeature(float r, float theta, float time, float offset,
     float seed = mod(cycle,4096.0) + 17.0*offset;
     vec3 seedOffset = vec3(hash21(vec2(seed,1.0)), hash21(vec2(seed,2.0)),
                            hash21(vec2(seed,3.0))) * 32.0;
-    vec3 point = vec3(0.28*birthR, 0.58*cos(phase), 0.58*sin(phase));
-    float turbulence = GenerateAccretionDiskNoise(point + seedOffset, 1.0, 3.0, 45.0);
-    // Differentiate the unwrapped characteristic, not atan() or mod(age).
-    // This avoids false AA bands at the azimuth seam and feature renewal.
     vec2 dBirthR = dr + INFLOW_SPEED*dt;
     vec2 dPhase = dtheta - (birthOmega-omega)/INFLOW_SPEED*dr
                   - birthOmega*dt - spiral.y*dBirthR;
-    float filamentPhase = 15.0*birthR + 4.0*phase + 2.6*turbulence;
-    vec2 gradient = 15.0*dBirthR + 4.0*dPhase
-                    + 2.6*vec2(dFdx(turbulence),dFdy(turbulence));
-    float footprint = abs(gradient.x) + abs(gradient.y);
-    float filaments = 0.72 + 0.28*sin(filamentPhase)*exp(-0.25*footprint*footprint);
-    return clamp(0.28 + 1.2*turbulence,0.25,2.4)*filaments;
+    float phi = atan(sin(phase),cos(phase));
+    vec2 point = vec2(0.18*birthR,0.055*phi);
+    vec2 dx = vec2(0.18*dBirthR.x,0.055*dPhase.x);
+    vec2 dy = vec2(0.18*dBirthR.y,0.055*dPhase.y);
+    float noise = polarDiskNoise(point,dx,dy,seedOffset);
+    // Match opposite sides of the atan branch cut with a C1-continuous blend.
+    // Noise gradients use the unwrapped angle, never the wrapped phi jump.
+    float seam = 0.35;
+    if (phi < -kPi+seam) {
+        float wrapped = polarDiskNoise(point+vec2(0.0,0.055*2.0*kPi),dx,dy,seedOffset);
+        noise = mix(wrapped,noise,smoothstep(-kPi,-kPi+seam,phi));
+    }
+    return clamp(0.30+1.0*noise,0.30,1.80);
 }
 float diskTexture(vec4 hit, float r) {
     float time = uTime*3.6 + hit.z; // Backward ray integration gives t_emit < t_obs.

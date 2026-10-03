@@ -22,7 +22,7 @@ body.academic-cosmos{
   overflow:hidden;
   pointer-events:none;
   /* Match the renderer's height-based projection and the same image anchor. */
-  background:#030710 url("../images/academic-npgs-desktop.webp?v=20261003-flow2") var(--cosmos-center-x) var(--cosmos-center-y) / auto 100% no-repeat;
+  background:#030710 url("../images/academic-npgs-desktop.webp?v=20261003-filaments1") var(--cosmos-center-x) var(--cosmos-center-y) / auto 100% no-repeat;
 }
 
 .academic-cosmos .cosmos-bg canvas{
@@ -167,7 +167,7 @@ body.academic-cosmos{
     --cosmos-center-x:52%;
     --cosmos-center-y:39%;
     --cosmos-view-span:36;
-    background-image:url("../images/academic-npgs-mobile.webp?v=20261003-flow2");
+    background-image:url("../images/academic-npgs-mobile.webp?v=20261003-filaments1");
   }
 
   .academic-cosmos .cosmos-bg::after{

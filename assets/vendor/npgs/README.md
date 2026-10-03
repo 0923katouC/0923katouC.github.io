@@ -48,6 +48,19 @@ the lifetime and texture here are illustrative, not fits to that simulation.
 Warm temperature mapping, pixel-footprint filtering and bounded bloom finish
 this surface-emission visualization; it is not a hydrodynamic simulation.
 
+Texture coordinates now follow the upstream
+[polar-strip cloud approach](https://github.com/baopinshui/NPGS/blob/91305ca1661f18b60d6d33ed4616e4cd5b977b9f/NPGS/Sources/Engine/Shaders/BlackHole_common.glsl#L1693):
+the radial and azimuthal axes have independent scales. The former circular
+noise embedding and noise-displaced sine bands produced large eye-shaped
+patches; they have been removed. Three noise octaves produce thin radial
+detail and long orbital filaments, with pixel-footprint filtering and a
+smooth angular seam. These are web-specific texture settings, evaluated at
+the same bounded-age birth coordinates, not a change to Kerr ray tracing.
+The user confirmed `BlackHole_common.glsl` above as the source to follow
+for their Shadertoy `W3BBzK` reference. This adaptation retains the existing
+Kerr ray maps and thin-disk geometry rather than importing the upstream
+volume, thick-disk and jet scene.
+
 To check the advection after edits, serve the repository and open
 `/tests/black-hole-dynamics.html`. Its button compiles the actual GLSL helper,
 checks GPU results against independently integrated RK4 particle trajectories,
