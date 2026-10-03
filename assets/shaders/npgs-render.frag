@@ -1,15 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Animated emission on stationary Kerr transfer maps; adapted from NPGS.
- * Thin-disk surface approximation, two images, emission-weighted jet motion.
+ * Thin-disk surface approximation, two images, a luminous differentially rotating accretion disk.
  */
 in vec2 vUv;
 out vec4 fragColor;
 uniform sampler2D uDiskNear;
 uniform sampler2D uDiskFar;
 uniform sampler2D uSky;
-uniform sampler2D uJet;
-uniform sampler2D uStream;
-uniform sampler2D uStar;
 uniform vec2 uResolution;
 uniform vec2 uCenter;
 uniform float uViewSpan;
@@ -92,16 +89,19 @@ vec4 diskEmission(vec4 hit, float coverage, float imageOrder) {
     float emissionTime = uTime * 3.6 + hit.z;
     float omega = sqrt(0.5 * r) / (r * r + PHYSICAL_A * sqrt(0.5 * r));
     float theta = atan(hit.x, hit.y);
-    // Separate pre-existing thin inner flow. Orbital advection uses the Kerr
-    // angular velocity. Slow radial drift follows alpha*(H/R)^2*v_K with
-    // alpha=.1, H/R=.08; this is not the newly stripped SPH material.
-    float phase = theta - omega * emissionTime;
-    float drift = 0.00045254834;
-    float advectedR = pow(max(0.001,pow(r,1.5)+1.5*drift*emissionTime),2.0/3.0);
-    vec3 noisePoint = vec3(2.2 * advectedR,1.5*cos(phase),1.5*sin(phase));
-    float turbulence=0.72+0.26*PerlinNoise(noisePoint)+
-                     0.12*PerlinNoise(3.1*noisePoint+vec3(4.0,8.0,2.0));
-    float textureValue=clamp(turbulence,0.3,1.2);
+    // NPGS's inflowing spiral coordinates, plus local orbital advection.
+    float u = sqrt(r);
+    float eps3 = PHYSICAL_A * 0.70710678 / (u * u * u);
+    float spiral = -16.9705627 / u * (1.0 - 0.25 * eps3 + 0.142857 * eps3 * eps3);
+    float phase = theta - 0.65 * omega * emissionTime - spiral;
+    float advectedR = r + emissionTime / 12.0;
+    // Circular embedding avoids an azimuth seam without an extra noise pass.
+    vec3 noisePoint = vec3(0.28 * advectedR, 0.58 * cos(phase), 0.58 * sin(phase));
+    float turbulence = GenerateAccretionDiskNoise(noisePoint, 2.0, 4.0, 45.0);
+    float filamentPhase = 15.0 * r + 4.0 * phase + 2.6 * turbulence;
+    float footprint = fwidth(filamentPhase);
+    float filaments = 0.72 + 0.28 * sin(filamentPhase) * exp(-0.25 * footprint * footprint);
+    float textureValue = clamp(0.28 + 1.2 * turbulence, 0.25, 2.4) * filaments;
     float envelope = Shape(radial, 0.9, 1.5);
     // NPGS's standard thin-disk T(r), normalized here for a warm visible palette.
     // This is an artistic temperature scale, not an observed physical spectrum.
@@ -111,7 +111,9 @@ vec4 diskEmission(vec4 hit, float coverage, float imageOrder) {
     vec3 color = KelvinToRgb(temperature);
     float emission = (0.22 + 1.65 * pow(tempProfile, 1.4)) * textureValue;
     emission *= (0.24 + 0.76 * envelope) * min(pow(hit.w, 2.5), 2.8);
-    float alpha = coverage * diskOpacityAtRadius(r);
+    emission *= 1.0 + 0.24 * imageOrder;
+    float edge = smoothstep(0.0, 0.025, radial) * (1.0 - smoothstep(0.82, 1.0, radial));
+    float alpha = coverage * edge * (0.90 + 0.08 * envelope);
     return vec4(color * emission * alpha * 1.65, alpha);
 }
 
@@ -133,18 +135,7 @@ void main() {
         vec3 skyColor = sky.w > 0.8 ? background(sky.xyz) : vec3(0.0);
         color = nearDisk.rgb + (1.0 - nearDisk.a) *
                 (farDisk.rgb + (1.0 - farDisk.a) * skyColor);
-        vec4 jet = texture(uJet, mapUv);
-        // Linear harmonic moments preserve the ray integral under animation,
-        // including rays that visit both lobes or wind around the hole.
-        float jetPhase = 0.736 * uTime * 3.6;
-        float jetLight = max(0.0, jet.x + 0.6 * dot(jet.yz, vec2(cos(jetPhase), -sin(jetPhase))));
-        // A representative synchrotron band mapped to a cool display palette.
-        color += vec3(0.46,0.68,1.0) * jetLight * 2.4;
-        vec4 stream = texture(uStream, mapUv);
-        color += stream.rgb;
-        // Both passes stop at the same opaque WD surface. Disk transmission
-        // is already in this radiance; do not apply it a second time here.
-        color += texture(uStar, mapUv).rgb;
+
     }
     float edge = max(abs(mapUv.x - 0.5), abs(mapUv.y - 0.5));
     if (edge > 0.46 && edge < 0.5) {
