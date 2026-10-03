@@ -376,23 +376,39 @@
     const correction = Math.min(1, Math.sqrt(cap / (width * height)));
     width = Math.max(1, Math.round(width * correction));
     height = Math.max(1, Math.round(height * correction));
-    if (canvas.width !== width || canvas.height !== height || sceneWidth !== width || sceneHeight !== height) {
+    const sceneChanged = canvas.width !== width || canvas.height !== height || sceneWidth !== width || sceneHeight !== height;
+    if (sceneChanged) {
       canvas.width = width;
       canvas.height = height;
       gl.bindTexture(gl.TEXTURE_2D, scene);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, width, height, 0, gl.RGBA, gl.HALF_FLOAT, null);
-      sceneWidth = width;
-      sceneHeight = height;
     }
     // Reduce the expensive volume pass together with the output, while keeping
     // the geometry atlas intact. The shader selects exact cached rays from
     // this coarser image grid; no new geodesic integration is needed.
     const nextRadianceSize = Math.max(1, Math.round(mapSize * scale));
-    if (rayRadiance && radianceSize !== nextRadianceSize) {
+    const radianceChanged = rayRadiance && radianceSize !== nextRadianceSize;
+    if (radianceChanged) {
       gl.bindTexture(gl.TEXTURE_2D, rayRadiance);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, nextRadianceSize, nextRadianceSize,
         0, gl.RGBA, gl.HALF_FLOAT, null);
-      radianceSize = nextRadianceSize;
+    }
+    // WebGL allocation failures set an error flag instead of throwing. Check
+    // only after reallocating targets, keeping these checks out of steady frames.
+    if (sceneChanged || radianceChanged) {
+      if (gl.getError() !== gl.NO_ERROR) throw new Error('Background target resize failed');
+      for (const [changed, framebuffer] of [[sceneChanged, sceneFramebuffer],
+                                             [radianceChanged, rayRadianceFramebuffer]]) {
+        if (!changed) continue;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+          throw new Error('Resized background framebuffer is incomplete');
+        }
+      }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      sceneWidth = width;
+      sceneHeight = height;
+      if (radianceChanged) radianceSize = nextRadianceSize;
     }
     canvas.dataset.resolution = `${width}x${height}`;
     canvas.dataset.radianceResolution = `${radianceSize}x${radianceSize}`;
@@ -401,6 +417,10 @@
     canvas.dataset.framing = `${framing.x.toFixed(2)},${framing.y.toFixed(2)},${framing.span}`;
     resetMetrics();
     lastDraw = -Infinity;
+  }
+  function resizeAndSchedule() {
+    try { resize(); schedule(); }
+    catch (error) { fail(error); }
   }
   function bindTexture(program, name, unit, texture, target = gl.TEXTURE_2D) {
     gl.activeTexture(gl.TEXTURE0 + unit);
@@ -606,12 +626,12 @@
   }
   addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { resize(); schedule(); }, 120);
+    resizeTimer = setTimeout(resizeAndSchedule, 120);
   }, { passive: true });
   if ('ResizeObserver' in window) {
     const observer = new ResizeObserver(() => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => { resize(); schedule(); },120);
+      resizeTimer = setTimeout(resizeAndSchedule,120);
     });
     observer.observe(surface);
   }
@@ -651,9 +671,8 @@
   });
   addEventListener('pageshow', event => {
     if (event.persisted) {
-      resize(); lastDraw = -Infinity;
+      resizeAndSchedule(); lastDraw = -Infinity;
       if (ready) setState(reducedMotion.matches ? 'still' : 'ready');
-      schedule();
     }
   });
   initialize();
