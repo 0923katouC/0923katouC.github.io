@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="en"><meta charset="utf-8">
-<title>Disk characteristic GLSL regression</title>
+<title>Disk dynamics and material GLSL regression</title>
 <style>
 body{max-width:920px;margin:36px auto;padding:0 20px;background:#111827;color:#e5e7eb;font:15px/1.5 system-ui}
 button{padding:10px 18px;background:#38bdf8;color:#082f49;border:0;border-radius:6px;font-weight:700;cursor:pointer}
 button:disabled{opacity:.5}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#1f2937;padding:18px;border-radius:8px}
 [data-state=pass]{color:#86efac}[data-state=fail]{color:#fca5a5}canvas{display:none}small{color:#9ca3af}
 </style>
-<h1>Disk characteristic regression</h1>
-<p>Compiles the production <code>diskBirthCoordinates</code> GLSL helper and reads its floating-point GPU output. Expected motion comes from independent double-precision RK4 trajectories.</p>
+<h1>Disk dynamics and material regression</h1>
+<p>Compiles the production <code>diskBirthCoordinates</code> and <code>densityGrain</code> GLSL helpers and reads their floating-point GPU output. Expected motion comes from independent double-precision RK4 trajectories; paired material inputs check filtering, bounds and detail scaling.</p>
 <button id="run">Run GPU regression</button>
 <p id="status" data-state="idle">Ready. Shader URLs are relative to the server root; use <code>?base=/path/</code> to change that.</p>
 <pre id="results">No tests run.</pre>
@@ -51,10 +51,12 @@ function advanceRK4(r,theta,duration,spin,inflow){
 
 button.addEventListener('click',async()=>{
   button.disabled=true;statusNode.dataset.state='running';statusNode.textContent='Fetching and compiling production GLSL…';
-  window.regressionResult=null;const started=performance.now();let gl,program,texture,framebuffer,vao;
+  window.regressionResult=null;const started=performance.now();let gl,program,grainProgram,noiseTexture,texture,framebuffer,vao;
   const metrics={phaseSamples:0,velocitySamples:0,renewalSamples:0,maxBirthRadiusError:0,
     maxBirthAzimuthErrorRad:0,maxOmegaRelativeError:0,maxCharacteristicSpeedRelativeError:0,
-    minRecoveredAngularVelocity:Infinity,maxComplementWeightError:0,maxRenewalJump:0,maxRenewalSlope:0};
+    minRecoveredAngularVelocity:Infinity,maxComplementWeightError:0,maxRenewalJump:0,maxRenewalSlope:0,
+    grain:{samples:0,referenceSamples:0,positiveReferences:0,negativeReferences:0,referenceRMS:0,
+      referencePeak:0,maxAbsoluteValue:0,maxDisabledLeak:0,maxSpatialLeak:0,maxTemporalLeak:0,maxDetailScaleError:0}};
   try{
     const base=new URL(new URLSearchParams(location.search).get('base')||'/',location.href);
     const paths=['assets/shaders/npgs-render.frag','assets/js/academic-black-hole.js','assets/shaders/npgs-emission.glsl'];
@@ -81,8 +83,9 @@ button.addEventListener('click',async()=>{
       const shader=gl.createShader(type);gl.shaderSource(shader,text);gl.compileShader(shader);
       check(gl.getShaderParameter(shader,gl.COMPILE_STATUS),'GLSL compile failed:\n'+gl.getShaderInfoLog(shader));return shader;
     }
-    const vertex=compile(gl.VERTEX_SHADER,`#version 300 es
-      void main(){vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));gl_Position=vec4(p*2.0-1.0,0.0,1.0);}`);
+    const vertexSource=`#version 300 es
+      void main(){vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));gl_Position=vec4(p*2.0-1.0,0.0,1.0);}`;
+    const vertex=compile(gl.VERTEX_SHADER,vertexSource);
     const fragment=compile(gl.FRAGMENT_SHADER,`#version 300 es
       precision highp float;precision highp int;
       uniform vec4 uInput;layout(location=0) out vec4 outputData;
@@ -153,6 +156,87 @@ button.addEventListener('click',async()=>{
       metrics.maxRenewalSlope=Math.max(metrics.maxRenewalSlope,Math.abs((right-left)/(2*epsilon)));
       metrics.renewalSamples+=3;
     }
+
+    // Compile the actual material helper, not a JavaScript reimplementation.
+    // Explicit derivative inputs make its spatial/temporal rejection testable
+    // independently of fragment-quad derivatives and of the ODE assertions.
+    statusNode.textContent='Checking production density grain filtering and detail controls…';
+    await new Promise(requestAnimationFrame);
+    const grainFrequency=/const\s+vec2\s+GRAIN_FREQUENCY\s*=\s*[^;]+;/.exec(render);
+    check(grainFrequency,'Production GRAIN_FREQUENCY declaration not found.');
+    metrics.grain.frequencyDeclaration=grainFrequency[0];
+    const grainVertex=compile(gl.VERTEX_SHADER,vertexSource);
+    const grainFragment=compile(gl.FRAGMENT_SHADER,`#version 300 es
+      precision highp float;precision highp int;
+      uniform highp sampler3D uNoise;uniform float uGrainDetail;
+      uniform vec2 uBirth,uDr,uDphi;uniform float uPhaseRate;uniform vec3 uSeed;
+      layout(location=0) out vec4 outputData;
+      ${inflow.source}
+      ${grainFrequency[0]}
+      ${functionSource(emission,'PerlinNoise')}
+      ${functionSource(render,'densityGrain')}
+      void main(){outputData=vec4(densityGrain(uBirth,uDr,uDphi,uPhaseRate,uSeed),0.0,0.0,1.0);}`);
+    grainProgram=gl.createProgram();gl.attachShader(grainProgram,grainVertex);gl.attachShader(grainProgram,grainFragment);gl.linkProgram(grainProgram);
+    check(gl.getProgramParameter(grainProgram,gl.LINK_STATUS),'Grain GLSL link failed:\n'+gl.getProgramInfoLog(grainProgram));
+    gl.deleteShader(grainVertex);gl.deleteShader(grainFragment);gl.useProgram(grainProgram);
+    const grainUniforms=Object.fromEntries(['uNoise','uGrainDetail','uBirth','uDr','uDphi','uPhaseRate','uSeed'].map(name=>{
+      const uniform=gl.getUniformLocation(grainProgram,name);
+      check(uniform!==null,'Grain test input unexpectedly inactive: '+name);
+      return [name,uniform];
+    }));
+    // Same deterministic 32^3 R8 lattice and filtering as production makeNoise.
+    const lattice=new Uint8Array(32*32*32);
+    for(let z=0;z<32;++z)for(let y=0;y<32;++y)for(let x=0;x<32;++x){
+      const value=Math.sin(x*12.9898+y*78.233+z*213.765)*43758.5453;
+      lattice[x+32*(y+32*z)]=Math.round(255*(value-Math.floor(value)));
+    }
+    noiseTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_3D,noiseTexture);
+    gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    for(const axis of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T,gl.TEXTURE_WRAP_R])gl.texParameteri(gl.TEXTURE_3D,axis,gl.REPEAT);
+    gl.texImage3D(gl.TEXTURE_3D,0,gl.R8,32,32,32,0,gl.RED,gl.UNSIGNED_BYTE,lattice);
+    gl.uniform1i(grainUniforms.uNoise,0);
+    function grainSample(birth,seed,{dr=[0,0],dphi=[0,0],phaseRate=0,detail=1}={}){
+      gl.uniform2fv(grainUniforms.uBirth,birth);gl.uniform3fv(grainUniforms.uSeed,seed);
+      gl.uniform2fv(grainUniforms.uDr,dr);gl.uniform2fv(grainUniforms.uDphi,dphi);
+      gl.uniform1f(grainUniforms.uPhaseRate,phaseRate);gl.uniform1f(grainUniforms.uGrainDetail,detail);
+      gl.drawArrays(gl.TRIANGLES,0,3);gl.readPixels(0,0,1,1,gl.RGBA,gl.FLOAT,output);
+      check(Array.from(output).every(Number.isFinite),'Grain GPU output is nonfinite.');
+      check(Math.abs(output[3]-1)<1e-6,'Grain draw did not reach the readback target.');
+      const value=output[0];metrics.grain.samples++;
+      metrics.grain.maxAbsoluteValue=Math.max(metrics.grain.maxAbsoluteValue,Math.abs(value));
+      check(Math.abs(value)<=Math.max(0,detail)+2e-6,'Grain exceeds its detail-scaled [-1,1] bound.');
+      return value;
+    }
+    let grainSquareSum=0;
+    for(const seed of [[.37,7.25,11.9],[23.6,19.8,3.1]]){
+      for(const radius of [1.35,2.1,4.7,8.3])for(const angle of [-2.7,-.8,.4,2.2]){
+        const birth=[radius,angle],reference=grainSample(birth,seed);
+        metrics.grain.referenceSamples++;grainSquareSum+=reference*reference;
+        metrics.grain.referencePeak=Math.max(metrics.grain.referencePeak,Math.abs(reference));
+        if(reference>.01)metrics.grain.positiveReferences++;
+        if(reference<-.01)metrics.grain.negativeReferences++;
+        const muted=grainSample(birth,seed,{detail:0});
+        const reduced=grainSample(birth,seed,{detail:.35});
+        metrics.grain.maxDisabledLeak=Math.max(metrics.grain.maxDisabledLeak,Math.abs(muted));
+        metrics.grain.maxDetailScaleError=Math.max(metrics.grain.maxDetailScaleError,Math.abs(reduced-.35*reference));
+        // Each rejection uses the SAME coordinates/seed as a live reference;
+        // the two derivative axes and either sign of rapid flow are independent.
+        for(const derivatives of [{dr:[1,0]},{dr:[0,1]},{dphi:[1,0]},{dphi:[0,1]}]){
+          metrics.grain.maxSpatialLeak=Math.max(metrics.grain.maxSpatialLeak,Math.abs(grainSample(birth,seed,derivatives)));
+        }
+        for(const phaseRate of [-2,2])metrics.grain.maxTemporalLeak=Math.max(metrics.grain.maxTemporalLeak,
+          Math.abs(grainSample(birth,seed,{phaseRate})));
+      }
+    }
+    metrics.grain.referenceRMS=Math.sqrt(grainSquareSum/metrics.grain.referenceSamples);
+    check(metrics.grain.referenceRMS>.02&&metrics.grain.referencePeak>.05&&
+      metrics.grain.positiveReferences>0&&metrics.grain.negativeReferences>0,
+      'Resolved reference grain is absent or lacks signed variation; zero outputs cannot pass this test.');
+    const grainTolerance=2e-6;metrics.grain.tolerance=grainTolerance;
+    check(metrics.grain.maxDisabledLeak<grainTolerance,'uGrainDetail=0 does not disable grain.');
+    check(metrics.grain.maxSpatialLeak<grainTolerance,'Unresolved spatial grain is not rejected.');
+    check(metrics.grain.maxTemporalLeak<grainTolerance,'Fast temporal grain is not rejected.');
+    check(metrics.grain.maxDetailScaleError<grainTolerance,'uGrainDetail=.35 is not a linear scaling of the same reference.');
     check(gl.getError()===gl.NO_ERROR,'WebGL error occurred during readback.');
     // The 5-point composite Simpson rule has a bounded truncation error.
     // Independent double-precision estimates put the worst speed error near
@@ -168,14 +252,14 @@ button.addEventListener('click',async()=>{
     check(metrics.maxRenewalJump<tolerances.renewalJump&&metrics.maxRenewalSlope<tolerances.renewalSlope,'Renewal boundary is not smooth.');
     metrics.elapsedMs=performance.now()-started;
     window.regressionResult={status:'PASS',metrics};statusNode.dataset.state='pass';
-    statusNode.textContent='PASS — actual GLSL preserves birth coordinates and prograde motion; renewal windows are smooth.';
+    statusNode.textContent='PASS — actual GLSL preserves motion and smooth renewal; grain filtering, bounds and detail scaling pass.';
   }catch(error){
     metrics.elapsedMs=performance.now()-started;
     window.regressionResult={status:'FAIL',error:String(error.stack||error),metrics};
     statusNode.dataset.state='fail';statusNode.textContent='FAIL — '+error.message;
   }finally{
     resultNode.textContent=JSON.stringify(window.regressionResult,null,2);button.disabled=false;
-    if(gl){if(framebuffer)gl.deleteFramebuffer(framebuffer);if(texture)gl.deleteTexture(texture);if(program)gl.deleteProgram(program);if(vao)gl.deleteVertexArray(vao);}
+    if(gl){if(framebuffer)gl.deleteFramebuffer(framebuffer);if(texture)gl.deleteTexture(texture);if(noiseTexture)gl.deleteTexture(noiseTexture);if(program)gl.deleteProgram(program);if(grainProgram)gl.deleteProgram(grainProgram);if(vao)gl.deleteVertexArray(vao);}
   }
 });
 </script>

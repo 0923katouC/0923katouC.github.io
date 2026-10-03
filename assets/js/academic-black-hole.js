@@ -6,7 +6,7 @@
   'use strict';
   const canvas = document.getElementById('academic-black-hole');
   if (!canvas) return;
-  const VERSION = '20261003-filaments1';
+  const VERSION = '20261003-volume7';
   const baseUrl = new URL('../shaders/', document.currentScript.src);
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobile = matchMedia('(max-width: 820px), (pointer: coarse)');
@@ -14,7 +14,7 @@
   const surface = canvas.closest('.cosmos-bg') || canvas;
   let framing = {x:.58,y:.52,span:20};
   let revealUntil = 0;
-  const HEADER = '#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\n';
+  const HEADER = '#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\nprecision highp usampler2D;\n';
   const VERTEX = `
     out vec2 vUv;
     void main() {
@@ -29,6 +29,9 @@
     const float DISK_INNER = 1.28671550559;
     const float DISK_OUTER = 9.0;
     const float MAP_SPAN = 48.0;
+    float volumeHalfHeight(float r) {
+      return 0.45 + 0.075 * max(r - 3.0, 0.0);
+    }
     // Invertible ray-grid refinement: spend more actual rays near the hole.
     vec2 mapToPlane(vec2 uv) {
       vec2 q = uv * 2.0 - 1.0;
@@ -48,7 +51,7 @@
   `;
   canvas.dataset.renderer = 'npgs-kerr';
   canvas.dataset.version = VERSION;
-  canvas.dataset.scene = 'black-hole-only';
+  canvas.dataset.scene = 'volumetric-black-hole';
   document.body.classList.add('academic-cosmos-fallback');
   let gl;
   try {
@@ -61,24 +64,34 @@
     canvas.dataset.state = 'fallback';
     return;
   }
-  const shaderNames = ['npgs-kerr.glsl', 'npgs-emission.glsl', 'npgs-trace.frag',
-                       'npgs-render.frag', 'npgs-compose.frag'];
+  const shaderNames = ['npgs-kerr.glsl', 'npgs-emission.glsl', 'npgs-volume-trace.vert',
+                       'npgs-render.frag', 'npgs-compose.frag', 'npgs-project.frag'];
   let sources;
   let generation = 0;
   let programs = [];
   let textures = [];
   let framebuffers = [];
   let vao;
-  let trace, render, compose;
-  let maps = [];
+  let trace, render, project, compose;
+  let rayBuffer;
+  let rayFeedback;
+  let rayCache;
+  let cacheWidth = 0;
+  let cacheHeight = 0;
+  let cacheBytes = 0;
+  let nodeCount = 8;
+  let rayStrideBytes = 0;
+  let totalRays = 0;
   let noise;
+  let rayRadiance;
+  let rayRadianceFramebuffer;
+  let radianceSize = 0;
   let scene;
   let sceneWidth = 0;
   let sceneHeight = 0;
-  let mapFramebuffer;
   let sceneFramebuffer;
   let mapSize = 0;
-  let completedRows = 0;
+  let completedRays = 0;
   let ready = false;
   let failed = false;
   let raf = 0;
@@ -120,12 +133,12 @@
     release();
     console.warn('NPGS background: using the rendered fallback frame.', error);
   };
-  function makeProgram(fragment, names) {
+  function linkProgram(vertexSource, fragmentSource, names, varyings) {
     const shaders = [];
     const program = gl.createProgram();
     programs.push(program);
-    for (const [type, source] of [[gl.VERTEX_SHADER, HEADER + VERTEX],
-                                  [gl.FRAGMENT_SHADER, HEADER + fragment]]) {
+    for (const [type, source] of [[gl.VERTEX_SHADER, vertexSource],
+                                  [gl.FRAGMENT_SHADER, fragmentSource]]) {
       const shader = gl.createShader(type);
       shaders.push(shader);
       gl.shaderSource(shader, source);
@@ -137,11 +150,120 @@
       }
       gl.attachShader(program, shader);
     }
+    if (varyings) gl.transformFeedbackVaryings(program, varyings, gl.INTERLEAVED_ATTRIBS);
     gl.linkProgram(program);
     shaders.forEach(shader => gl.deleteShader(shader));
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
     const uniforms = Object.fromEntries(names.map(name => [name, gl.getUniformLocation(program, name)]));
     return { handle: program, uniforms };
+  }
+  function makeProgram(fragment, names) {
+    return linkProgram(HEADER + VERTEX, HEADER + fragment, names);
+  }
+  function makeTraceProgram() {
+    const varyings = Array.from({ length: nodeCount }, (_, index) => `vNode${index}`).concat('vSky');
+    const prefix = HEADER + `#define NODE_COUNT ${nodeCount}\n` + SCENE + sources[0];
+    const program = linkProgram(prefix + sources[2],
+      HEADER + 'out vec4 fragColor; void main() { fragColor = vec4(0.0); }',
+      ['uMapSize', 'uRayOffset'], varyings);
+    if (gl.getProgramParameter(program.handle, gl.TRANSFORM_FEEDBACK_VARYINGS) !== varyings.length) {
+      throw new Error('Ray-cache transform-feedback layout is incomplete');
+    }
+    varyings.forEach((name, index) => {
+      const info = gl.getTransformFeedbackVarying(program.handle, index);
+      if (!info || info.name !== name || info.size !== 1 || info.type !== gl.UNSIGNED_INT_VEC4) {
+        throw new Error(`Ray-cache varying has the wrong packed type: ${name}`);
+      }
+    });
+    if (location(program, 'uMapSize') === null || location(program, 'uRayOffset') === null) {
+      throw new Error('Ray-cache trace inputs are unavailable');
+    }
+    return program;
+  }
+  function allocateRayCache() {
+    const low = lowPower();
+    const maximum = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    const maximumComponents = gl.getParameter(gl.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS);
+    nodeCount = low ? 6 : economyDesktop() ? 8 : 12;
+    if (maximumComponents < 4 * (nodeCount + 1)) nodeCount = 6;
+    if (maximumComponents < 4 * (nodeCount + 1)) throw new Error('Packed transform feedback unavailable');
+    const desired = low ? 384 : economyDesktop() ? 640 : 960;
+    // One RGBA32UI texel stores eight packed half-floats. N nodes and one
+    // sky record are contiguous for every ray, independent of atlas rows.
+    mapSize = Math.min(desired, Math.floor(maximum / Math.sqrt(nodeCount + 1)));
+    if (mapSize < 1) throw new Error('Ray cache exceeds texture limits');
+    totalRays = mapSize * mapSize;
+    const texels = totalRays * (nodeCount + 1);
+    cacheWidth = Math.min(maximum, mapSize * (nodeCount + 1));
+    cacheHeight = Math.ceil(texels / cacheWidth);
+    if (cacheHeight > maximum) throw new Error('Ray-cache atlas exceeds texture limits');
+    rayStrideBytes = 16 * (nodeCount + 1);
+    // Padding covers the final partial atlas row, so the PBO upload never
+    // reads beyond the allocation. BufferData provides initialized storage.
+    cacheBytes = cacheWidth * cacheHeight * 16;
+    rayBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER, rayBuffer);
+    gl.bufferData(gl.TRANSFORM_FEEDBACK_BUFFER, cacheBytes, gl.STATIC_COPY);
+    gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER, null);
+    rayFeedback = gl.createTransformFeedback();
+    rayCache = gl.createTexture();
+    textures.push(rayCache);
+    gl.bindTexture(gl.TEXTURE_2D, rayCache);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32UI, cacheWidth, cacheHeight);
+    if (gl.getError() !== gl.NO_ERROR) throw new Error('Ray-cache allocation failed');
+    canvas.dataset.qualityTier = low ? 'mobile' : economyDesktop() ? 'economy' : 'desktop';
+    canvas.dataset.mapResolution = `${mapSize}x${mapSize}`;
+    canvas.dataset.nodeCount = String(nodeCount);
+    canvas.dataset.cacheResolution = `${cacheWidth}x${cacheHeight}`;
+    canvas.dataset.rayCacheBytes = String(cacheBytes);
+    canvas.dataset.tracePeakCacheBytes = String(2 * cacheBytes);
+    canvas.dataset.cacheLayout = `RGBA32UI; ray-major; ${nodeCount + 1} texels/ray`;
+  }
+  function traceRayBatch(count) {
+    gl.useProgram(trace.handle);
+    gl.uniform2f(location(trace, 'uMapSize'), mapSize, mapSize);
+    gl.uniform1i(location(trace, 'uRayOffset'), completedRays);
+    gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, rayFeedback);
+    // All offsets/lengths are multiples of 16, satisfying TF's 4-byte rule.
+    gl.bindBufferRange(gl.TRANSFORM_FEEDBACK_BUFFER, 0, rayBuffer,
+      completedRays * rayStrideBytes, count * rayStrideBytes);
+    gl.enable(gl.RASTERIZER_DISCARD);
+    let active = false;
+    try {
+      gl.beginTransformFeedback(gl.POINTS);
+      active = true;
+      gl.drawArrays(gl.POINTS, 0, count);
+    } finally {
+      if (active) gl.endTransformFeedback();
+      gl.disable(gl.RASTERIZER_DISCARD);
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+      gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
+      gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER, null);
+    }
+  }
+  function uploadRayCache() {
+    // GPU-to-GPU transfer: no getBufferSubData/readPixels or CPU staging copy.
+    gl.bindTexture(gl.TEXTURE_2D, rayCache);
+    gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, rayBuffer);
+    try {
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+      gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
+      gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, cacheWidth, cacheHeight,
+        gl.RGBA_INTEGER, gl.UNSIGNED_INT, 0);
+    } finally {
+      gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, null);
+    }
+    if (gl.getError() !== gl.NO_ERROR) throw new Error('Packed ray-cache upload failed');
+    // Upload commands retain the buffer until consumed by the GPU. Drop our
+    // references immediately so the steady scene holds only the atlas copy.
+    gl.deleteTransformFeedback(rayFeedback); rayFeedback = null;
+    gl.deleteBuffer(rayBuffer); rayBuffer = null;
   }
   function makeTexture(width, height, filter = gl.LINEAR) {
     const texture = gl.createTexture();
@@ -218,7 +340,7 @@
   function resize() {
     if (!scene || gl.isContextLost()) return;
     const low = lowPower();
-    const cap = (low ? 230000 : economyDesktop() ? 1100000 : 2100000) * scale * scale;
+    const cap = (low ? 230000 : economyDesktop() ? 700000 : 1500000) * scale * scale;
     const dpr = Math.min(devicePixelRatio || 1, low ? 1 : 1.5);
     const bounds = surface.getBoundingClientRect();
     const style = getComputedStyle(surface);
@@ -245,7 +367,19 @@
       sceneWidth = width;
       sceneHeight = height;
     }
+    // Reduce the expensive volume pass together with the output, while keeping
+    // the geometry atlas intact. The shader selects exact cached rays from
+    // this coarser image grid; no new geodesic integration is needed.
+    const nextRadianceSize = Math.max(1, Math.round(mapSize * scale));
+    if (rayRadiance && radianceSize !== nextRadianceSize) {
+      gl.bindTexture(gl.TEXTURE_2D, rayRadiance);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, nextRadianceSize, nextRadianceSize,
+        0, gl.RGBA, gl.HALF_FLOAT, null);
+      radianceSize = nextRadianceSize;
+    }
     canvas.dataset.resolution = `${width}x${height}`;
+    canvas.dataset.radianceResolution = `${radianceSize}x${radianceSize}`;
+    canvas.dataset.radianceMapBytes = String(radianceSize * radianceSize * 8);
     canvas.dataset.qualityScale = scale.toFixed(2);
     canvas.dataset.framing = `${framing.x.toFixed(2)},${framing.y.toFixed(2)},${framing.span}`;
     resetMetrics();
@@ -279,51 +413,66 @@
       pendingQuery = gl.createQuery();
       gl.beginQuery(timerExtension.TIME_ELAPSED_EXT, pendingQuery);
     }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFramebuffer);
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.useProgram(render.handle);
-    ['uDiskNear', 'uDiskFar', 'uSky'].forEach((name, index) => bindTexture(render, name, index, maps[index]));
-    bindTexture(render, 'uNoise', 3, noise, gl.TEXTURE_3D);
-    gl.uniform2f(location(render, 'uResolution'), canvas.width, canvas.height);
-    gl.uniform2f(location(render, 'uCenter'), framing.x, framing.y);
-    gl.uniform1f(location(render, 'uViewSpan'), framing.span);
-    gl.uniform1f(location(render, 'uTime'), elapsed);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.useProgram(compose.handle);
-    bindTexture(compose, 'uScene', 0, scene);
-    gl.uniform2f(location(compose, 'uTexel'), 1 / canvas.width, 1 / canvas.height);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    if (timed) gl.endQuery(timerExtension.TIME_ELAPSED_EXT);
+    try {
+      // Integrate one exact cached ray per radiance pixel, with adaptive pixel
+      // density. Filter only radiance, never nodes from different passages.
+      gl.bindFramebuffer(gl.FRAMEBUFFER, rayRadianceFramebuffer);
+      gl.viewport(0, 0, radianceSize, radianceSize);
+      gl.useProgram(render.handle);
+      bindTexture(render, 'uRayCache', 0, rayCache);
+      bindTexture(render, 'uNoise', 1, noise, gl.TEXTURE_3D);
+      gl.uniform2f(location(render, 'uMapSize'), mapSize, mapSize);
+      gl.uniform2f(location(render, 'uRadianceResolution'), radianceSize, radianceSize);
+      gl.uniform1i(location(render, 'uCacheWidth'), cacheWidth);
+      gl.uniform1i(location(render, 'uNodeCount'), nodeCount);
+      gl.uniform1f(location(render, 'uTime'), elapsed);
+      gl.uniform1f(location(render, 'uGrainDetail'), lowPower() ? 0.35 : 1.0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFramebuffer);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.useProgram(project.handle);
+      bindTexture(project, 'uRadiance', 0, rayRadiance);
+      bindTexture(project, 'uNoise', 1, noise, gl.TEXTURE_3D);
+      gl.uniform2f(location(project, 'uResolution'), canvas.width, canvas.height);
+      gl.uniform2f(location(project, 'uCenter'), framing.x, framing.y);
+      gl.uniform1f(location(project, 'uViewSpan'), framing.span);
+      gl.uniform2f(location(project, 'uRadianceResolution'), radianceSize, radianceSize);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.useProgram(compose.handle);
+      bindTexture(compose, 'uScene', 0, scene);
+      gl.uniform2f(location(compose, 'uTexel'), 1 / canvas.width, 1 / canvas.height);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    } finally {
+      if (timed) gl.endQuery(timerExtension.TIME_ELAPSED_EXT);
+    }
   }
   function tick(now) {
     raf = 0;
     if (document.hidden || gl.isContextLost() || failed || !trace) return;
     try {
-      if (completedRows < mapSize) {
+      if (completedRays < totalRays) {
         if (traceQuery && gl.getQueryParameter(traceQuery, gl.QUERY_RESULT_AVAILABLE)) {
           const disjoint = gl.getParameter(timerExtension.GPU_DISJOINT_EXT);
           const ms = gl.getQueryParameter(traceQuery, gl.QUERY_RESULT) / 1e6;
           gl.deleteQuery(traceQuery); traceQuery = null;
-          if (!disjoint) traceRows = Math.max(1, Math.min(lowPower() ? 6 : 10, Math.round(traceRows * 8 / Math.max(ms, .1))));
+          if (!disjoint) traceRows = Math.max(1, Math.min(lowPower() ? 4 : 8, Math.round(traceRows * 8 / Math.max(ms, .1))));
         }
-        // Trace only the two disk images and escaped sky rays in one pass.
+        // Each vertex traces one ray and writes its ordered packed nodes.
         const timedTrace = timerExtension && !traceQuery;
         if (timedTrace) { traceQuery = gl.createQuery(); gl.beginQuery(timerExtension.TIME_ELAPSED_EXT, traceQuery); }
-        const rows = Math.min(traceRows, mapSize - completedRows);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, mapFramebuffer);
-        gl.viewport(0, 0, mapSize, mapSize);
-        gl.useProgram(trace.handle);
-        gl.uniform2f(location(trace, 'uMapSize'), mapSize, mapSize);
-        gl.enable(gl.SCISSOR_TEST);
-        gl.scissor(0, completedRows, mapSize, rows);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-        gl.disable(gl.SCISSOR_TEST);
-        if (timedTrace) gl.endQuery(timerExtension.TIME_ELAPSED_EXT);
-        completedRows += rows;
-        canvas.dataset.traceProgress = (100 * completedRows / mapSize).toFixed(0);
-        if (completedRows < mapSize) { schedule(); return; }
-        if (gl.getError() !== gl.NO_ERROR) throw new Error('Transfer-map rendering failed');
+        const rays = Math.min(traceRows * mapSize, totalRays - completedRays);
+        try { traceRayBatch(rays); }
+        finally { if (timedTrace) gl.endQuery(timerExtension.TIME_ELAPSED_EXT); }
+        if (completedRays === 0 && gl.getError() !== gl.NO_ERROR) {
+          throw new Error('The first ray-cache transform-feedback batch failed');
+        }
+        completedRays += rays;
+        canvas.dataset.traceProgress = (100 * completedRays / totalRays).toFixed(0);
+        if (completedRays < totalRays) { schedule(); return; }
+        if (gl.getError() !== gl.NO_ERROR) throw new Error('Ray-cache transform feedback failed');
+        uploadRayCache();
+        if (traceQuery) { gl.deleteQuery(traceQuery); traceQuery = null; }
         ready = true;
         canvas.dataset.traceWallMs = (performance.now() - traceStarted).toFixed(0);
         draw();
@@ -361,13 +510,24 @@
     pendingQuery = null;
     if (traceQuery) gl.deleteQuery(traceQuery);
     traceQuery = null;
+    gl.disable(gl.RASTERIZER_DISCARD);
+    gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
+    gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER, null);
+    gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, null);
+    if (rayFeedback) gl.deleteTransformFeedback(rayFeedback);
+    if (rayBuffer) gl.deleteBuffer(rayBuffer);
+    rayFeedback = null; rayBuffer = null; rayCache = null;
     textures.forEach(texture => gl.deleteTexture(texture));
     framebuffers.forEach(framebuffer => gl.deleteFramebuffer(framebuffer));
     programs.forEach(program => gl.deleteProgram(program));
     if (vao) gl.deleteVertexArray(vao);
     textures = []; framebuffers = []; programs = [];
+    rayRadiance = null; rayRadianceFramebuffer = null;
+    radianceSize = 0;
     scene = null;
     vao = null;
+    trace = null; render = null; project = null; compose = null;
+    ready = false;
   }
   async function initialize() {
     const currentGeneration = ++generation;
@@ -394,34 +554,30 @@
       if (!gl.getExtension('EXT_color_buffer_float')) throw new Error('Floating-point targets unavailable');
       timerExtension = gl.getExtension('EXT_disjoint_timer_query_webgl2');
       release();
-      if (gl.getParameter(gl.MAX_DRAW_BUFFERS) < 3 || gl.getParameter(gl.MAX_COLOR_ATTACHMENTS) < 3) throw new Error('Three render targets unavailable');
       vao = gl.createVertexArray();
       gl.bindVertexArray(vao);
       gl.disable(gl.DEPTH_TEST);
       gl.disable(gl.BLEND);
       gl.disable(gl.DITHER);
-      trace = makeProgram(SCENE + sources[0] + sources[2], ['uMapSize']);
+      allocateRayCache();
+      trace = makeTraceProgram();
       render = makeProgram(SCENE + sources[1] + sources[3],
-        ['uDiskNear', 'uDiskFar', 'uSky', 'uNoise', 'uResolution', 'uCenter', 'uViewSpan', 'uTime']);
+        ['uRayCache', 'uMapSize', 'uRadianceResolution', 'uCacheWidth', 'uNodeCount', 'uNoise', 'uTime', 'uGrainDetail']);
+      project = makeProgram(SCENE + sources[1] + sources[5],
+        ['uRadiance', 'uNoise', 'uResolution', 'uCenter', 'uViewSpan', 'uRadianceResolution']);
       compose = makeProgram(sources[4], ['uScene', 'uTexel']);
-      mapSize = lowPower() ? 512 : economyDesktop() ? 832 : 1536;
-      canvas.dataset.qualityTier = lowPower() ? 'mobile' : economyDesktop() ? 'economy' : 'desktop';
-      mapSize = Math.min(mapSize, gl.getParameter(gl.MAX_TEXTURE_SIZE));
-      canvas.dataset.mapResolution = `${mapSize}x${mapSize}`;
-      maps = Array.from({ length: 3 }, () => makeTexture(mapSize, mapSize, gl.NEAREST));
-      for (const texture of maps.slice(2)) {
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      }
-      mapFramebuffer = makeFramebuffer(maps);
       noise = makeNoise();
+      rayRadiance = makeTexture(1, 1);
+      radianceSize = 1;
+      rayRadianceFramebuffer = makeFramebuffer([rayRadiance]);
       scene = makeTexture(1, 1);
       sceneWidth = sceneHeight = 1;
       sceneFramebuffer = makeFramebuffer([scene]);
-      completedRows = 0;
-      traceRows = 4;
+      completedRays = 0;
+      traceRows = lowPower() ? 1 : 2;
       traceStarted = performance.now();
+      tracePausedAt = document.hidden ? traceStarted : 0;
+      canvas.dataset.traceProgress = '0';
       resize();
       setState('tracing');
       schedule();
@@ -455,11 +611,18 @@
     ++generation;
     stop(); ready = false;
     pendingQuery = null; traceQuery = null;
+    rayFeedback = null; rayBuffer = null; rayCache = null;
+    rayRadiance = null; rayRadianceFramebuffer = null;
+    radianceSize = 0;
+    trace = null; render = null; project = null; compose = null;
     setState('context-lost');
     document.body.classList.add('academic-cosmos-fallback');
   });
   canvas.addEventListener('webglcontextrestored', () => {
     textures = []; framebuffers = []; programs = []; vao = null; pendingQuery = null;
+    rayFeedback = null; rayBuffer = null; rayCache = null;
+    rayRadiance = null; rayRadianceFramebuffer = null;
+    radianceSize = 0;
     scene = null;
     initialize();
   });

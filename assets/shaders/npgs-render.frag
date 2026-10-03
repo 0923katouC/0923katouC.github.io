@@ -1,16 +1,16 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Animated emission on stationary Kerr transfer maps; adapted from NPGS.
- * Thin-disk surface approximation, two images, a luminous differentially rotating accretion disk.
+ * Finite-height cloud emission along cached, numerically integrated Kerr rays.
+ * Ordered proper-length volume samples, with front-to-back absorption.
  */
 in vec2 vUv;
 out vec4 fragColor;
-uniform sampler2D uDiskNear;
-uniform sampler2D uDiskFar;
-uniform sampler2D uSky;
-uniform vec2 uResolution;
-uniform vec2 uCenter;
-uniform float uViewSpan;
+uniform highp usampler2D uRayCache;
+uniform vec2 uMapSize;
+uniform vec2 uRadianceResolution;
+uniform int uCacheWidth;
+uniform int uNodeCount;
 uniform float uTime;
+uniform float uGrainDetail;
 
 float hash21(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -52,33 +52,18 @@ vec3 background(vec3 direction) {
                  + starLayer(uv, 135.0, 83.0 * face) * 0.35;
 }
 
-vec4 diskSample(sampler2D map, vec2 uv, out float coverage) {
-    // Interpolate only valid hits. Zero sentinels must not drag disk coordinates
-    // towards the origin at a silhouette edge or create a false glowing ring.
-    ivec2 size = textureSize(map, 0);
-    vec2 q = clamp(uv * vec2(size) - 0.5, vec2(0.0), vec2(size - 1));
-    ivec2 base = ivec2(floor(q));
-    ivec2 next = min(base + 1, size - 1);
-    vec2 f = fract(q);
-    vec4 a = texelFetch(map, base, 0);
-    vec4 b = texelFetch(map, ivec2(next.x, base.y), 0);
-    vec4 c = texelFetch(map, ivec2(base.x, next.y), 0);
-    vec4 d = texelFetch(map, next, 0);
-    vec4 w = vec4((1.0-f.x)*(1.0-f.y), f.x*(1.0-f.y), (1.0-f.x)*f.y, f.x*f.y);
-    w *= step(vec4(0.001), vec4(a.w, b.w, c.w, d.w));
-    coverage = dot(w, vec4(1.0));
-    if (coverage < 0.001) return vec4(0.0);
-    // Distinct images close to the photon ring must not interpolate through
-    // unrelated azimuths. Select the nearest valid sample across such seams.
-    vec4 nearest = w.x > w.y ? a : b;
-    float best = max(w.x, w.y);
-    if (w.z > best) { nearest = c; best = w.z; }
-    if (w.w > best) nearest = d;
-    if ((a.w > 0.0 && distance(a.xy, nearest.xy) > 1.8) ||
-        (b.w > 0.0 && distance(b.xy, nearest.xy) > 1.8) ||
-        (c.w > 0.0 && distance(c.xy, nearest.xy) > 1.8) ||
-        (d.w > 0.0 && distance(d.xy, nearest.xy) > 1.8)) return nearest;
-    return (a*w.x + b*w.y + c*w.z + d*w.w) / coverage;
+struct RayNode { vec4 positionTime; vec4 transfer; };
+RayNode readNode(ivec2 ray, int index) {
+    int slot = (ray.y*int(uMapSize.x)+ray.x)*(uNodeCount+1)+index;
+    uvec4 encoded = texelFetch(uRayCache,ivec2(slot%uCacheWidth,slot/uCacheWidth),0);
+    RayNode node;
+    node.positionTime = vec4(unpackHalf2x16(encoded.x),unpackHalf2x16(encoded.y));
+    node.transfer = vec4(unpackHalf2x16(encoded.z),unpackHalf2x16(encoded.w));
+    return node;
+}
+float volumeRadius(vec3 p) {
+    float b=dot(p,p)-PHYSICAL_A*PHYSICAL_A;
+    return sqrt(max(0.0,0.5*(b+sqrt(b*b+4.0*PHYSICAL_A*PHYSICAL_A*p.y*p.y))));
 }
 
 // Emission features have a finite lifetime, as turbulent structures do.
@@ -110,19 +95,37 @@ vec2 diskBirthCoordinates(float r, float theta, float age) {
 // Anisotropic polar noise: fine radial structure, long azimuthal filaments.
 // Based on NPGS's separate radial/azimuthal coordinates, without circular
 // noise embedding or noise-displaced sine contours that produced eye shapes.
-float polarDiskNoise(vec2 point, vec2 dx, vec2 dy, vec3 seed) {
+float polarDiskNoise(vec3 point, vec3 dx, vec3 dy, vec3 seed) {
     float accumulation = 1.0;
     for (int i=0;i<3;++i) {
         float frequency = pow(3.0,float(i)+2.0);
         float footprint = max(length(dx),length(dy))*frequency;
         float weight = (1.0-smoothstep(0.2,0.8,footprint)) * (i==2 ? 0.45 : 1.0);
-        float value = PerlinNoise(vec3(point.x*frequency,seed.y,point.y*frequency)+seed);
+        float value = PerlinNoise(point*frequency+seed+vec3(0.0,seed.y,0.0));
         accumulation *= 1.0 + 0.1*value*weight;
     }
     return log(1.0+pow(accumulation,28.0));
 }
-float diskFeature(float r, float theta, float time, float offset,
-                  vec2 dr, vec2 dtheta, vec2 dt) {
+// A separate, zero-mean density field supplies resolvable material grains.
+// It shares the cloud's birth coordinates: no screen-space or per-frame noise.
+const vec2 GRAIN_FREQUENCY = vec2(10.0,8.0);
+const float GRAIN_EMISSION_CONTRAST = 0.65;
+const float GRAIN_DENSITY_CONTRAST = 0.38;
+float densityGrain(vec2 birth, vec2 dr, vec2 dphi, float phaseRate, vec3 seed) {
+    vec2 dx = GRAIN_FREQUENCY*vec2(dr.x,dphi.x);
+    vec2 dy = GRAIN_FREQUENCY*vec2(dr.y,dphi.y);
+    float spatial = max(length(dx),length(dy));
+    // Limit motion per 30 Hz frame as well as the spatial pixel footprint.
+    float temporal = length(GRAIN_FREQUENCY*vec2(INFLOW_SPEED,phaseRate))*3.6/30.0;
+    float filterWeight = 1.0-smoothstep(0.25,0.95,max(spatial,temporal));
+    if (filterWeight <= 0.0 || uGrainDetail <= 0.0) return 0.0;
+    vec2 q = GRAIN_FREQUENCY*birth + seed.xz + vec2(7.1,19.3);
+    // Integer Y samples one lattice plane instead of averaging two planes.
+    float grain = PerlinNoise(vec3(q.x,floor(seed.y),q.y));
+    return grain*filterWeight*uGrainDetail;
+}
+vec2 diskFeature(float r, float theta, float height, float time, float offset,
+                  vec2 dr, vec2 dtheta, vec2 dy, vec2 dt) {
     float cycle = floor((time + offset) / FEATURE_LIFETIME);
     float age = mod(time + offset, FEATURE_LIFETIME);
     vec2 birth = diskBirthCoordinates(r,theta,age);
@@ -139,78 +142,108 @@ float diskFeature(float r, float theta, float time, float offset,
     vec2 dPhase = dtheta - (birthOmega-omega)/INFLOW_SPEED*dr
                   - birthOmega*dt - spiral.y*dBirthR;
     float phi = atan(sin(phase),cos(phase));
-    vec2 point = vec2(0.18*birthR,0.055*phi);
-    vec2 dx = vec2(0.18*dBirthR.x,0.055*dPhase.x);
-    vec2 dy = vec2(0.18*dBirthR.y,0.055*dPhase.y);
-    float noise = polarDiskNoise(point,dx,dy,seedOffset);
+    // Material follows a fixed relative height in the gently flared disk.
+    float relativeHeight=height/volumeHalfHeight(r);
+    vec2 dRelativeHeight=(dy-relativeHeight*0.075*step(3.0,r)*dr)/volumeHalfHeight(r);
+    float birthHeight=relativeHeight*volumeHalfHeight(birthR);
+    vec2 dBirthHeight=volumeHalfHeight(birthR)*dRelativeHeight
+                      +relativeHeight*0.075*step(3.0,birthR)*dBirthR;
+    vec3 point = vec3(0.18*birthR,0.14*birthHeight,0.055*phi);
+    vec3 dx = vec3(0.18*dBirthR.x,0.14*dBirthHeight.x,0.055*dPhase.x);
+    vec3 ddy = vec3(0.18*dBirthR.y,0.14*dBirthHeight.y,0.055*dPhase.y);
+    float noise = polarDiskNoise(point,dx,ddy,seedOffset);
+    float phaseRate = -birthOmega-spiral.y*INFLOW_SPEED;
+    float grain = densityGrain(vec2(birthR,phi),dBirthR,dPhase,phaseRate,seedOffset);
     // Match opposite sides of the atan branch cut with a C1-continuous blend.
     // Noise gradients use the unwrapped angle, never the wrapped phi jump.
     float seam = 0.35;
     if (phi < -kPi+seam) {
-        float wrapped = polarDiskNoise(point+vec2(0.0,0.055*2.0*kPi),dx,dy,seedOffset);
-        noise = mix(wrapped,noise,smoothstep(-kPi,-kPi+seam,phi));
+        float wrapped = polarDiskNoise(point+vec3(0.0,0.0,0.055*2.0*kPi),dx,ddy,seedOffset);
+        float wrappedGrain = densityGrain(vec2(birthR,phi+2.0*kPi),dBirthR,dPhase,phaseRate,seedOffset);
+        float blend = smoothstep(-kPi,-kPi+seam,phi);
+        noise = mix(wrapped,noise,blend);
+        grain = mix(wrappedGrain,grain,blend);
     }
-    return clamp(0.30+1.0*noise,0.30,1.80);
+    return vec2(clamp(0.30+noise,0.30,1.80),grain);
 }
-float diskTexture(vec4 hit, float r) {
+vec2 diskTexture(vec4 hit, float r, float height) {
     float time = uTime*3.6 + hit.z; // Backward ray integration gives t_emit < t_obs.
     float theta = atan(hit.x,hit.y); // +y spin: tangent (z,0,-x), as in p_phi.
     vec2 dr = vec2(dFdx(r),dFdy(r));
     vec2 tangent = vec2(hit.y,-hit.x)/max(dot(hit.xy,hit.xy),1e-6);
     vec2 dtheta = vec2(dot(tangent,dFdx(hit.xy)),dot(tangent,dFdy(hit.xy)));
     vec2 dt = vec2(dFdx(time),dFdy(time));
+    vec2 dy = vec2(dFdx(height),dFdy(height));
     float age = mod(time,FEATURE_LIFETIME);
     float weight = pow(sin(kPi*age/FEATURE_LIFETIME),2.0);
-    float a = diskFeature(r,theta,time,0.0,dr,dtheta,dt);
-    float b = diskFeature(r,theta,time,FEATURE_LIFETIME*0.5,dr,dtheta,dt);
+    vec2 a = diskFeature(r,theta,height,time,0.0,dr,dtheta,dy,dt);
+    vec2 b = diskFeature(r,theta,height,time,FEATURE_LIFETIME*0.5,dr,dtheta,dy,dt);
     // Complementary smooth windows prevent a visible reset or blank interval.
-    return weight*a + (1.0-weight)*b;
+    vec2 material = weight*a + (1.0-weight)*b;
+    // Preserve the variance of centered fine detail during population mixing.
+    // The positive cloud brightness keeps the original 1.0BH interpolation.
+    material.y /= sqrt(weight*weight + (1.0-weight)*(1.0-weight));
+    return material;
 }
 
-vec4 diskEmission(vec4 hit, float coverage, float imageOrder) {
-    if (coverage < 0.001 || hit.w <= 0.0) return vec4(0.0);
-    float r = sqrt(max(0.0, dot(hit.xy, hit.xy) - PHYSICAL_A * PHYSICAL_A));
-    if (r <= DISK_INNER || r >= DISK_OUTER) return vec4(0.0);
-    float radial = (r - DISK_INNER) / (DISK_OUTER - DISK_INNER);
-    float textureValue = diskTexture(hit,r);
-    float envelope = Shape(radial, 0.9, 1.5);
-    // NPGS's standard thin-disk T(r), normalized here for a warm visible palette.
-    // This is an artistic temperature scale, not an observed physical spectrum.
-    float tempProfile = pow(pow(DISK_INNER / r, 3.0) *
-                            max(0.0, 1.0 - sqrt(DISK_INNER / r)) / 0.05665278, 0.25);
-    float temperature = max(900.0, 5800.0 * tempProfile * pow(hit.w, 0.65));
-    vec3 color = KelvinToRgb(temperature);
-    float emission = (0.22 + 1.65 * pow(tempProfile, 1.4)) * textureValue;
-    emission *= (0.24 + 0.76 * envelope) * min(pow(hit.w, 2.5), 2.8);
-    emission *= 1.0 + 0.24 * imageOrder;
-    float edge = smoothstep(0.0, 0.025, radial) * (1.0 - smoothstep(0.82, 1.0, radial));
-    float alpha = coverage * edge * (0.90 + 0.08 * envelope);
-    return vec4(color * emission * alpha * 1.65, alpha);
+vec4 volumeEmission(RayNode node) {
+    float shift=node.transfer.x, lengthInEmitterFrame=node.transfer.y;
+    vec3 pos=node.positionTime.xyz;
+    float actualRadius=volumeRadius(pos);
+    bool valid=node.transfer.w>0.5 && shift>0.0 && lengthInEmitterFrame>0.0
+               && actualRadius>DISK_INNER && actualRadius<DISK_OUTER;
+    if(dot(pos.xz,pos.xz)<1e-6) pos=vec3(DISK_INNER+0.05,0.0,0.0);
+    float r=clamp(actualRadius,DISK_INNER+0.001,DISK_OUTER-0.001);
+    // Evaluate derivatives before the validity branch: neighboring fragments
+    // must evaluate the SAME ordered node, even when one ray has no material.
+    vec2 material=diskTexture(vec4(pos.x,pos.z,node.positionTime.w,shift),r,pos.y);
+    if(!valid) return vec4(0.0);
+    float radial=(r-DISK_INNER)/(DISK_OUTER-DISK_INNER);
+    float envelope=Shape(radial,0.9,1.5);
+    float halfHeight=volumeHalfHeight(r);
+    // Noise changes the cloud's real vertical density, inside the traced bound.
+    float cloudHeight=halfHeight*(0.82+0.14*clamp(material.x,0.3,1.6));
+    float vertical=pow(max(0.0,1.0-pow(pos.y/cloudHeight,2.0)),1.5);
+    float density=envelope*vertical*max(0.25,0.55+0.45*material.x+GRAIN_DENSITY_CONTRAST*material.y);
+    float opticalDepth=2.1*density*lengthInEmitterFrame/halfHeight;
+    float alpha=1.0-exp(-min(opticalDepth,30.0));
+    float tempProfile=pow(pow(DISK_INNER/r,3.0)*max(0.0,1.0-sqrt(DISK_INNER/r))/0.05665278,0.25);
+    float temperature=max(900.0,5800.0*tempProfile*pow(shift,0.65));
+    float source=(0.18+1.55*pow(tempProfile,1.4))*(0.35+0.65*envelope);
+    source *= material.x*(1.0+GRAIN_EMISSION_CONTRAST*material.y);
+    float innerCloud=max(0.0,1.0-5.0*radial*radial);
+    source *= 1.0+0.08*innerCloud*max(material.y,0.0);
+    // g^3 transports specific radiance; colours are an illustrative palette.
+    vec3 emission=KelvinToRgb(temperature)*source*min(pow(shift,3.0),3.0)*1.30;
+    return vec4(emission*alpha,alpha);
 }
 
+ivec2 rayForPixel(ivec2 pixel) {
+    return min(ivec2((vec2(pixel)+0.5)*uMapSize/uRadianceResolution),ivec2(uMapSize)-1);
+}
 void main() {
-    vec2 plane = (vUv * uResolution - uCenter * uResolution) / uResolution.y * uViewSpan;
-    vec2 mapUv = planeToMap(plane);
-    vec3 color;
-    if (any(lessThan(mapUv, vec2(0.001))) || any(greaterThan(mapUv, vec2(0.999)))) {
-        color = background(sceneDirection(plane));
-    } else {
-        float coverNear, coverFar;
-        vec4 nearHit = diskSample(uDiskNear, mapUv, coverNear);
-        vec4 farHit = diskSample(uDiskFar, mapUv, coverFar);
-        vec4 nearDisk = diskEmission(nearHit, coverNear, 0.0);
-        vec4 farDisk = diskEmission(farHit, coverFar, 1.0);
-        // Normalize the filtered escape direction and gate the shadow mask.
-        // Filtering avoids derivative spikes from quantized transfer texels.
-        vec4 sky = texture(uSky, mapUv);
-        vec3 skyColor = sky.w > 0.8 ? background(sky.xyz) : vec3(0.0);
-        color = nearDisk.rgb + (1.0 - nearDisk.a) *
-                (farDisk.rgb + (1.0 - farDisk.a) * skyColor);
-
+    ivec2 pixel=ivec2(gl_FragCoord.xy);
+    ivec2 ray=rayForPixel(pixel);
+    RayNode raySky=readNode(ray,uNodeCount);
+    vec3 escapeDirection=raySky.positionTime.w>0.5 ? normalize(raySky.positionTime.xyz)
+        : sceneDirection(mapToPlane((vec2(ray)+0.5)/uMapSize));
+    vec3 sky=raySky.positionTime.w*background(escapeDirection);
+    // Integrate each physical ray completely before screen-space filtering.
+    // Fixed passage slots keep corresponding material nodes aligned in quads.
+    ivec2 quadBase=pixel-(pixel%2);
+    bool evaluateMaterial=raySky.transfer.z>0.5
+       || readNode(rayForPixel(quadBase),uNodeCount).transfer.z>0.5
+       || readNode(rayForPixel(quadBase+ivec2(1,0)),uNodeCount).transfer.z>0.5
+       || readNode(rayForPixel(quadBase+ivec2(0,1)),uNodeCount).transfer.z>0.5
+       || readNode(rayForPixel(quadBase+ivec2(1,1)),uNodeCount).transfer.z>0.5;
+    vec4 accumulated=vec4(0.0);
+    if(evaluateMaterial) {
+        for(int index=0;index<12;++index) {
+            if(index>=uNodeCount) break;
+            RayNode node=readNode(ray,index);
+            vec4 cloud=volumeEmission(node);
+            accumulated+=(1.0-accumulated.a)*cloud;
+        }
     }
-    float edge = max(abs(mapUv.x - 0.5), abs(mapUv.y - 0.5));
-    if (edge > 0.46 && edge < 0.5) {
-        color = mix(color, background(sceneDirection(plane)), smoothstep(0.46, 0.5, edge));
-    }
-    fragColor = vec4(max(color, vec3(0.0)), 1.0);
+    fragColor=vec4(max(accumulated.rgb+(1.0-accumulated.a)*sky,vec3(0.0)),accumulated.a);
 }
