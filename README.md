@@ -23,7 +23,7 @@ Personal website hosted with GitHub Pages.
 
 The four homepage cards use responsive WebP images from `assets/images/home-entries/`, served directly by GitHub Pages. The corresponding original JPEGs are preserved in `assets/images/home-entries/originals/`, named `photography`, `academics`, `writing`, and `projects`.
 
-Run `python scripts/build_home_entry_images.py` with Pillow installed to regenerate the 480px and 960px variants. Source images retain their full frame; `assets/css/home.css` controls subject placement, responsive image fitting, and translucency.
+Run `python scripts/build_home_entry_images.py` with Pillow installed to regenerate the 480px and 960px variants. Source images retain their full frame; `assets/css/home.css` controls subject placement, responsive cover cropping, and translucency, while the shared stylesheet keeps the original card dimensions.
 
 ## Publication synchronization
 
