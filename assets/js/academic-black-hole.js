@@ -6,7 +6,7 @@
   'use strict';
   const canvas = document.getElementById('academic-black-hole');
   if (!canvas) return;
-  const VERSION = '20261002-tidal3';
+  const VERSION = '20261003-hydro9';
   const baseUrl = new URL('../shaders/', document.currentScript.src);
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobile = matchMedia('(max-width: 820px), (pointer: coarse)');
@@ -24,7 +24,7 @@
     const float HORIZON = 0.75514701644;
     const float DISK_INNER = 1.28671550559;
     const float DISK_OUTER = 9.0;
-    const float MAP_SPAN = 36.0;
+    const float MAP_SPAN = 52.0;
     // Invertible ray-grid refinement: spend more actual rays near the hole.
     vec2 mapToPlane(vec2 uv) {
       vec2 q = uv * 2.0 - 1.0;
@@ -35,11 +35,13 @@
       q = (sqrt(0.3025 + 1.8 * q) - 0.55) / 0.9;
       return 0.5 + 0.5 * sign(plane) * q;
     }
-    const vec3 CAMERA = vec3(0.0, 4.8621489747, 27.5746170843);
+    const vec3 CAMERA = vec3(0.0, 8.335112528, 47.27077214);
     vec3 sceneDirection(vec2 plane) {
-      plane = mat2(0.951056516, -0.309016994, 0.309016994, 0.951056516) * plane;
-      vec3 up = vec3(0.0, 0.984807753, -0.173648178);
-      return normalize(-CAMERA + vec3(plane.x, 0.0, 0.0) + up * plane.y);
+      plane = mat2(0.573576436, -0.819152044, 0.819152044, 0.573576436) * plane;
+      vec3 forward = normalize(-CAMERA);
+      vec3 right = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));
+      vec3 up = cross(right, forward);
+      return normalize(forward * length(CAMERA) + right * plane.x + up * plane.y);
     }
   `;
   canvas.dataset.renderer = 'npgs-kerr';
@@ -57,7 +59,7 @@
     return;
   }
   const shaderNames = ['npgs-kerr.glsl', 'npgs-emission.glsl', 'npgs-trace.frag',
-                       'npgs-render.frag', 'npgs-compose.frag', 'npgs-transfer.glsl', 'npgs-tidal.frag'];
+                       'npgs-render.frag', 'npgs-compose.frag', 'npgs-transfer.glsl', 'npgs-tidal.frag', 'npgs-hydro.glsl'];
   let sources;
   let generation = 0;
   let programs = [];
@@ -72,8 +74,9 @@
   let sceneHeight = 0;
   let mapFramebuffer;
   let tidalFramebuffer;
-  let debrisTexture;
-  let debris;
+  let hydro;
+  let hydroTextures;
+  const hydroUniforms = ['uCoreHydro','uCoreHeat','uFlowHydro','uFlowHeat','uCoreMin','uCoreMax','uFlowMin','uFlowMax','uCoreIso'];
   let sceneFramebuffer;
   let mapSize = 0;
   let completedRows = 0;
@@ -184,20 +187,17 @@
     gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, 32, 32, 32, 0, gl.RED, gl.UNSIGNED_BYTE, data);
     return texture;
   }
-  function makeDebrisTexture() {
-    const count = debris.points.length / 4;
-    const data = new Float32Array(count * 8);
-    data.set(debris.points);
-    data.set(debris.velocities, count * 4);
-    const texture = gl.createTexture();
-    textures.push(texture);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, count, 2, 0, gl.RGBA, gl.FLOAT, data);
+  function makeVolume(data,dimensions,single=false) {
+    const texture=gl.createTexture();textures.push(texture);
+    gl.bindTexture(gl.TEXTURE_3D,texture);
+    gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    for(const axis of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T,gl.TEXTURE_WRAP_R]) gl.texParameteri(gl.TEXTURE_3D,axis,gl.CLAMP_TO_EDGE);
+    gl.texImage3D(gl.TEXTURE_3D,0,single?gl.R16F:gl.RGBA16F,...dimensions,0,single?gl.RED:gl.RGBA,gl.FLOAT,data);
     return texture;
+  }
+  function bindHydro(program) {
+    ['uCoreHydro','uCoreHeat','uFlowHydro','uFlowHeat'].forEach((name,index)=>bindTexture(program,name,index,hydroTextures[index],gl.TEXTURE_3D));
   }
   function resetMetrics() {
     warmup = 24;
@@ -287,8 +287,8 @@
     gl.uniform2f(location(render, 'uResolution'), canvas.width, canvas.height);
     const portrait = innerWidth / Math.max(innerHeight, 1) < 0.82;
     // Keep the black hole prominent and include the donor core in portrait.
-    gl.uniform2f(location(render, 'uCenter'), portrait ? 0.40 : 0.58, portrait ? 0.61 : 0.52);
-    gl.uniform1f(location(render, 'uViewSpan'), portrait ? 40 : 20);
+    gl.uniform2f(location(render, 'uCenter'), portrait ? 0.28 : 0.36, portrait ? 0.68 : 0.64);
+    gl.uniform1f(location(render, 'uViewSpan'), portrait ? 60 : 28);
     gl.uniform1f(location(render, 'uTime'), elapsed);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -316,13 +316,14 @@
         gl.bindFramebuffer(gl.FRAMEBUFFER, mapFramebuffer);
         gl.viewport(0, 0, mapSize, mapSize);
         gl.useProgram(trace.handle);
+        bindHydro(trace);
         gl.uniform2f(location(trace, 'uMapSize'), mapSize, mapSize);
         gl.enable(gl.SCISSOR_TEST);
         gl.scissor(0, completedRows, mapSize, rows);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         gl.bindFramebuffer(gl.FRAMEBUFFER, tidalFramebuffer);
         gl.useProgram(tidalTrace.handle);
-        bindTexture(tidalTrace, 'uDebris', 0, debrisTexture);
+        bindHydro(tidalTrace);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         gl.disable(gl.SCISSOR_TEST);
         if (timedTrace) gl.endQuery(timerExtension.TIME_ELAPSED_EXT);
@@ -394,20 +395,25 @@
       timerExtension = gl.getExtension('EXT_disjoint_timer_query_webgl2');
       release();
       if (gl.getParameter(gl.MAX_DRAW_BUFFERS) < 4 || gl.getParameter(gl.MAX_COLOR_ATTACHMENTS) < 4) throw new Error('Four render targets unavailable');
-      if (!debris) {
-        if (!window.AcademicTidalStream) throw new Error('Tidal snapshot generator unavailable');
-        debris = window.AcademicTidalStream.generate({samples:64,spin:.43});
-        canvas.dataset.massShellError = debris.diagnostics.maxMassShellError.toExponential(2);
+      if (!hydro) {
+        if (!window.AcademicHydroVolume) throw new Error('Hydro volume loader unavailable');
+        const url=new URL('../data/wd-sph/wd-volume.json',baseUrl);
+        url.searchParams.set('v',VERSION);
+        hydro=await window.AcademicHydroVolume.load(url);
+        if(currentGeneration!==generation || gl.isContextLost()) return;
+        canvas.dataset.fluidModel='Phantom GRSPH';
+        canvas.dataset.fluidParticles=String(hydro.metadata.source.count);
+        canvas.dataset.coreMassFraction=hydro.metadata.core.massFraction.toFixed(4);
       }
       vao = gl.createVertexArray();
       gl.bindVertexArray(vao);
       gl.disable(gl.DEPTH_TEST);
       gl.disable(gl.BLEND);
       gl.disable(gl.DITHER);
-      const transferSource = SCENE + sources[0] + sources[5];
-      trace = makeProgram(transferSource + sources[2], ['uMapSize', 'uStarPosition', 'uStarRadius']);
+      const transferSource = SCENE + sources[0] + sources[5] + sources[7];
+      trace = makeProgram(transferSource + sources[2], ['uMapSize',...hydroUniforms]);
       tidalTrace = makeProgram(transferSource + sources[6],
-        ['uMapSize','uDebris','uDebrisCount','uGroupMin[0]','uGroupMax[0]','uStarPosition','uStarVelocity','uStarRadius']);
+        ['uMapSize',...hydroUniforms]);
       render = makeProgram(transferSource + sources[1] + sources[3],
         ['uDiskNear', 'uDiskFar', 'uSky', 'uJet', 'uStream', 'uStar', 'uNoise', 'uResolution', 'uCenter', 'uViewSpan', 'uTime']);
       compose = makeProgram(sources[4], ['uScene', 'uTexel']);
@@ -423,28 +429,20 @@
       }
       mapFramebuffer = makeFramebuffer(maps.slice(0,4));
       tidalFramebuffer = makeFramebuffer(maps.slice(4));
-      debrisTexture = makeDebrisTexture();
-      const groupMin = new Float32Array(32), groupMax = new Float32Array(32);
-      for (let group = 0; group < 8; ++group) {
-        const lo = [Infinity,Infinity,Infinity], hi = [-Infinity,-Infinity,-Infinity];
-        for (let i = group * 8; i <= Math.min(group * 8 + 8,63); ++i) {
-          const radius = debris.points[i*4+3] * 3;
-          for (let j = 0; j < 3; ++j) {lo[j] = Math.min(lo[j],debris.points[i*4+j]-radius); hi[j] = Math.max(hi[j],debris.points[i*4+j]+radius);}
-        }
-        groupMin.set([...lo,0],group*4); groupMax.set([...hi,0],group*4);
-      }
-      for (const program of [trace,tidalTrace]) {
+      hydroTextures=[makeVolume(hydro.core.field,hydro.core.dimensions),makeVolume(hydro.core.heat,hydro.core.dimensions,true),
+                     makeVolume(hydro.flow.field,hydro.flow.dimensions),makeVolume(hydro.flow.heat,hydro.flow.dimensions,true)];
+      for(const program of [trace,tidalTrace]) {
         gl.useProgram(program.handle);
         gl.uniform2f(location(program,'uMapSize'),mapSize,mapSize);
-        gl.uniform3fv(location(program,'uStarPosition'),debris.star.position);
-        gl.uniform1f(location(program,'uStarRadius'),debris.star.radius);
+        gl.uniform3fv(location(program,'uCoreMin'),hydro.core.min);
+        gl.uniform3fv(location(program,'uCoreMax'),hydro.core.max);
+        gl.uniform3fv(location(program,'uFlowMin'),hydro.flow.min);
+        gl.uniform3fv(location(program,'uFlowMax'),hydro.flow.max);
+        // The dense core has a grey photosphere proxy; tails emit optically thin.
+        const iso=hydro.metadata.core.photosphereDensityFraction;
+        gl.uniform1f(location(program,'uCoreIso'),iso);
+        bindHydro(program);
       }
-      gl.useProgram(tidalTrace.handle);
-      bindTexture(tidalTrace,'uDebris',0,debrisTexture);
-      gl.uniform1i(location(tidalTrace,'uDebrisCount'),64);
-      gl.uniform4fv(location(tidalTrace,'uGroupMin[0]'),groupMin);
-      gl.uniform4fv(location(tidalTrace,'uGroupMax[0]'),groupMax);
-      gl.uniform4fv(location(tidalTrace,'uStarVelocity'),debris.star.velocity);
       noise = makeNoise();
       scene = makeTexture(1, 1);
       sceneWidth = sceneHeight = 1;

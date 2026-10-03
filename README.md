@@ -42,7 +42,9 @@ The academic page uses a WebGL 2 adaptation of [baopinshui/NPGS](https://github.
 See the [upstream attribution, GPLv3 license and adaptation notes](assets/vendor/npgs/README.md)
 for the rendering scope and source details.
 
-The white-dwarf scene uses a numerically integrated Kerr ballistic-debris
-snapshot, with curved-ray volume/surface transfer for the stream, star and
-jets. It is an illustration rather than a hydrodynamic disruption simulation.
-Run `node tests/test_tidal_stream.js` for its numerical regression checks.
+The white dwarf and two tails are reconstructed from an offline Phantom GRSPH
+partial-disruption run with pressure, stellar self-gravity and shock heating.
+The browser applies Kerr ray tracing to its density grids. The separate inner
+disc and jet remain prescribed radiation models, not outputs of that encounter.
+See the linked model notes for the papers, raw data, assumptions and verification.
+Volume preprocessing needs NumPy; run `python -B -m unittest discover -s tests -v`.

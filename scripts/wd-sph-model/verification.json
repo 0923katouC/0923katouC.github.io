@@ -1,0 +1,54 @@
+{
+  "4096": {
+    "particles": 4096,
+    "relaxationIterations": 852,
+    "relaxationKineticOverPotential": 9.992181028789627e-08,
+    "relaxationDensityL2Error": 0.01671185769774639,
+    "relaxationVirialRatio": 0.9982522689621575,
+    "coreMassFraction": 0.817626953125,
+    "coreRadius90Rs": 0.7296186533952507,
+    "coreRadiusBHCenterRs": 31.54697444234404,
+    "particleMassSumRendererUnits": 2.499999936844688e-05,
+    "maxFourVelocityNormError": 8.881784197001252e-16,
+    "binarySha256": "f46ced846c00ef2cec820d4e3e1129926689d9bbbbceed5ba24bdd172bb038f6",
+    "entropyExcessP95": 6.00946969339417e-07
+  },
+  "16384": {
+    "particles": 16384,
+    "relaxationIterations": 844,
+    "relaxationKineticOverPotential": 9.992876265708069e-08,
+    "relaxationDensityL2Error": 0.010386442306858092,
+    "relaxationVirialRatio": 0.99642406805704,
+    "coreMassFraction": 0.814697265625,
+    "coreRadius90Rs": 0.7352511001876602,
+    "coreRadiusBHCenterRs": 31.541422876416433,
+    "particleMassSumRendererUnits": 2.499999936844688e-05,
+    "maxFourVelocityNormError": 8.881784197001252e-16,
+    "binarySha256": "d748a537cf3dc07bd1ad9a18c316a60a04f0b352769ada4f15bf9bd6f09defa4",
+    "entropyExcessP95": 3.323709319544003e-07
+  },
+  "isolatedControl4096": [
+    {
+      "timeRgOverC": 0.0,
+      "radius90Rg": 0.5326760598165776,
+      "maxRestDensityNative": 0.00023340578610189295,
+      "internalKineticOverPotential": 5.0252223778584235e-25,
+      "virialRatio": 0.9982401842729625
+    },
+    {
+      "timeRgOverC": 1000.0,
+      "radius90Rg": 0.5294917644955235,
+      "maxRestDensityNative": 0.00024354985115663679,
+      "internalKineticOverPotential": 2.8721493008637814e-06,
+      "virialRatio": 1.011544175565789
+    }
+  ],
+  "limitations": [
+    "A low-resolution visual fluid simulation, not publication-level convergence.",
+    "Fixed Kerr GR hydrodynamics with approximate Newtonian self-gravity; not full evolving-spacetime numerical relativity.",
+    "Gamma-law n=1.5 initial-polytrope WD approximation; no realistic degenerate finite-temperature EOS, nuclear reactions, radiation or magnetic fields.",
+    "Initial and final self-bound classifications use Newtonian comoving unbinding.",
+    "No pre-existing disk, disk circularization or jet was simulated.",
+    "Shock/entropy-excess amplitude is not quantitatively converged and is not a radiative temperature."
+  ]
+}

@@ -2,10 +2,13 @@
  * Stationary-camera transfer maps using NPGS's analytic Hamiltonian + RK4.
  * Outputs: two equatorial disk intersections; escaping sky direction;
  * covariantly integrated jet intensity, harmonic moments and absolute height.
+ * The jet is a semi-analytic optically thin representative-band model, not
+ * a GRMHD evolution. Frequency-dependent transfer follows the invariant
+ * conventions of ipole (https://arxiv.org/abs/1712.03057) and RAPTOR
+ * (https://arxiv.org/abs/1801.10452); the prescribed funnel geometry is
+ * motivated by https://arxiv.org/abs/1810.09963, not fitted to a WD TDE.
  */
 uniform vec2 uMapSize;
-uniform vec3 uStarPosition;
-uniform float uStarRadius;
 layout(location = 0) out vec4 diskNear;
 layout(location = 1) out vec4 diskFar;
 layout(location = 2) out vec4 skyRay;
@@ -27,49 +30,50 @@ vec4 diskIntersection(vec4 x, vec4 p, float energy) {
     return vec4(x.x, x.z, x.w, shift);
 }
 
-float jetWidthAtHeight(float height) {
-    return 0.22 + 0.045 * max(height - 1.0, 0.0);
-}
-
 void integrateJet(vec4 x, vec4 p, float affineLength, float transmission,
                   inout vec4 moments) {
     float height = abs(x.y);
     float rho = length(x.xz);
     if (height <= 1.0 || height >= 35.0) return;
-    // Both lobes launch on the spin axis in emitter coordinates. The soft
-    // spine joins the narrower sheath without shifting its lensed image.
+    // A broad plasma sheath surrounds a faint spine; both belong to the same
+    // finite-base parabolic funnel. There is no image-space warp or mask.
     float width = jetWidthAtHeight(height);
     float radius = rho / width;
-    if (radius >= 1.5) return;
-    float sheath = max(0.0, 1.0 - 2.0 * abs(1.0 - radius * radius));
-    float spine = 0.12 * exp(-3.0 * radius * radius);
-    float shape = (sheath + spine) * (1.0 - smoothstep(1.2, 1.5, radius)) / width;
+    if (radius >= 1.85) return;
+    float sheath = exp(-0.5 * pow((radius - 0.72) / 0.32, 2.0)) *
+                   smoothstep(0.0, 0.35, radius);
+    float spine = 0.035 * exp(-0.5 * pow(radius / 0.28, 2.0));
+    float shape = (sheath + spine) * (1.0 - smoothstep(1.5, 1.85, radius));
     shape *= smoothstep(1.0, 1.8, height);
-    // Prescribed heating is strongest in the launch zone. Its lensed image
-    // follows the Kerr rays; far from the hole the jet remains nearly straight.
-    shape *= 0.25 + 5.0 * exp(-0.5 * pow((height - 2.6) / 1.4, 2.0));
-    // Mild comoving density structure, sampled on the curved ray itself.
-    shape *= 0.75 + 0.25 * sin(4.2 * height +
-              1.1 * sin(5.0 * x.x) + 0.8 * cos(5.0 * x.z));
-    shape *= exp(-0.0025 * pow(height / DISK_INNER, 2.0));
+    // Moderate, positive, multiscale inhomogeneity in the prescribed snapshot.
+    // Unlike the small time harmonic below, these are not evolved fluid modes.
+    shape *= 1.0 + 0.16 * sin(2.7 * height + 1.7 * sin(4.0 * x.x) +
+                            1.1 * cos(3.0 * x.z)) +
+                   0.08 * sin(7.3 * height - 3.4 * x.x + 2.9 * x.z);
     shape *= 1.0 - smoothstep(27.0, 35.0, height);
-    vec4 velocity;
-    if (!jetEmitterVelocity(x.xyz, velocity)) return;
+    vec4 velocity, magneticField;
+    float fieldStrength, properDensity;
+    if (!jetPlasmaFrame(x.xyz, velocity, magneticField, fieldStrength, properDensity)) return;
     float emissionEnergy = emitterPhotonEnergy(p, velocity);
     if (!(emissionEnergy > 0.0) || isinf(emissionEnergy)) return;
-    // The camera tetrad initializes observed photon energy to one. For
-    // bolometric comoving emissivity, dI_obs = g^4 * j * dl_emit * T.
+    float perpendicularField = jetFieldPerpendicular(p, velocity, magneticField, fieldStrength);
+    // Isotropic power-law electrons with p=2.4 give alpha=(p-1)/2=0.7 and
+    // j'_nu ~ n*B_perp^1.7*nu'^-0.7. At fixed observer frequency nu_obs,
+    // g^3*j'_nu(nu_obs/g) becomes g^3.7*j'_nu(nu_obs). Units, electron
+    // normalization and the representative frequency are in the amplitude.
+    // Volume absorption is explicitly neglected; T is foreground disk transfer.
     float shift = 1.0 / emissionEnergy;
     float emittedLength = emissionEnergy * affineLength;
-    float shift2 = shift * shift;
-    float dw = 0.5 * shape * emittedLength * shift2 * shift2 * transmission;
+    float emissivity = 0.32 * properDensity * shape * pow(perpendicularField, 1.7);
+    float dw = emissivity * emittedLength * pow(shift, 3.7) * transmission;
     if (!(dw > 0.0) || isinf(dw)) return;
     // Linear harmonic moments reproduce the integral of j0*(1+A*cos(phi))
     // exactly under the chosen segment quadrature, including retarded time.
     float azimuth = rho > 1e-8 ? atan(x.x, x.z) : 0.0;
     float phase = 2.0 * azimuth - 0.92 * (height - 1.0) + 0.736 * x.w;
-    // Keep the spine steady; an azimuthal mode is undefined on the axis.
-    float harmonicFraction = sheath / (sheath + spine);
+    // Keep the spine steady. Weak modulation avoids globally coherent rods;
+    // the renderer's 0.6 multiplier limits the resulting contrast to 12%.
+    float harmonicFraction = 0.20 * sheath / (sheath + spine);
     moments += dw * vec4(1.0, harmonicFraction * cos(phase),
                         harmonicFraction * sin(phase), height);
 }
@@ -84,7 +88,7 @@ void integrateJetSegment(vec4 startX, vec4 endX, vec4 startP, vec4 endP,
     float closestFraction = clamp(-dot(startX.xz, chord.xz) /
                                   max(dot(chord.xz, chord.xz), 1e-8), 0.0, 1.0);
     float closestRadius = length(startX.xz + closestFraction * chord.xz);
-    if (closestRadius >= 1.5 * jetWidthAtHeight(maxHeight)) return;
+    if (closestRadius >= 1.85 * jetWidthAtHeight(maxHeight)) return;
     // Resolve the small launch region more finely, with bounded quadrature.
     float spacing = clamp(0.45 * jetWidthAtHeight(minHeight), 0.045, 0.16);
     int samples = clamp(int(ceil(length(chord) / spacing)), 3, 32);
@@ -116,7 +120,7 @@ void main() {
             any(isnan(p)) || any(isinf(p))) break;
         State s; s.X = x; s.P = p;
         State k1 = GetDerivativesAnalytic(s, PHYSICAL_A, 0.0, 1.0, false, geo);
-        if (geo.r > 90.0 && dot(x.xyz, -k1.X.xyz) > 0.0) {
+        if (geo.r > 110.0 && dot(x.xyz, -k1.X.xyz) > 0.0) {
             skyRay = vec4(normalize(-k1.X.xyz), 1.0);
             break;
         }
@@ -126,7 +130,7 @@ void main() {
         float dt = 0.22 * min(stepGeo, stepForce);
         // Resolve the thin disk crossing and the jet sheath near the hole.
         if (geo.r < 24.0) dt = min(dt, 0.55 / max(length(k1.X.xyz), 1e-6));
-        dt = max(dt, 1e-6);
+        dt = max(hydroStepLimit(x.xyz, length(k1.X.xyz), dt), 1e-6);
         vec4 previousX = x;
         vec4 previousP = p;
         StepGeodesicRK4_Optimized(x, p, energy, -dt, PHYSICAL_A, 0.0,
@@ -134,7 +138,7 @@ void main() {
         if (any(isnan(x)) || any(isinf(x)) || any(isnan(p)) || any(isinf(p))) break;
         // The star is opaque: only surface crossings and jet emission in
         // front of its first intersection contribute to the base scene.
-        float starFraction = whiteDwarfIntersection(previousX.xyz, x.xyz, uStarPosition, uStarRadius);
+        float starFraction = hydroCoreIntersection(previousX.xyz, x.xyz);
         bool hitStar = starFraction <= 1.0;
         float segmentFraction = hitStar ? starFraction : 1.0;
         vec4 segmentX = mix(previousX, x, segmentFraction);

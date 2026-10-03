@@ -1,0 +1,28 @@
+{
+  "bhMsun": 10000.0,
+  "wdMsun": 0.5,
+  "wdRsolar": 0.0141,
+  "Rstar_rg": 0.6642900615868242,
+  "tidalRadius_rg": 18.03160645700191,
+  "pericenter_rg": 25.0,
+  "apocenter_rg": 475.0,
+  "beta": 0.7212642582800765,
+  "eccentricity": 0.9,
+  "spin": 0.86,
+  "E": 0.9980046044893287,
+  "L": 7.116042346069622,
+  "initial": {
+    "x": [
+      90.16213387839058,
+      0,
+      0
+    ],
+    "v": [
+      -0.10765261649899062,
+      0.07754117538864534,
+      0
+    ]
+  },
+  "units": "Phantom G=Mbh=c=1, Cartesian-like Boyer-Lindquist spin+z",
+  "commit": "ed34a9c2aec4a5687c14acebd684b4e8abeb7245"
+}

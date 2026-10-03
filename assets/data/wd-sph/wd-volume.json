@@ -1,0 +1,337 @@
+{
+  "version": 1,
+  "format": "phantom-sph-sparse-volume-v1",
+  "source": {
+    "binary": "n16384-t1000.f32",
+    "count": 16384,
+    "time": 499.6321285571693,
+    "timeNativeBL": 1000.0,
+    "timeKSRange": [
+      499.56345551622326,
+      499.69270562376676
+    ],
+    "units": {
+      "distance": "Rs=2GM_BH/c^2",
+      "time": "Rs/c",
+      "velocity": "c",
+      "mass": "c^2 Rs/G (BH mass=0.5)",
+      "density": "mass unit/Rs^3",
+      "internalEnergy": "c^2",
+      "coordinates": "ingoing Cartesian Kerr-Schild, spin+y"
+    },
+    "provenance": {
+      "solver": "Phantom 2026.0.1",
+      "commit": "ed34a9c2aec4a5687c14acebd684b4e8abeb7245",
+      "source": "https://github.com/danieljprice/phantom",
+      "nativeDump": "n16384/wd_00100",
+      "bhMsun": 10000.0,
+      "wdTargetMsun": 0.5,
+      "spinDimensionless": 0.86,
+      "pericenterRg": 25,
+      "apocenterRg": 475,
+      "eos": "n=1.5 initial polytrope, gamma=5/3 evolved ideal-gas approximation",
+      "physics": "fixed Kerr GRSPH, approximate Newtonian self-gravity, pressure, shock heating",
+      "scope": "illustrative low-resolution fluid run; no magnetic field, radiation feedback or nuclear network",
+      "timeSlice": "equal Boyer-Lindquist time mapped to KS; frozen-fluid radiative snapshot, not an equal-KS-time evolution",
+      "coreFinder": "iterative Newtonian comoving kinetic+internal+self-potential unbinding with cubic softened potential; approximate diagnostic",
+      "density": "rho is rest density; SPH m/h^3 reconstructs conserved density, not exactly rho"
+    },
+    "kernel": {
+      "name": "cubic-spline",
+      "support": 2,
+      "normalization": "1/(pi*h^3)"
+    },
+    "thermodynamics": {
+      "gamma": 1.6666666666666667,
+      "K0": 0.0041788614866012895,
+      "K0Definition": "median (gamma-1)u/rho_rest^(gamma-1) from the actual initial dump, converted to exported density units",
+      "heatDefinition": "max(u-K0*rho_rest^(gamma-1)/(gamma-1),0)",
+      "heatInterpretation": "entropy-excess proxy; includes numerical dissipation and is not a radiative temperature",
+      "initialEntropyRelativeP01P99": [
+        0.9999035254857102,
+        1.0001131693553873
+      ],
+      "uExcessPercentiles": {
+        "0": 0.0,
+        "50": 1.0730810104925059e-07,
+        "95": 3.323709319544003e-07,
+        "99": 6.739698415394502e-07,
+        "100": 1.67475638008253e-06
+      }
+    },
+    "diagnostics": {
+      "maxTransformedFourVelocityNormError": 8.881784197001252e-16,
+      "totalMass": 2.5000000000000008e-05,
+      "maxRestDensity": 0.00018897494010161608,
+      "allParticlesFinite": true
+    },
+    "sourceHashes": {
+      "metadataSha256": "8343fb3bb5eaab44a55fd8c284b64eebd1b3f844e506dc97d1929edb0fb4908e",
+      "binarySha256": "d748a537cf3dc07bd1ad9a18c316a60a04f0b352769ada4f15bf9bd6f09defa4"
+    }
+  },
+  "rotation": {
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "angleRadians": -0.5402657603406618,
+    "matrix": [
+      [
+        0.8575720141197806,
+        0.0,
+        0.5143639184454357
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        -0.5143639184454357,
+        0.0,
+        0.8575720141197806
+      ]
+    ],
+    "corePositionBefore": [
+      -14.297599001308766,
+      -2.1652494107252427e-05,
+      28.11476515758635
+    ],
+    "corePosition": [
+      2.200000000000001,
+      -2.1652494107252427e-05,
+      31.464604829370685
+    ],
+    "physicalLengthScale": 1.0
+  },
+  "core": {
+    "position": [
+      2.200000000000001,
+      -2.1652494107252427e-05,
+      31.464604829370685
+    ],
+    "velocity": [
+      0.11767400052149332,
+      -8.373676587123216e-08,
+      0.11173964672209118
+    ],
+    "densityPeakPosition": [
+      2.191846459916867,
+      -0.0008326184339763314,
+      31.477142266290485
+    ],
+    "mass": 2.0367431640625007e-05,
+    "massFraction": 0.814697265625,
+    "radius90": 0.7352511001876602,
+    "radius99": 0.9293848340339184,
+    "unbindingCounts": [
+      13696,
+      13439,
+      13371,
+      13351,
+      13348,
+      13348
+    ],
+    "particleCount": 13348,
+    "photosphereDensityFraction": 0.02
+  },
+  "densityDefinition": "coordinate kernel mass density reconstructed from particle masses; not exported rest density",
+  "surfaceModel": "Core density boundary at 0.02 of peak coordinate kernel density is a grey photosphere proxy; unbound tails use an optically thin emissive-skin approximation. Neither is a calibrated atmosphere or opacity solution.",
+  "smoothingModel": "Phantom cubic spline with h_eff=max(h,minimumVoxelWidths*largestVoxelWidth); full 2h_eff support and conservative discrete quadrature normalization",
+  "velocityDefinition": "mass-density-weighted coordinate velocity dx/dt; convert and normalize in the local spacetime metric before radiative transfer",
+  "energyDefinition": "mass-density-weighted specific entropy-excess proxy, with calibrated cold polytropic internal energy subtracted",
+  "heat": {
+    "name": "entropy-excess proxy",
+    "formula": "max(u - K0*rho_rest**(gamma-1)/(gamma-1), 0)",
+    "gamma": 1.6666666666666667,
+    "K0": 0.0041788614866012895,
+    "specificUnits": "c^2",
+    "interpretation": "irreversible-heating proxy above the calibrated initial cold polytrope; not observed radiation temperature or a converged shock diagnostic",
+    "originalSpecificInternalEnergyRange": [
+      1.2100268520498503e-07,
+      2.081558523059357e-05
+    ],
+    "specificExcessRange": [
+      0.0,
+      1.6747564352328626e-06
+    ],
+    "clippedParticleCount": 623,
+    "massWeightedExcess": 3.1651822366561366e-12
+  },
+  "grids": {
+    "core": {
+      "dimensions": [
+        64,
+        64,
+        64
+      ],
+      "min": [
+        1.3340359429509763,
+        -0.5299933403730392,
+        30.396345207517598
+      ],
+      "max": [
+        3.031587812550454,
+        0.5068032145500183,
+        32.576603639297005
+      ],
+      "voxelSize": [
+        0.02652424796249184,
+        0.016199946170672774,
+        0.03406653799655324
+      ],
+      "voxelVolume": 1.463809803731233e-05,
+      "particleCount": 13348,
+      "smoothing": {
+        "minimumVoxelWidths": 1.0,
+        "originalHRange": [
+          0.023833202198147774,
+          0.09758231043815613
+        ],
+        "effectiveHRange": [
+          0.03406653799655324,
+          0.09758231043815613
+        ],
+        "broadenedParticleCount": 6342,
+        "discreteKernelNormalization": true,
+        "uncorrectedKernelIntegralRange": [
+          0.9970612580732221,
+          1.0030432910742284
+        ]
+      },
+      "diagnostics": {
+        "inputMass": 2.03674311261004e-05,
+        "uncorrectedQuadratureMass": 2.0367571265344125e-05,
+        "uncorrectedRelativeMassError": 6.880555670367013e-06,
+        "depositedMass": 2.03674311261004e-05,
+        "depositedRelativeMassError": 0.0,
+        "inputCoordinateMomentum": [
+          2.396717100704709e-06,
+          -1.7055025928263866e-12,
+          2.275849558144948e-06
+        ],
+        "depositedCoordinateMomentum": [
+          2.3967171007047048e-06,
+          -1.7055025928264583e-12,
+          2.2758495581449454e-06
+        ],
+        "inputInternalEnergy": 2.9315468135109594e-12,
+        "depositedInternalEnergy": 2.9315468135109594e-12,
+        "encodedMass": 2.0367431025984117e-05,
+        "encodedRelativeMassError": -4.915508573292836e-09,
+        "halfFloatTextureMass": 2.0367435958307476e-05,
+        "halfFloatTextureRelativeMassError": 2.372516713820482e-07,
+        "omittedMass": 1.0432067265152972e-13
+      },
+      "densityScale": 0.00019325512964039307,
+      "energyScale": 1.6747564352328628e-06,
+      "recordCount": 80608,
+      "recordStride": 24,
+      "recordFormat": "little-endian uint32 index, float32[5]",
+      "channels": [
+        "rho/densityScale",
+        "rho*vx/densityScale",
+        "rho*vy/densityScale",
+        "rho*vz/densityScale",
+        "rho*u/(densityScale*energyScale)"
+      ],
+      "indexOrder": "x + nx*(y + ny*z)",
+      "sparseRelativeDensityThreshold": 1e-07,
+      "file": "wd-volume-core.bin.gz",
+      "compression": "gzip",
+      "storedBytes": 1725414,
+      "photosphereDensityFraction": 0.02,
+      "uncompressedBytes": 1934592,
+      "sha256": "7c69111c173572fe4df5b5b67a51e204a4f1eb504f5695eee9c0bb76cf646f87"
+    },
+    "flow": {
+      "dimensions": [
+        128,
+        28,
+        104
+      ],
+      "min": [
+        -1.1945984412766237,
+        -0.7608417049050331,
+        28.490286076603194
+      ],
+      "max": [
+        5.815615344180315,
+        0.7400278002023697,
+        34.0080088459825
+      ],
+      "voxelSize": [
+        0.054767295198882335,
+        0.053602482325264385,
+        0.05305502662864719
+      ],
+      "voxelVolume": 0.00015575167719997633,
+      "particleCount": 3036,
+      "smoothing": {
+        "minimumVoxelWidths": 1.0,
+        "originalHRange": [
+          0.04509693756699562,
+          0.3712182641029358
+        ],
+        "effectiveHRange": [
+          0.054767295198882335,
+          0.3712182641029358
+        ],
+        "broadenedParticleCount": 274,
+        "discreteKernelNormalization": true,
+        "uncorrectedKernelIntegralRange": [
+          0.9971280283277809,
+          1.0051790019317128
+        ]
+      },
+      "diagnostics": {
+        "inputMass": 4.63256824234648e-06,
+        "uncorrectedQuadratureMass": 4.632629972480372e-06,
+        "uncorrectedRelativeMassError": 1.3325250846390411e-05,
+        "depositedMass": 4.63256824234648e-06,
+        "depositedRelativeMassError": 0.0,
+        "inputCoordinateMomentum": [
+          5.454146944267922e-07,
+          2.0179115171927284e-12,
+          5.107140147047283e-07
+        ],
+        "depositedCoordinateMomentum": [
+          5.454146944267886e-07,
+          2.0179115171925705e-12,
+          5.107140147047274e-07
+        ],
+        "inputInternalEnergy": 2.3363542314517696e-13,
+        "depositedInternalEnergy": 2.3363542314517696e-13,
+        "encodedMass": 4.632567935161914e-06,
+        "encodedRelativeMassError": -6.630977664949995e-08,
+        "halfFloatTextureMass": 4.632583913959737e-06,
+        "halfFloatTextureRelativeMassError": 3.382921187065492e-06,
+        "omittedMass": 3.0677179021473865e-13
+      },
+      "densityScale": 2.253449265858085e-05,
+      "energyScale": 5.736056540481859e-07,
+      "recordCount": 58682,
+      "recordStride": 24,
+      "recordFormat": "little-endian uint32 index, float32[5]",
+      "channels": [
+        "rho/densityScale",
+        "rho*vx/densityScale",
+        "rho*vy/densityScale",
+        "rho*vz/densityScale",
+        "rho*u/(densityScale*energyScale)"
+      ],
+      "indexOrder": "x + nx*(y + ny*z)",
+      "sparseRelativeDensityThreshold": 1e-07,
+      "file": "wd-volume-flow.bin.gz",
+      "compression": "gzip",
+      "storedBytes": 1261315,
+      "photosphereDensityFraction": null,
+      "uncompressedBytes": 1408368,
+      "sha256": "c638b4c17ad0695f2f3968edccfec1949a2f85a7aaed9b7eb0a4483a3ae61a41"
+    }
+  },
+  "totalStoredBytes": 2986729,
+  "totalUncompressedBytes": 3342960
+}

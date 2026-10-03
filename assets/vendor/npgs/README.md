@@ -10,109 +10,120 @@ GNU General Public License, version 3; a complete copy is in [LICENSE](LICENSE).
 The readable JavaScript and GLSL served by the website are the corresponding
 source of this component. They are also available in this website's GitHub repository.
 
-## Browser adaptation (updated 2026-10-02)
+## Material model: a computed partial disruption
 
-- `assets/shaders/npgs-kerr.glsl` retains NPGS's Kerr-Schild geometry, analytic
-  Hamiltonian derivatives, static-observer tetrad, RK4 integrator, and null
-  Hamiltonian correction. The unused observer modes were removed.
-- The browser scene fixes a static camera outside an uncharged rotating black
-  hole: dimensionless spin 0.86, mass parameter 0.5, spin axis +y. Spatial
-  distances are in Schwarzschild radii; the disk starts at the prograde ISCO
-  (1.28671550559) and ends at radius 9. Coordinate order is (x,y,z,t), with
-  metric signature (+++-), as in NPGS.
-- `npgs-trace.frag` caches two equatorial disk intersections, their photon
-  frequency ratios and travel times, escaping sky directions, and the jet's
-  integrated emissivity. Rays use NPGS's adaptive RK4 step prescription with
-  tighter steps near the disk. The integration is limited to 420 steps and
-  ends at radius 90 or just outside the event horizon.
-- `npgs-emission.glsl` retains the disk noise combination, radial profile and
-  blackbody RGB functions. A small periodic 3D texture replaces repeated noise
-  lattice hashes. The animated surface model uses the original thin-disk
-  temperature profile, spiral inflow, local orbital advection, and frequency
-  shifts, with an artistic visible-temperature scale and bounded intensity.
-- The original volumetric disk is reduced to two thin-disk images. The jet
-  follows the same curved null rays, with a local static-observer tetrad giving
-  an actual 0.8c outflow along the common +y/-y spin axis. A soft spine and
-  hollow sheath turn on at heights 1–1.8; prescribed heating near height 2.6
-  emphasizes the strongly lensed launch region. Bolometric emissivity uses
-  `g^4 j dl_emit`, with `dl_emit = (-p.u) |d_lambda|`. Linear harmonic moments
-  retain emission-time delay without applying nonlinear shading to averaged
-  positions. Disk crossings split volume integration using the same intrinsic
-  opacity as the displayed disk. Foreground jet emission can appear within the
-  apparent shadow; distant jets are naturally almost straight.
-  Full time-dependent volume dynamics, polarization, charge,
-  heat haze, movable observers and maximal spacetime extensions are omitted.
-- Cubemap sky assets are replaced by procedural stars sampled along the
-  escaping rays. WebGL 2 replaces the desktop Vulkan interfaces. A small HDR
-  bloom pass and finite tone mapper replace desktop history/TAA compositing.
-- The stationary photon geodesics are computed once in small, GPU-timed batches.
-  Two passes store six transfer textures while respecting WebGL 2's minimum of
-  four simultaneous render targets. An invertible nonuniform ray grid puts
-  more rays around the shadow and photon ring. Animation is capped at 30 fps;
-  GPU timing and sustained low draw-rate windows can lower output resolution.
-  Hidden tabs pause and reduced-motion preferences produce a still frame.
-  WebGL failure displays a frame rendered with these same shaders.
+The WD and its tails now come from a real, offline **Phantom GRSPH** calculation,
+not the former radial test-particle line. Phantom was built from commit
+`ed34a9c2aec4a5687c14acebd684b4e8abeb7245` with `SETUP=grtde`, a fixed Kerr
+metric, pressure, approximate Newtonian stellar self-gravity and shock heating.
 
-This is a performance-oriented web adaptation. It does not reproduce every
-mode or the full volumetric accuracy of the desktop NPGS renderer.
+The setup follows the regime of [Mahapatra et al., partial WD disruptions](https://arxiv.org/html/2410.12727v2):
+BH mass 10,000 solar masses, initial WD mass 0.5 solar masses and radius
+0.0141 solar radii, pericentre 25 rg and apocentre 475 rg (e=0.9).
+Our spin is a*=0.86. The exact chosen radius gives beta=0.7213.
+An n=1.5 initial polytrope and evolved gamma=5/3 gas approximate the WD;
+this is not a full degenerate EOS, nuclear network, or evolving Einstein metric.
+Exact Kerr E,L were solved for the orbit rather than using the setup's
+Newtonian orbital initializer.
 
-## Framing update on 2026-10-02
+The displayed snapshot is at native t=1000 rg/c (about 49.26 seconds after
+initialization). The core has moved out to 31.54 Rs. Its two tails have NOT
+already circularized into the inner disc. The inner disc is a separate,
+pre-existing prescribed flow; the figure does not claim this encounter has
+created that disc or its jet. This distinction is essential: fallback,
+stream self-intersection and circularization are different processes.
+See [Rossi, Servin & Kesden on circularization](https://doi.org/10.1103/PhysRevD.104.103019).
 
-The screen-plane roll is 18 degrees; the camera remains at 10 degrees above
-the disk. Disk, jets and lensed sky use the same rotated rays. The closer jet
-onset keeps the visible sheath connected to the poles without shifting it off
-the spin axis. Desktop framing uses a view span of 20 (previously 34), while
-portrait framing uses 40 (previously 48), shifted left to include the donor
-core. The scene fills the page and extends behind the content. Both fallback images are rendered from
-the same shaders at the initial animation time.
+### Numerical checks and reproducibility
 
-## White-dwarf tidal-debris model
+- 16,384 particles: relaxed Ekin/|W|=9.99e-8, virial ratio about 0.9964.
+- Iteratively self-bound core fraction: 81.47%; a 4,096-particle comparison
+  gives 81.76%. This is a resolution sensitivity check, not paper-grade convergence.
+- An isolated-star control evolved for the same duration changes R90 by -0.60%.
+- The deformed core's R90=0.735 Rs is measured from the simulated particles;
+  it is not an arbitrarily enlarged stellar radius or a spherical photosphere.
+- BL-to-Kerr-Schild four-velocity normalization residual is below 9e-16.
+- Heating is less well converged and is used only as an entropy-excess display proxy.
 
-`assets/js/tidal-stream.js` evolves 64 initially comoving, massive test particles
-with analytical Cartesian Kerr-Schild Hamiltonian derivatives and RK4. Matter
-uses `g(u,u) = -1`, not the photon null correction. The scale is a 10,000 solar
-mass black hole and a 0.6 solar mass WD with radius 0.30 Rs, giving a Newtonian
-tidal-radius estimate of 7.663 Rs. The initial central orbit has E=0.968 and
-L_y=1.8. All particles are sampled at the same coordinate time, t=425 Rs/c;
-the returning leading debris reaches approximately 4.25 Rs and overlaps the
-accretion disk. Rotation about the spin axis only changes the viewing azimuth.
+Run configurations, exporter, coordinate conversion, source commit and detailed
+checks are in [scripts/wd-sph-model](../../../scripts/wd-sph-model/README.txt).
+The original particle snapshot and metadata are in
+[assets/data/wd-sph/raw](../../data/wd-sph/raw/).
+`python scripts/build_wd_volume.py SNAPSHOT.json OUTPUT` reconstructs the grids;
+it needs NumPy. `python -B -m unittest discover -s tests -v` checks conservative
+SPH deposition, velocity/momentum rotation, heat subtraction, encoding and the
+publication synchronizer.
 
-`npgs-tidal.frag` ray traces the prescribed stretched core and three-dimensional
-debris tubes along the same numerical Kerr null paths. Both passes stop at the
-same opaque core surface and process disk crossings in observer-to-source
-order. Stream flow is a linear, retarded-time emissivity modulation on this
-fixed snapshot. Surface redshift, emitter-frame limb darkening and volume
-transfer are evaluated before tone mapping. Visible temperatures, tube widths,
-core shape and brightness are prescribed illustration parameters; the color
-of the stream's averaged temperature is also an approximation.
+## Rendering the computed fluid
 
-This is **not** GR hydrodynamics, a solved evolving spacetime, a stellar
-self-gravity calculation, or a prediction that a self-bound core survives.
-The stationary Kerr metric is exact; photon and ballistic-particle trajectories
-are numerically integrated. Gas pressure, shocks, self-gravity, disk formation,
-magnetic launching and the star's changing shape are not evolved. The existing
-disk and its feeding stream represent an illustrative late-time configuration.
+The SPH cubic-spline kernels reconstruct density and density-weighted velocity
+on a 64-cubed core grid and a 128-by-28-by-104 tail grid. Sparse gzip assets total
+about 2.85 MiB. Coordinate kernel mass density is distinguished from relativistic
+rest density. Discrete kernel normalization preserves mass and momentum;
+FP16 density conversion changes mass by less than 0.0004% in these grids.
+Cold-polytrope internal energy is subtracted before constructing the heat proxy.
 
-Physical context: [Maguire et al., WD tidal-disruption review](https://arxiv.org/abs/2004.00146)
-and [Cheng & Evans, relativistic tidal encounters](https://arxiv.org/abs/1303.4129).
+The dense core is rendered at an isodensity boundary of 2% of its peak coordinate
+kernel density. This is an unresolved **grey photosphere proxy**, not an opacity
+calculation. Its shape, local velocities and deformation come from the SPH
+snapshot. Limb darkening and modest irradiation/entropy modulation provide a
+readable surface without adding planet-like terrain. Tails use an optically thin
+emissive-skin approximation with density-squared emissivity. Their bulk opacity,
+scattering and radiation feedback are not solved. Temperatures, normalization
+and the warm/cool display palette are illustrative, not a predicted spectrum.
 
-Run `node tests/test_tidal_stream.js` for independent massive normalization,
-Killing-invariant conservation, step-halving convergence, stream continuity,
-packing and bounds checks. At step 0.25, the snapshot's maximum mass-shell
-error is about 1.4e-8; invariant-error convergence ratios are about 15.4.
+All core intersections, tail emission, disc images and jet emission use the
+same numerical Kerr null geodesics. The photon momentum starts in the finite
+observer's local orthonormal tetrad, with adaptive RK4 integration. The trace
+step is continuously limited near the reconstructed fluid. Both passes stop at
+the same core surface and split volume integration at foreground disc crossings.
+A dense-core surface never erases emission already collected in front of it.
 
-## Quality and measurement
+The stored fluid slice is simultaneous in Boyer-Lindquist time. Mapping it to
+Kerr-Schild coordinates produces a KS-time spread of 0.12925 Rs/c (0.01273 s).
+We use the standard frozen-fluid / fast-light approximation. Browser animation
+advects the separate disc emission and modulates the prescribed jet; it does
+not pretend the fixed hydro grid is a time-evolving disruption movie.
 
-| Preset | Transfer grid (six RGBA16F maps) | Output pixel cap |
-| --- | --- | --- |
-| Desktop | 1152², about 61 MiB | 2,100,000 |
-| Desktop with four or fewer logical CPUs | 832², about 32 MiB | 1,100,000 |
-| Narrow/coarse-pointer device or save-data | 512², 12 MiB | 230,000 |
+## Disc and jet radiation models
 
-The map covers 36 Rs with additional central refinement; output resolution
-also respects DPR and adaptive scaling. A still-mode desktop keeps desktop
-detail. Canvas `data-*` diagnostics expose the actual map/output sizes,
-trace wall time (excluding hidden intervals), 120-draw sample duration/rate,
-CPU submission time and asynchronous GPU time when available. GPU time does
-not include CSS compositing and is not a cross-device benchmark. Static
-fallback frames remain visible during the initial batched ray tracing.
+The inner disc retains two lensed surface images. Kerr orbital angular velocity
+sets its texture advection; slow radial drift uses alpha=0.1 and H/R=0.08.
+Higher-order images receive no arbitrary brightness bonus. This is a thin-flow
+visualization, not the thick, radiating outflow of a newly formed TDE disc.
+
+The jet is a **semi-analytic optically thin funnel**, not a GRMHD simulation.
+It has finite-base parabolic expansion, a broad soft sheath and weak spine;
+velocity follows the expanding streamlines in the local tetrad. Prescribed
+mass-flux and field scalings are n~1/(gamma*v*W^2), Bp~W^-2 and Bphi~W^-1.
+The plasma-frame perpendicular field is computed covariantly. A power-law
+population with p=2.4 gives spectral index 0.7 and transfer proportional to
+`g^3.7 j_normalized dl_emit` in the selected band. Low-amplitude harmonic moments
+retain emission-time delay. There is no post-process bend or offset of the jet.
+
+Method references: [ipole](https://arxiv.org/abs/1712.03057),
+[RAPTOR I](https://arxiv.org/abs/1801.10452),
+[BHOSS](https://arxiv.org/abs/1907.09196).
+Funnel geometry is motivated by [Nakamura et al.](https://arxiv.org/abs/1810.09963),
+not fitted to that M87 calculation. Magnetic flux and accretion state are
+additional assumptions; spin alone does not guarantee a jet.
+
+## Observer and quality
+
+The whole SPH field, including velocities, is rotated around the Kerr symmetry
+axis. The observer is at R=48 Rs, 10 degrees above the disc, while the donor is
+on the near side at R=31.54 Rs. Its apparent size therefore increases through
+perspective and its actual simulated deformation, without rescaling particle
+positions or the stellar mass. A 55-degree camera roll frames core and tails.
+
+Two trace passes retain six RGBA16F maps while respecting WebGL 2's minimum of
+four simultaneous render targets. The ray grid covers 52 Rs with extra central
+sampling. Desktop uses 1152 by 1152 maps and at most 2.1M
+output pixels; four-or-fewer logical CPU devices use 832 by 832 and 1.1M pixels.
+Narrow/coarse-pointer or save-data devices use 512 by 512 and 230k pixels.
+Animation targets 30 fps with sustained-load downscaling. Hidden tabs pause;
+reduced-motion produces a still frame. The first trace is batched over frames,
+and unsupported hardware or data-loading failure displays the matching fallback.
+Canvas data attributes expose actual resolution, trace timing and 120-draw
+performance samples. These are measurements of the current device, not universal
+integrated-GPU performance guarantees.

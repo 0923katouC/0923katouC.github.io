@@ -1,0 +1,7 @@
+Repository: https://github.com/danieljprice/phantom
+Commit: ed34a9c2aec4a5687c14acebd684b4e8abeb7245
+Reported version: 2026.0.1
+Compiler: GNU Fortran 14.2.0 (gfortran)
+Build: SYSTEM=gfortran SETUP=grtde
+CPU threading: OMP_NUM_THREADS=4
+Numerical kernel: M4 cubic spline, support 2h, hfact=1.2
