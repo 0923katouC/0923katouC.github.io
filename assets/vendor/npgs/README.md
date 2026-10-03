@@ -29,11 +29,29 @@ maps store two disk intersections and escaped sky directions. An invertible
 nonuniform image-plane grid improves sampling near the shadow and photon ring.
 It changes sample density, not the camera or the ray geometry.
 
-The NPGS spiral/inflow coordinates and strong layered disk texture are restored.
-Differential orbital motion, retarded emission time, warm temperature mapping
-and bounded bloom provide the visual animation. Fine sinusoidal bands are
-attenuated by their pixel footprint to reduce moire. This surface-emission
-animation is an illustrative web adaptation, not a hydrodynamic simulation.
+Emission structures follow a single backward characteristic: dr/dt = -0.02
+and dtheta/dt = Omega_K(r) in the renderer's Cartesian Kerr-Schild azimuth.
+Composite Simpson quadrature integrates the angle along the radial path;
+the spiral and all noise/filament coordinates are evaluated at that common
+birth point. This fixes the competing angular velocities caused by applying
+radial drift and differential rotation to different texture coordinates.
+The small inward speed is an illustrative emission-pattern speed; Doppler
+shifts still use circular Keplerian emitters, not a solved accreting fluid.
+
+Two populations live for 48 emission-time units with complementary sin²
+windows. Birth and death have zero weight and slope, bounding shear without
+resetting the visible disk. Time includes each ray's negative travel time.
+Angle derivatives use the continuous tangent rather than the atan branch
+cut. The finite lifetime is motivated by transient structures in
+[Schnittman, Krolik & Hawley (2006)](https://arxiv.org/abs/astro-ph/0606615);
+the lifetime and texture here are illustrative, not fits to that simulation.
+Warm temperature mapping, pixel-footprint filtering and bounded bloom finish
+this surface-emission visualization; it is not a hydrodynamic simulation.
+
+To check the advection after edits, serve the repository and open
+`/tests/black-hole-dynamics.html`. Its button compiles the actual GLSL helper,
+checks GPU results against independently integrated RK4 particle trajectories,
+and checks the continuity of the actual renewal windows across their resets.
 
 Desktop ray maps are 1536 by 1536, with at most 2.1M output pixels. Economy
 desktops use 832 by 832 / 1.1M pixels. Narrow/coarse-pointer/save-data devices

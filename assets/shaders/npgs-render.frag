@@ -81,27 +81,81 @@ vec4 diskSample(sampler2D map, vec2 uv, out float coverage) {
     return (a*w.x + b*w.y + c*w.z + d*w.w) / coverage;
 }
 
+// Emission features have a finite lifetime, as turbulent structures do.
+// Backtrace every texture coordinate through ONE velocity field: prograde
+// Keplerian rotation plus a small inward drift. This is a kinematic surface
+// model, not an evolution of the fluid stress-energy tensor.
+const float FEATURE_LIFETIME = 48.0;
+const float INFLOW_SPEED = 0.02;
+float diskOmega(float r) {
+    float root = sqrt(0.5 * r);
+    return root / (r*r + PHYSICAL_A*root);
+}
+vec2 birthSpiral(float r) {
+    float u = sqrt(r);
+    float eps = PHYSICAL_A * 0.70710678 / (r*u);
+    float spiral = -16.9705627 / u * (1.0 - 0.25*eps + 0.142857*eps*eps);
+    float slope = 8.48528135 / (r*u) * (1.0 - eps + eps*eps);
+    return vec2(spiral,slope);
+}
+vec2 diskBirthCoordinates(float r, float theta, float age) {
+    float stepR = INFLOW_SPEED*age*0.25;
+    float birthR = r + 4.0*stepR;
+    // Composite Simpson quadrature of integral_r^birthR Omega(s) ds / v.
+    float orbit = age/12.0 * (diskOmega(r) + 4.0*diskOmega(r+stepR)
+                  + 2.0*diskOmega(r+2.0*stepR) + 4.0*diskOmega(r+3.0*stepR)
+                  + diskOmega(birthR));
+    return vec2(birthR,theta-orbit);
+}
+float diskFeature(float r, float theta, float time, float offset,
+                  vec2 dr, vec2 dtheta, vec2 dt) {
+    float cycle = floor((time + offset) / FEATURE_LIFETIME);
+    float age = mod(time + offset, FEATURE_LIFETIME);
+    vec2 birth = diskBirthCoordinates(r,theta,age);
+    float birthR = birth.x;
+    float omega = diskOmega(r);
+    float birthOmega = diskOmega(birthR);
+    vec2 spiral = birthSpiral(birthR);
+    float phase = birth.y - spiral.x;
+    // The layer is invisible (with zero slope) when this seed is replaced.
+    float seed = mod(cycle,4096.0) + 17.0*offset;
+    vec3 seedOffset = vec3(hash21(vec2(seed,1.0)), hash21(vec2(seed,2.0)),
+                           hash21(vec2(seed,3.0))) * 32.0;
+    vec3 point = vec3(0.28*birthR, 0.58*cos(phase), 0.58*sin(phase));
+    float turbulence = GenerateAccretionDiskNoise(point + seedOffset, 1.0, 3.0, 45.0);
+    // Differentiate the unwrapped characteristic, not atan() or mod(age).
+    // This avoids false AA bands at the azimuth seam and feature renewal.
+    vec2 dBirthR = dr + INFLOW_SPEED*dt;
+    vec2 dPhase = dtheta - (birthOmega-omega)/INFLOW_SPEED*dr
+                  - birthOmega*dt - spiral.y*dBirthR;
+    float filamentPhase = 15.0*birthR + 4.0*phase + 2.6*turbulence;
+    vec2 gradient = 15.0*dBirthR + 4.0*dPhase
+                    + 2.6*vec2(dFdx(turbulence),dFdy(turbulence));
+    float footprint = abs(gradient.x) + abs(gradient.y);
+    float filaments = 0.72 + 0.28*sin(filamentPhase)*exp(-0.25*footprint*footprint);
+    return clamp(0.28 + 1.2*turbulence,0.25,2.4)*filaments;
+}
+float diskTexture(vec4 hit, float r) {
+    float time = uTime*3.6 + hit.z; // Backward ray integration gives t_emit < t_obs.
+    float theta = atan(hit.x,hit.y); // +y spin: tangent (z,0,-x), as in p_phi.
+    vec2 dr = vec2(dFdx(r),dFdy(r));
+    vec2 tangent = vec2(hit.y,-hit.x)/max(dot(hit.xy,hit.xy),1e-6);
+    vec2 dtheta = vec2(dot(tangent,dFdx(hit.xy)),dot(tangent,dFdy(hit.xy)));
+    vec2 dt = vec2(dFdx(time),dFdy(time));
+    float age = mod(time,FEATURE_LIFETIME);
+    float weight = pow(sin(kPi*age/FEATURE_LIFETIME),2.0);
+    float a = diskFeature(r,theta,time,0.0,dr,dtheta,dt);
+    float b = diskFeature(r,theta,time,FEATURE_LIFETIME*0.5,dr,dtheta,dt);
+    // Complementary smooth windows prevent a visible reset or blank interval.
+    return weight*a + (1.0-weight)*b;
+}
+
 vec4 diskEmission(vec4 hit, float coverage, float imageOrder) {
     if (coverage < 0.001 || hit.w <= 0.0) return vec4(0.0);
     float r = sqrt(max(0.0, dot(hit.xy, hit.xy) - PHYSICAL_A * PHYSICAL_A));
     if (r <= DISK_INNER || r >= DISK_OUTER) return vec4(0.0);
     float radial = (r - DISK_INNER) / (DISK_OUTER - DISK_INNER);
-    float emissionTime = uTime * 3.6 + hit.z;
-    float omega = sqrt(0.5 * r) / (r * r + PHYSICAL_A * sqrt(0.5 * r));
-    float theta = atan(hit.x, hit.y);
-    // NPGS's inflowing spiral coordinates, plus local orbital advection.
-    float u = sqrt(r);
-    float eps3 = PHYSICAL_A * 0.70710678 / (u * u * u);
-    float spiral = -16.9705627 / u * (1.0 - 0.25 * eps3 + 0.142857 * eps3 * eps3);
-    float phase = theta - 0.65 * omega * emissionTime - spiral;
-    float advectedR = r + emissionTime / 12.0;
-    // Circular embedding avoids an azimuth seam without an extra noise pass.
-    vec3 noisePoint = vec3(0.28 * advectedR, 0.58 * cos(phase), 0.58 * sin(phase));
-    float turbulence = GenerateAccretionDiskNoise(noisePoint, 2.0, 4.0, 45.0);
-    float filamentPhase = 15.0 * r + 4.0 * phase + 2.6 * turbulence;
-    float footprint = fwidth(filamentPhase);
-    float filaments = 0.72 + 0.28 * sin(filamentPhase) * exp(-0.25 * footprint * footprint);
-    float textureValue = clamp(0.28 + 1.2 * turbulence, 0.25, 2.4) * filaments;
+    float textureValue = diskTexture(hit,r);
     float envelope = Shape(radial, 0.9, 1.5);
     // NPGS's standard thin-disk T(r), normalized here for a warm visible palette.
     // This is an artistic temperature scale, not an observed physical spectrum.

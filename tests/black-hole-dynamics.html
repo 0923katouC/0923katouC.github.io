@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8">
+<title>Disk characteristic GLSL regression</title>
+<style>
+body{max-width:920px;margin:36px auto;padding:0 20px;background:#111827;color:#e5e7eb;font:15px/1.5 system-ui}
+button{padding:10px 18px;background:#38bdf8;color:#082f49;border:0;border-radius:6px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#1f2937;padding:18px;border-radius:8px}
+[data-state=pass]{color:#86efac}[data-state=fail]{color:#fca5a5}canvas{display:none}small{color:#9ca3af}
+</style>
+<h1>Disk characteristic regression</h1>
+<p>Compiles the production <code>diskBirthCoordinates</code> GLSL helper and reads its floating-point GPU output. Expected motion comes from independent double-precision RK4 trajectories.</p>
+<button id="run">Run GPU regression</button>
+<p id="status" data-state="idle">Ready. Shader URLs are relative to the server root; use <code>?base=/path/</code> to change that.</p>
+<pre id="results">No tests run.</pre>
+<small>Read-only diagnostic. No website source is modified. The three fetched production files and their combined SHA-256 identify the implementation tested.</small>
+<canvas id="gpu" width="1" height="1"></canvas>
+<script>
+'use strict';
+const statusNode=document.querySelector('#status'), resultNode=document.querySelector('#results');
+const button=document.querySelector('#run');
+function check(condition,message){if(!condition)throw new Error(message);}
+function functionSource(source,name){
+  const match=new RegExp('(?:float|vec[234])\\s+'+name+'\\s*\\(').exec(source);
+  check(match,'Production function missing: '+name);
+  const start=source.indexOf('{',match.index);let depth=1,end=start+1;
+  while(end<source.length&&depth){if(source[end]==='{')depth++;if(source[end]==='}')depth--;end++;}
+  check(depth===0,'Unbalanced production helper '+name);
+  return source.slice(match.index,end);
+}
+function constantSource(source,name){
+  const match=new RegExp('const\\s+float\\s+'+name+'\\s*=\\s*([^;]+);').exec(source);
+  check(match,'Production constant missing: '+name);
+  const value=Number(match[1]);check(Number.isFinite(value),'Nonliteral constant '+name);
+  return {source:match[0],value};
+}
+const wrap=angle=>Math.atan2(Math.sin(angle),Math.cos(angle));
+
+// Independent expected dynamics in source coordinates. This advances a
+// particle forward, rather than duplicating the shader's inverse quadrature.
+function advanceRK4(r,theta,duration,spin,inflow){
+  const omega=x=>1/(Math.sqrt(2)*x**1.5+spin);
+  const count=Math.max(1,Math.ceil(duration/.01)),h=duration/count;
+  for(let i=0;i<count;i++){
+    const k1=omega(r), k2=omega(r-.5*h*inflow);
+    const k3=omega(r-.5*h*inflow), k4=omega(r-h*inflow);
+    theta+=h*(k1+2*k2+2*k3+k4)/6;
+    r-=h*inflow;
+  }
+  return [r,theta];
+}
+
+button.addEventListener('click',async()=>{
+  button.disabled=true;statusNode.dataset.state='running';statusNode.textContent='Fetching and compiling production GLSL…';
+  window.regressionResult=null;const started=performance.now();let gl,program,texture,framebuffer,vao;
+  const metrics={phaseSamples:0,velocitySamples:0,renewalSamples:0,maxBirthRadiusError:0,
+    maxBirthAzimuthErrorRad:0,maxOmegaRelativeError:0,maxCharacteristicSpeedRelativeError:0,
+    minRecoveredAngularVelocity:Infinity,maxComplementWeightError:0,maxRenewalJump:0,maxRenewalSlope:0};
+  try{
+    const base=new URL(new URLSearchParams(location.search).get('base')||'/',location.href);
+    const paths=['assets/shaders/npgs-render.frag','assets/js/academic-black-hole.js','assets/shaders/npgs-emission.glsl'];
+    const urls=paths.map(path=>new URL(path,base).href);
+    const sources=await Promise.all(urls.map(async url=>{
+      const response=await fetch(url,{cache:'no-store'});check(response.ok,'Fetch failed '+response.status+': '+url);return response.text();
+    }));
+    const [render,scene,emission]=sources;
+    const spin=constantSource(scene,'PHYSICAL_A'),inflow=constantSource(render,'INFLOW_SPEED');
+    const lifetime=constantSource(render,'FEATURE_LIFETIME'),pi=constantSource(emission,'kPi');
+    check(lifetime.value>1&&inflow.value>0,'Expected a positive lifetime and inward drift.');
+    const diskTexture=functionSource(render,'diskTexture');
+    const renewal=/float\s+age\s*=[^;]+;\s*float\s+weight\s*=[^;]+;/.exec(diskTexture);
+    check(renewal,'Production renewal-weight statements not found.');
+    const helpers=[spin.source,inflow.source,lifetime.source,pi.source,
+      functionSource(render,'diskOmega'),functionSource(render,'diskBirthCoordinates')].join('\n');
+    const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(sources.join('\n')));
+    metrics.productionSHA256=Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('');
+    metrics.sourceURLs=urls;metrics.spin=spin.value;metrics.inflow=inflow.value;metrics.lifetime=lifetime.value;
+    gl=document.querySelector('#gpu').getContext('webgl2',{antialias:false,depth:false,stencil:false});
+    check(gl,'WebGL2 unavailable.');check(gl.getExtension('EXT_color_buffer_float'),'EXT_color_buffer_float unavailable.');
+    check(gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT).precision>=23,'Fragment highp is below float32 precision.');
+    function compile(type,text){
+      const shader=gl.createShader(type);gl.shaderSource(shader,text);gl.compileShader(shader);
+      check(gl.getShaderParameter(shader,gl.COMPILE_STATUS),'GLSL compile failed:\n'+gl.getShaderInfoLog(shader));return shader;
+    }
+    const vertex=compile(gl.VERTEX_SHADER,`#version 300 es
+      void main(){vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));gl_Position=vec4(p*2.0-1.0,0.0,1.0);}`);
+    const fragment=compile(gl.FRAGMENT_SHADER,`#version 300 es
+      precision highp float;precision highp int;
+      uniform vec4 uInput;layout(location=0) out vec4 outputData;
+      ${helpers}
+      void main(){float time=uInput.w;${renewal[0]}
+        vec2 birth=diskBirthCoordinates(uInput.x,uInput.y,uInput.z);
+        outputData=vec4(birth,diskOmega(uInput.x),weight);}`);
+    program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);
+    check(gl.getProgramParameter(program,gl.LINK_STATUS),'GLSL link failed:\n'+gl.getProgramInfoLog(program));
+    gl.deleteShader(vertex);gl.deleteShader(fragment);gl.useProgram(program);
+    vao=gl.createVertexArray();gl.bindVertexArray(vao);
+    texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,1,1,0,gl.RGBA,gl.FLOAT,null);
+    framebuffer=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,texture,0);
+    check(gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE,'RGBA32F framebuffer incomplete.');
+    gl.viewport(0,0,1,1);const input=gl.getUniformLocation(program,'uInput');const output=new Float32Array(4);
+    function sample(r,theta,age,time=0){
+      gl.uniform4f(input,r,theta,age,time);gl.drawArrays(gl.TRIANGLES,0,3);
+      gl.readPixels(0,0,1,1,gl.RGBA,gl.FLOAT,output);
+      check(Array.from(output).every(Number.isFinite),'GPU returned nonfinite data.');return Array.from(output);
+    }
+    const radii=[1.29,1.35,1.5,2,3,4,6,9];
+    const angles=[-Math.PI+.0001,-Math.PI/2,-.0001,.0001,Math.PI/2,Math.PI-.0001];
+    const ages=[0,.25,6,12,24,36,47.5,48].map(age=>age/48*lifetime.value);
+    const referenceOmega=r=>1/(Math.sqrt(2)*r**1.5+spin.value);
+    for(const radius of radii){
+      statusNode.textContent='Checking forward trajectories and recovered birth coordinates at r='+radius+'…';
+      await new Promise(requestAnimationFrame);
+      for(const age of ages){
+        const birthRadius=radius+inflow.value*age;
+        const advanced=advanceRK4(birthRadius,0,age,spin.value,inflow.value);
+        for(const theta0 of angles){
+          const actual=sample(advanced[0],wrap(theta0+advanced[1]),age);
+          metrics.maxBirthRadiusError=Math.max(metrics.maxBirthRadiusError,Math.abs(actual[0]-birthRadius));
+          const error=Math.abs(wrap(actual[1]-theta0));
+          if(error>metrics.maxBirthAzimuthErrorRad){metrics.maxBirthAzimuthErrorRad=error;metrics.worstPhaseCase={radius,theta0,age};}
+          metrics.maxOmegaRelativeError=Math.max(metrics.maxOmegaRelativeError,Math.abs(actual[2]/referenceOmega(radius)-1));
+          check(actual[2]>0,'Production orbital frequency is not prograde.');metrics.phaseSamples++;
+        }
+      }
+      // Invert the ACTUAL GPU characteristic to infer its material angular
+      // velocity, using centered samples along inward radial motion.
+      const dt=.1;
+      for(const age of [1,12,24,36,lifetime.value-.2]){
+        for(const theta of [-Math.PI/2,Math.PI/2]){
+          const before=sample(radius+inflow.value*dt,theta,age-dt);
+          const after=sample(radius-inflow.value*dt,theta,age+dt);
+          const recoveredOmega=-(after[1]-before[1])/(2*dt);
+          metrics.minRecoveredAngularVelocity=Math.min(metrics.minRecoveredAngularVelocity,recoveredOmega);
+          metrics.maxCharacteristicSpeedRelativeError=Math.max(metrics.maxCharacteristicSpeedRelativeError,
+            Math.abs(recoveredOmega/referenceOmega(radius)-1));
+          check(recoveredOmega>0,'GPU characteristic reverses rotation at r='+radius+', age='+age);
+          metrics.velocitySamples++;
+        }
+      }
+    }
+    for(const time of [-96,-48,-24,-.1,0,.1,12,24,47.9,48,48.1,120,3600,86400]){
+      const a=sample(4,0,0,time)[3],b=sample(4,0,0,time+lifetime.value/2)[3];
+      metrics.maxComplementWeightError=Math.max(metrics.maxComplementWeightError,Math.abs(a+b-1));
+      check(a>=-1e-6&&a<=1.000001,'Renewal weight outside [0,1].');metrics.renewalSamples+=2;
+    }
+    for(const boundary of [-lifetime.value,0,lifetime.value/2,lifetime.value]){
+      const epsilon=.01;
+      const left=sample(4,0,0,boundary-epsilon)[3],middle=sample(4,0,0,boundary)[3],right=sample(4,0,0,boundary+epsilon)[3];
+      metrics.maxRenewalJump=Math.max(metrics.maxRenewalJump,Math.abs(right-middle),Math.abs(left-middle));
+      metrics.maxRenewalSlope=Math.max(metrics.maxRenewalSlope,Math.abs((right-left)/(2*epsilon)));
+      metrics.renewalSamples+=3;
+    }
+    check(gl.getError()===gl.NO_ERROR,'WebGL error occurred during readback.');
+    // The 5-point composite Simpson rule has a bounded truncation error.
+    // Independent double-precision estimates put the worst speed error near
+    // r=1.29, age=48 at about 0.032%; allow <0.1% including GPU float32 error.
+    const tolerances={birthRadius:2e-5,birthAzimuthRad:.002,omegaRelative:2e-5,
+      characteristicSpeedRelative:.001,complementWeight:2e-5,renewalJump:2e-6,renewalSlope:2e-5};
+    metrics.tolerances=tolerances;
+    check(metrics.maxBirthRadiusError<tolerances.birthRadius,'Birth radius is not conserved.');
+    check(metrics.maxBirthAzimuthErrorRad<tolerances.birthAzimuthRad,'Recovered birth azimuth exceeds bounded quadrature tolerance.');
+    check(metrics.maxOmegaRelativeError<tolerances.omegaRelative,'Production Omega differs from independent Kerr reference.');
+    check(metrics.maxCharacteristicSpeedRelativeError<tolerances.characteristicSpeedRelative,'Characteristic angular speed differs by >=0.1%.');
+    check(metrics.maxComplementWeightError<tolerances.complementWeight,'Renewal windows do not sum to one.');
+    check(metrics.maxRenewalJump<tolerances.renewalJump&&metrics.maxRenewalSlope<tolerances.renewalSlope,'Renewal boundary is not smooth.');
+    metrics.elapsedMs=performance.now()-started;
+    window.regressionResult={status:'PASS',metrics};statusNode.dataset.state='pass';
+    statusNode.textContent='PASS — actual GLSL preserves birth coordinates and prograde motion; renewal windows are smooth.';
+  }catch(error){
+    metrics.elapsedMs=performance.now()-started;
+    window.regressionResult={status:'FAIL',error:String(error.stack||error),metrics};
+    statusNode.dataset.state='fail';statusNode.textContent='FAIL — '+error.message;
+  }finally{
+    resultNode.textContent=JSON.stringify(window.regressionResult,null,2);button.disabled=false;
+    if(gl){if(framebuffer)gl.deleteFramebuffer(framebuffer);if(texture)gl.deleteTexture(texture);if(program)gl.deleteProgram(program);if(vao)gl.deleteVertexArray(vao);}
+  }
+});
+</script>
+</html>
