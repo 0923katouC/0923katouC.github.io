@@ -6,7 +6,7 @@
   'use strict';
   const canvas = document.getElementById('academic-black-hole');
   if (!canvas) return;
-  const VERSION = '20261003-volume7';
+  const VERSION = '20261003-jet4';
   const baseUrl = new URL('../shaders/', document.currentScript.src);
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobile = matchMedia('(max-width: 820px), (pointer: coarse)');
@@ -51,7 +51,7 @@
   `;
   canvas.dataset.renderer = 'npgs-kerr';
   canvas.dataset.version = VERSION;
-  canvas.dataset.scene = 'volumetric-black-hole';
+  canvas.dataset.scene = 'volumetric-black-hole-jets';
   document.body.classList.add('academic-cosmos-fallback');
   let gl;
   try {
@@ -65,7 +65,7 @@
     return;
   }
   const shaderNames = ['npgs-kerr.glsl', 'npgs-emission.glsl', 'npgs-volume-trace.vert',
-                       'npgs-render.frag', 'npgs-compose.frag', 'npgs-project.frag'];
+                       'npgs-render.frag', 'npgs-compose.frag', 'npgs-project.frag', 'npgs-jet.glsl'];
   let sources;
   let generation = 0;
   let programs = [];
@@ -79,7 +79,11 @@
   let cacheWidth = 0;
   let cacheHeight = 0;
   let cacheBytes = 0;
+  // Disk and jet slots are fixed independently. Three packed uint words per
+  // material node are regrouped into RGBA32UI packets for transform feedback.
   let nodeCount = 8;
+  let jetNodeCount = 4;
+  let packetTexels = 10;
   let rayStrideBytes = 0;
   let totalRays = 0;
   let noise;
@@ -161,8 +165,9 @@
     return linkProgram(HEADER + VERTEX, HEADER + fragment, names);
   }
   function makeTraceProgram() {
-    const varyings = Array.from({ length: nodeCount }, (_, index) => `vNode${index}`).concat('vSky');
-    const prefix = HEADER + `#define NODE_COUNT ${nodeCount}\n` + SCENE + sources[0];
+    const varyings = Array.from({ length: packetTexels }, (_, index) => `vPack${index}`);
+    const defines = `#define NODE_COUNT ${nodeCount}\n#define JET_NODE_COUNT ${jetNodeCount}\n#define PACKET_TEXELS ${packetTexels}\n`;
+    const prefix = HEADER + defines + SCENE + sources[6] + sources[0];
     const program = linkProgram(prefix + sources[2],
       HEADER + 'out vec4 fragColor; void main() { fragColor = vec4(0.0); }',
       ['uMapSize', 'uRayOffset'], varyings);
@@ -185,19 +190,29 @@
     const maximum = gl.getParameter(gl.MAX_TEXTURE_SIZE);
     const maximumComponents = gl.getParameter(gl.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS);
     nodeCount = low ? 6 : economyDesktop() ? 8 : 12;
-    if (maximumComponents < 4 * (nodeCount + 1)) nodeCount = 6;
-    if (maximumComponents < 4 * (nodeCount + 1)) throw new Error('Packed transform feedback unavailable');
+    jetNodeCount = low || economyDesktop() ? 4 : 6;
+    const packetsFor = (diskNodes, jetNodes) => Math.ceil((3 * (diskNodes + jetNodes) + 4) / 4);
+    packetTexels = packetsFor(nodeCount, jetNodeCount);
+    if (maximumComponents < 4 * packetTexels && nodeCount > 8) {
+      nodeCount = 8; jetNodeCount = 4; packetTexels = packetsFor(nodeCount, jetNodeCount);
+    }
+    if (maximumComponents < 4 * packetTexels) {
+      nodeCount = 6; jetNodeCount = 4; packetTexels = packetsFor(nodeCount, jetNodeCount);
+    }
+    if (maximumComponents < 4 * packetTexels) throw new Error('Packed transform feedback unavailable');
     const desired = low ? 384 : economyDesktop() ? 640 : 960;
-    // One RGBA32UI texel stores eight packed half-floats. N nodes and one
-    // sky record are contiguous for every ray, independent of atlas rows.
-    mapSize = Math.min(desired, Math.floor(maximum / Math.sqrt(nodeCount + 1)));
+    // Each node stores [x,y,z,tLag,g,dl] in three uints. Four sky uints follow
+    // all disk and jet nodes; zero padding ends the last RGBA32UI packet.
+    // Full desktop: 58 useful words padded to 60, within the 64-component
+    // transform-feedback minimum. Records remain contiguous across atlas rows.
+    mapSize = Math.min(desired, Math.floor(maximum / Math.sqrt(packetTexels)));
     if (mapSize < 1) throw new Error('Ray cache exceeds texture limits');
     totalRays = mapSize * mapSize;
-    const texels = totalRays * (nodeCount + 1);
-    cacheWidth = Math.min(maximum, mapSize * (nodeCount + 1));
+    const texels = totalRays * packetTexels;
+    cacheWidth = Math.min(maximum, mapSize * packetTexels);
     cacheHeight = Math.ceil(texels / cacheWidth);
     if (cacheHeight > maximum) throw new Error('Ray-cache atlas exceeds texture limits');
-    rayStrideBytes = 16 * (nodeCount + 1);
+    rayStrideBytes = 16 * packetTexels;
     // Padding covers the final partial atlas row, so the PBO upload never
     // reads beyond the allocation. BufferData provides initialized storage.
     cacheBytes = cacheWidth * cacheHeight * 16;
@@ -218,10 +233,12 @@
     canvas.dataset.qualityTier = low ? 'mobile' : economyDesktop() ? 'economy' : 'desktop';
     canvas.dataset.mapResolution = `${mapSize}x${mapSize}`;
     canvas.dataset.nodeCount = String(nodeCount);
+    canvas.dataset.jetNodeCount = String(jetNodeCount);
+    canvas.dataset.packetTexels = String(packetTexels);
     canvas.dataset.cacheResolution = `${cacheWidth}x${cacheHeight}`;
     canvas.dataset.rayCacheBytes = String(cacheBytes);
     canvas.dataset.tracePeakCacheBytes = String(2 * cacheBytes);
-    canvas.dataset.cacheLayout = `RGBA32UI; ray-major; ${nodeCount + 1} texels/ray`;
+    canvas.dataset.cacheLayout = `RGBA32UI; ray-major; ${packetTexels} texels/ray; ${nodeCount} disk + ${jetNodeCount} jet nodes`;
   }
   function traceRayBatch(count) {
     gl.useProgram(trace.handle);
@@ -425,6 +442,8 @@
       gl.uniform2f(location(render, 'uRadianceResolution'), radianceSize, radianceSize);
       gl.uniform1i(location(render, 'uCacheWidth'), cacheWidth);
       gl.uniform1i(location(render, 'uNodeCount'), nodeCount);
+      gl.uniform1i(location(render, 'uJetNodeCount'), jetNodeCount);
+      gl.uniform1i(location(render, 'uPacketTexels'), packetTexels);
       gl.uniform1f(location(render, 'uTime'), elapsed);
       gl.uniform1f(location(render, 'uGrainDetail'), lowPower() ? 0.35 : 1.0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -561,8 +580,8 @@
       gl.disable(gl.DITHER);
       allocateRayCache();
       trace = makeTraceProgram();
-      render = makeProgram(SCENE + sources[1] + sources[3],
-        ['uRayCache', 'uMapSize', 'uRadianceResolution', 'uCacheWidth', 'uNodeCount', 'uNoise', 'uTime', 'uGrainDetail']);
+      render = makeProgram(SCENE + sources[6] + sources[1] + sources[3],
+        ['uRayCache', 'uMapSize', 'uRadianceResolution', 'uCacheWidth', 'uNodeCount', 'uJetNodeCount', 'uPacketTexels', 'uNoise', 'uTime', 'uGrainDetail']);
       project = makeProgram(SCENE + sources[1] + sources[5],
         ['uRadiance', 'uNoise', 'uResolution', 'uCenter', 'uViewSpan', 'uRadianceResolution']);
       compose = makeProgram(sources[4], ['uScene', 'uTexel']);

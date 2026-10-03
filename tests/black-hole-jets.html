@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kerr jet emitter GPU regression</title>
+<style>
+body{max-width:1000px;margin:32px auto;padding:0 20px;background:#101827;color:#e5e7eb;font:15px/1.5 system-ui}
+button{padding:11px 18px;border:0;border-radius:7px;background:#7dd3fc;color:#082f49;font:600 15px system-ui;cursor:pointer}
+button:disabled{opacity:.5}pre{padding:18px;background:#1e293b;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere}
+[data-state=pass]{color:#86efac}[data-state=fail]{color:#fca5a5}small{color:#a8b5c6}canvas{display:none}
+</style>
+<h1>Kerr jet emitter GPU regression</h1>
+<p>Runs the actual production jet helpers on the GPU. Checks the four-velocity with the independent shared Kerr metric, outward motion in both hemispheres, constant streamline labels and coordinate flight-time derivatives.</p>
+<button id="run" type="button">Run GPU jet checks</button>
+<p id="status" data-state="idle">Ready. No checks have run.</p>
+<pre id="results">No results.</pre>
+<small>Read-only diagnostic. Asset URLs default to the server root; <code>?base=/personal-site/</code> changes the prefix. This validates the prescribed emitter model, not a GRMHD launch mechanism.</small>
+<canvas id="gpu" width="1" height="1"></canvas>
+<script>
+'use strict';
+const statusNode=document.querySelector('#status'),resultsNode=document.querySelector('#results'),button=document.querySelector('#run');
+function check(value,message){if(!value)throw new Error(message);}
+function sceneTemplate(host){
+  const found=/\bconst\s+SCENE\s*=\s*`([\s\S]*?)`\s*;/.exec(host);
+  check(found&&!found[1].includes('${'),'Literal production SCENE template is required.');return found[1];
+}
+function floatConstant(source,name){
+  const match=new RegExp('const\\s+float\\s+'+name+'\\s*=\\s*([-+0-9.eE]+)\\s*;').exec(source);
+  check(match&&Number.isFinite(Number(match[1])),'Missing production constant '+name);return Number(match[1]);
+}
+button.addEventListener('click',async()=>{
+  button.disabled=true;statusNode.dataset.state='running';statusNode.textContent='Fetching and compiling production emitter helpers…';
+  window.jetRegressionResult=null;
+  const started=performance.now(),failures=[],cases=[];
+  const metrics={samples:0,assertions:0,positiveHemisphereSamples:0,negativeHemisphereSamples:0,
+    maxFourVelocityNormError:0,minFutureTimeComponent:Infinity,minOutwardVelocity:Infinity,
+    maxFlightDerivativeRelativeError:0,maxEtaTimeDerivative:0,maxLaunchTimeDerivative:0,
+    maxEtaCoordinateError:0,maxHemisphereTimeRelativeError:0,maxLaunchBoundaryDelay:0,worst:{},
+    tolerances:{fourVelocityNorm:5e-4,flightDerivativeRelative:.01,etaTimeDerivative:2e-4,launchTimeDerivative:.015}};
+  let gl,program,buffer,feedback,vao,active=false;const shaders=[];
+  const assert=(condition,message,input)=>{metrics.assertions++;if(!condition)failures.push({input,message});};
+  const worst=(name,value,input)=>{if(value>metrics[name]){metrics[name]=value;metrics.worst[name]={input,value};}};
+  try{
+    const base=new URL(new URLSearchParams(location.search).get('base')||'/',location.href);
+    const paths=['assets/js/academic-black-hole.js','assets/shaders/npgs-jet.glsl','assets/shaders/npgs-kerr.glsl'];
+    const urls=paths.map(path=>new URL(path,base).href);
+    const sources=await Promise.all(urls.map(async url=>{
+      const response=await fetch(url,{cache:'no-store'});check(response.ok,'Fetch failed '+response.status+': '+url);return response.text();
+    }));
+    const scene=sceneTemplate(sources[0]),start=floatConstant(sources[1],'JET_START'),end=floatConstant(sources[1],'JET_LENGTH');
+    metrics.sourceURLs=urls;metrics.jetStart=start;metrics.jetLength=end;
+    const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(sources.join('\n')));
+    metrics.productionSHA256=Array.from(new Uint8Array(hash),value=>value.toString(16).padStart(2,'0')).join('');
+    gl=document.querySelector('#gpu').getContext('webgl2',{antialias:false,depth:false,stencil:false});
+    check(gl,'WebGL 2 unavailable.');
+    function glCheck(stage){
+      const code=gl.getError();if(code!==gl.NO_ERROR){metrics.errorStage=stage;throw new Error('WebGL '+stage+': 0x'+code.toString(16));}
+    }
+    function compile(type,text){
+      const shader=gl.createShader(type);shaders.push(shader);gl.shaderSource(shader,text);gl.compileShader(shader);
+      check(gl.getShaderParameter(shader,gl.COMPILE_STATUS),'GLSL compile failed:\n'+gl.getShaderInfoLog(shader));return shader;
+    }
+    const header='#version 300 es\nprecision highp float;\nprecision highp int;\n';
+    const vertex=compile(gl.VERTEX_SHADER,header+scene+'\n'+sources[1]+'\n'+sources[2]+`
+      uniform vec4 uCase; // height, eta, azimuth, hemisphere
+      uniform vec2 uSteps; // height finite difference, coordinate time step
+      out vec4 vVelocity;
+      out vec4 vMetric;
+      out vec4 vGeometry;
+      out vec4 vTransport;
+      void main(){
+        float h=uCase.x,eta=uCase.y,angle=uCase.z;
+        float radius=jetRadius(h);
+        vec3 position=vec3(eta*radius*sin(angle),uCase.w*h,eta*radius*cos(angle));
+        vec4 velocity=jetEmitterVelocity(position);
+        KerrGeometry geo;
+        ComputeGeometryScalars(position,PHYSICAL_A,0.0,1.0,1.0,false,geo);
+        float norm=dot(velocity,LowerIndex(velocity,geo));
+        float delay=jetFlowDelay(h,eta);
+        float before=jetFlowDelay(h-uSteps.x,eta);
+        float after=jetFlowDelay(h+uSteps.x,eta);
+        vec3 coordinateVelocity=velocity.xyz/velocity.w;
+        vec3 materialBefore=jetMaterialCoordinates(position-uSteps.y*coordinateVelocity,40.0-uSteps.y);
+        vec3 materialAfter=jetMaterialCoordinates(position+uSteps.y*coordinateVelocity,40.0+uSteps.y);
+        vVelocity=velocity;
+        vMetric=vec4(norm,delay,before,after);
+        vGeometry=vec4(radius,length(position.xz)/radius,jetSupportMargin(position),0.0);
+        vTransport=vec4(materialBefore.x,materialAfter.x,materialBefore.z,materialAfter.z);
+        gl_Position=vec4(0,0,0,1);gl_PointSize=1.0;
+      }`);
+    const fragment=compile(gl.FRAGMENT_SHADER,header+'out vec4 unusedColor;void main(){unusedColor=vec4(0);}\n');
+    program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);
+    gl.transformFeedbackVaryings(program,['vVelocity','vMetric','vGeometry','vTransport'],gl.INTERLEAVED_ATTRIBS);
+    gl.linkProgram(program);check(gl.getProgramParameter(program,gl.LINK_STATUS),'GLSL link failed:\n'+gl.getProgramInfoLog(program));
+    gl.useProgram(program);vao=gl.createVertexArray();gl.bindVertexArray(vao);
+    buffer=gl.createBuffer();gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER,buffer);gl.bufferData(gl.TRANSFORM_FEEDBACK_BUFFER,64,gl.DYNAMIC_READ);
+    feedback=gl.createTransformFeedback();
+    const input=gl.getUniformLocation(program,'uCase'),steps=gl.getUniformLocation(program,'uSteps');
+    check(input!==null&&steps!==null,'GPU test uniforms were optimized away.');
+    gl.enable(gl.RASTERIZER_DISCARD);glCheck('setup');
+    const output=new Float32Array(16);
+    function sample(h,eta,phi,hemisphere,dh,dt){
+      gl.bindBuffer(gl.COPY_READ_BUFFER,null);gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK,feedback);
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER,0,buffer);
+      gl.uniform4f(input,h,eta,phi,hemisphere);gl.uniform2f(steps,dh,dt);
+      gl.beginTransformFeedback(gl.POINTS);active=true;gl.drawArrays(gl.POINTS,0,1);gl.endTransformFeedback();active=false;
+      glCheck('helper transform feedback');
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER,0,null);gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER,null);
+      gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK,null);gl.bindBuffer(gl.COPY_READ_BUFFER,buffer);
+      gl.getBufferSubData(gl.COPY_READ_BUFFER,0,output);glCheck('helper readback');gl.bindBuffer(gl.COPY_READ_BUFFER,null);
+      check(Array.from(output).every(Number.isFinite),'GPU helper returned a nonfinite value.');return Array.from(output);
+    }
+    const heights=[start+.04,start+.15,2,3,5,8,11,end-.1].filter(h=>h>start&&h<end);
+    const etas=[0,.25,.65,.95,1.03],angles=[0,Math.PI/3,Math.PI,-Math.PI/2];
+    for(const h of heights){
+      statusNode.textContent='Checking both hemispheres and off-axis streamlines at height '+h.toFixed(3)+' Rs…';
+      await new Promise(requestAnimationFrame);
+      for(const eta of etas)for(const phi of angles){
+        let positiveTime=null;
+        for(const sign of [1,-1]){
+          const dh=Math.min(.002*Math.max(1,h),.25*(h-start),.25*(end-h)),dt=.02;
+          const values=sample(h,eta,phi,sign,dh,dt),[ux,uy,uz,ut,norm,delay,before,after,radius,recoveredEta,margin]=values;
+          const inputCase={height:h,eta,azimuth:phi,hemisphere:sign};
+          const normError=Math.abs(norm+1),expected=ut/Math.abs(uy),actual=(after-before)/(2*dh);
+          const flightError=Math.abs(actual/expected-1),etaDerivative=(values[13]-values[12])/(2*dt);
+          const launchDerivative=(values[15]-values[14])/(2*dt);
+          metrics.samples++;metrics[sign>0?'positiveHemisphereSamples':'negativeHemisphereSamples']++;
+          metrics.minFutureTimeComponent=Math.min(metrics.minFutureTimeComponent,ut);
+          metrics.minOutwardVelocity=Math.min(metrics.minOutwardVelocity,sign*uy);
+          worst('maxFourVelocityNormError',normError,inputCase);worst('maxFlightDerivativeRelativeError',flightError,inputCase);
+          worst('maxEtaTimeDerivative',Math.abs(etaDerivative),inputCase);worst('maxLaunchTimeDerivative',Math.abs(launchDerivative),inputCase);
+          worst('maxEtaCoordinateError',Math.abs(recoveredEta-eta),inputCase);
+          assert(normError<=metrics.tolerances.fourVelocityNorm,'Emitter does not satisfy g(U,U)=-1.',inputCase);
+          assert(ut>0,'Emitter is not future-directed.',inputCase);
+          assert(sign*uy>0,'Emitter does not flow outward in its hemisphere.',inputCase);
+          assert(radius>0&&margin>0,'Sample is not inside the prescribed support.',inputCase);
+          assert(Math.abs(recoveredEta-eta)<1e-5,'Material radius coordinate does not recover the requested streamline.',inputCase);
+          assert(delay>0&&after>before,'Coordinate flight delay is not positive/increasing.',inputCase);
+          assert(flightError<=metrics.tolerances.flightDerivativeRelative,'Flight delay derivative differs from Ut/|Uy| by more than 1%.',inputCase);
+          assert(Math.abs(etaDerivative)<=metrics.tolerances.etaTimeDerivative,'Eta changes along the coordinate velocity field.',inputCase);
+          assert(Math.abs(launchDerivative)<=metrics.tolerances.launchTimeDerivative,'Launch-time label is not advected with the emitter.',inputCase);
+          if(sign>0)positiveTime=ut;
+          else{
+            const symmetry=Math.abs(ut/positiveTime-1);worst('maxHemisphereTimeRelativeError',symmetry,inputCase);
+            assert(symmetry<1e-5,'Reflected hemispheres have inconsistent future time components.',inputCase);
+          }
+          cases.push({input:inputCase,fourVelocity:[ux,uy,uz,ut],norm,delay,
+            flightDerivative:actual,expectedFlightDerivative:expected,flightRelativeError:flightError,etaDerivative,launchDerivative});
+        }
+      }
+    }
+    for(const eta of etas){
+      const result=sample(start,eta,0,1,.001,.001),delay=Math.abs(result[5]);
+      worst('maxLaunchBoundaryDelay',delay,{height:start,eta});
+      assert(delay<1e-6,'Flight delay is not zero at its launch boundary.',{height:start,eta});
+    }
+    metrics.elapsedWallMs=Math.round(performance.now()-started);
+    metrics.note='Finite differences use actual GPU helpers. Wall time includes compilation/readback and is not renderer performance.';
+    window.jetRegressionResult={pass:failures.length===0,metrics,failures,cases};
+    statusNode.dataset.state=failures.length?'fail':'pass';
+    statusNode.textContent=failures.length?'FAIL — '+failures.length+' emitter/transport invariant failures.':
+      'PASS — '+metrics.samples+' emitter samples in both hemispheres; '+metrics.assertions+' checks.';
+    resultsNode.textContent=JSON.stringify(window.jetRegressionResult,null,2);
+  }catch(error){
+    metrics.elapsedWallMs=Math.round(performance.now()-started);
+    window.jetRegressionResult={pass:false,error:String(error.message||error),metrics,failures,cases};
+    statusNode.dataset.state='fail';statusNode.textContent='FAIL — '+String(error.message||error);
+    resultsNode.textContent=JSON.stringify(window.jetRegressionResult,null,2);
+  }finally{
+    if(gl){
+      if(active)gl.endTransformFeedback();gl.disable(gl.RASTERIZER_DISCARD);
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER,0,null);gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER,null);
+      gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK,null);gl.bindBuffer(gl.COPY_READ_BUFFER,null);gl.bindVertexArray(null);
+      if(feedback)gl.deleteTransformFeedback(feedback);if(buffer)gl.deleteBuffer(buffer);if(vao)gl.deleteVertexArray(vao);
+      if(program)gl.deleteProgram(program);for(const shader of shaders)gl.deleteShader(shader);
+    }
+    button.disabled=false;
+  }
+});
+</script>
+</html>

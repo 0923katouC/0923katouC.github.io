@@ -10,7 +10,7 @@ button:disabled{opacity:.5}pre{padding:18px;background:#1e293b;border-radius:8px
 [data-state=pass]{color:#86efac}[data-state=fail]{color:#fca5a5}small{color:#a8b5c6}canvas{display:none}
 </style>
 <h1>Kerr volume geometry GPU regression</h1>
-<p>Compiles the actual production transform-feedback vertex shader with its current SCENE and Kerr helpers. Samples individual rays on a 65×65 ray grid and checks the decoded half-float cache against geometric, causal and path-length invariants.</p>
+<p>Compiles the actual production disk-and-jet transform-feedback shader. Samples rays on a 65×65 grid and checks packed half-float geometry, separate fixed material banks, causal ordering and conserved quadrature path length. Use <code>?nodes=6</code>, <code>8</code> or <code>12</code> for the production tiers.</p>
 <button id="run" type="button">Run GPU volume checks</button>
 <p id="status" data-state="idle">Ready. No checks have run.</p>
 <pre id="results">No results.</pre>
@@ -20,8 +20,9 @@ button:disabled{opacity:.5}pre{padding:18px;background:#1e293b;border-radius:8px
 'use strict';
 const requestedNodes=Number(new URLSearchParams(location.search).get("nodes")) || 8;
 const NODE_COUNT=[6,8,12].includes(requestedNodes) ? requestedNodes : 8;
-const MAX_PASSAGES=2, NODES_PER_PASSAGE=NODE_COUNT/MAX_PASSAGES;
-const MAP_SIZE=65, WORDS_PER_RECORD=4, WORDS_PER_RAY=4*(NODE_COUNT+1);
+const JET_NODE_COUNT=NODE_COUNT===12?6:4,MAX_PASSAGES=2;
+const MAP_SIZE=65,SKY_WORD_OFFSET=3*(NODE_COUNT+JET_NODE_COUNT);
+const PACKET_TEXELS=Math.ceil((SKY_WORD_OFFSET+4)/4),WORDS_PER_RAY=4*PACKET_TEXELS;
 const statusNode=document.querySelector('#status'),resultsNode=document.querySelector('#results');
 const runButton=document.querySelector('#run');
 function requireCondition(value,message){if(!value)throw new Error(message);}
@@ -31,13 +32,21 @@ function halfToNumber(bits){
   if(exponent===31)return fraction?NaN:sign*Infinity;
   return sign*Math.pow(2,exponent-15)*(1+fraction/1024);
 }
-function decodeRecord(words,record){
+function decodeHalves(words,offset,count){
   const values=[];
-  for(let pair=0;pair<WORDS_PER_RECORD;pair++){
-    const word=words[record*WORDS_PER_RECORD+pair];
+  for(let pair=0;pair<count;pair++){
+    const word=words[offset+pair];
     values.push(halfToNumber(word&65535),halfToNumber(word>>>16));
   }
   return values;
+}
+function decodePacket(words){
+  return {
+    disk:Array.from({length:NODE_COUNT},(_,i)=>decodeHalves(words,3*i,3)),
+    jet:Array.from({length:JET_NODE_COUNT},(_,i)=>decodeHalves(words,3*(NODE_COUNT+i),3)),
+    sky:decodeHalves(words,SKY_WORD_OFFSET,4),
+    padding:Array.from(words.slice(SKY_WORD_OFFSET+4))
+  };
 }
 function floatConstant(scene,name){
   const found=new RegExp('const\\s+float\\s+'+name+'\\s*=\\s*([-+0-9.eE]+)\\s*;').exec(scene);
@@ -61,6 +70,16 @@ function heightContract(scene){
   requireCondition([base,slope,start].every(Number.isFinite)&&base>0&&slope>=0,'Invalid volume support parameters.');
   return {base,slope,start,at:r=>base+slope*Math.max(r-start,0)};
 }
+function jetContract(source){
+  const start=floatConstant(source,'JET_START'),length=floatConstant(source,'JET_LENGTH');
+  const base=floatConstant(source,'JET_BASE_RADIUS'),padding=floatConstant(source,'JET_CACHE_PADDING');
+  const radius=/float\s+radius\s*=\s*JET_BASE_RADIUS\s*\+\s*([-+0-9.eE]+)\s*\*\s*z\s*\+\s*([-+0-9.eE]+)\s*\*\s*\(softRoot-1\.0\)\s*;/.exec(source);
+  requireCondition(radius,'Jet radius prescription changed; update the support reference explicitly.');
+  const linear=Number(radius[1]),root=Number(radius[2]);
+  return {start,length,base,padding,linear,root,at:h=>{
+    const d=Math.max(h-start,0);return base+linear*d+root*(Math.sqrt(1+d)-1);
+  }};
+}
 function kerrRadius(x,y,z,a){
   // Independent closed-form radius of a Cartesian Kerr-Schild point.
   const b=x*x+y*y+z*z-a*a,root=Math.hypot(b,2*a*y);
@@ -72,33 +91,34 @@ function probes(){
   for(const x of [0,64])for(const y of [0,64])add(x,y,'escaped corner');
   for(const [x,y] of [[32,0],[0,32],[64,32],[32,64]])add(x,y,'outer edge');
   for(let y=20;y<=44;y+=4)for(let x=16;x<=48;x+=4)add(x,y,'disk/inner-field probe');
+  // Cover both lobes, the central columns and the current 18-degree tilted
+  // projected axis. Probe placement does not replace the production tracer.
+  for(let y=4;y<=60;y+=2){
+    const axis=Math.round(32-.325*(y-32));
+    for(const x of [32,axis-2,axis-1,axis,axis+1,axis+2])add(x,y,'jet-axis/support probe');
+  }
   add(32,32,'captured center');
   return Array.from(values.values());
 }
 function updateWorst(metrics,key,value,ray,node){
   if(value>metrics[key]){metrics[key]=value;metrics.worst[key]={pixel:[ray.x,ray.y],node,value};}
 }
-function validateRay(ray,records,config,metrics,failures){
-  const sky=records[NODE_COUNT],valid=[];
-  const name='('+ray.x+','+ray.y+') '+ray.label;
+function validateRay(ray,packet,config,metrics,failures){
+  const {sky}=packet;
   const expect=(condition,message,node)=>{
     metrics.assertions++;
     if(!condition)failures.push({pixel:[ray.x,ray.y],label:ray.label,node:node??null,message});
   };
+  const records=packet.disk.concat(packet.jet,[sky]);
   for(let i=0;i<records.length;i++)expect(records[i].every(Number.isFinite),'Nonfinite half-float record '+i,i);
   if(!records.every(record=>record.every(Number.isFinite)))return {pixel:[ray.x,ray.y],label:ray.label,error:'nonfinite cache'};
-  const status=Math.round(sky[7]),baseStatus=status%4,truncated=status>=4;
-  const segments=sky[5],reportedCount=sky[6],escaped=sky[3];
-  expect(Number.isInteger(sky[7])&&status>=0&&status<=7,'Unknown status flag: '+sky[7]);
-  expect(escaped===0||escaped===1,'Escape mask is not 0 or 1.');
-  expect(Number.isInteger(segments)&&segments>=0&&segments<=MAX_PASSAGES,'Invalid occupied-passage count: '+segments+'; at most two passages are retained.');
-  expect(Number.isInteger(reportedCount)&&reportedCount>=0&&reportedCount<=NODE_COUNT,'Node count exceeds cache capacity or is nonintegral.');
-  expect(reportedCount===segments*NODES_PER_PASSAGE,'Reported count violates the fixed N/2 slots per retained passage.');
-  expect(sky[4]>=0,'Negative total emitter path length.');
-  expect((baseStatus===0)===(escaped===1),'Escape flag and terminal status disagree.');
+  expect(packet.padding.every(word=>word===0),'Packet padding contains stale uint32 data.');
+  const status=Math.round(sky[3]),baseStatus=status&3,escaped=baseStatus===0;
+  expect(Number.isInteger(sky[3])&&status>=0&&status<=15,'Unknown packed status flags: '+sky[3]);
   expect(baseStatus!==3,'Ray produced an invalid numerical state.');
   if(baseStatus===2)metrics.stepLimitedRays++;
-  if(truncated)metrics.truncatedRays++;
+  if(status&4)metrics.diskTruncatedRays++;
+  if(status&8)metrics.jetTruncatedRays++;
   if(escaped){
     metrics.escapedRays++;
     const norm=Math.hypot(...sky.slice(0,3));
@@ -108,68 +128,69 @@ function validateRay(ray,records,config,metrics,failures){
     if(baseStatus===1)metrics.capturedRays++;
     expect(sky.slice(0,3).every(value=>value===0),'Nonescaped ray contains a stale escaped direction.');
   }
-  if(ray.label==='escaped corner')expect(baseStatus===0&&escaped===1,'Known outer corner did not escape.');
-  if(ray.label==='captured center')expect(baseStatus===1&&escaped===0,'Central capture ray was not reported captured.');
-  let previousLag=Infinity,previousSegment=-1,totalLength=0;
-  const passageNodeCounts=[0,0],passageWeightSums=[0,0];
-  for(let i=0;i<NODE_COUNT;i++){
-    const node=records[i],[x,y,z,lag,g,dl,id,isValid]=node;
-    const expectedPassage=Math.floor(i/NODES_PER_PASSAGE);
-    expect(isValid===0||isValid===1,'Node validity is not 0 or 1.',i);
-    expect(isValid===(expectedPassage<segments?1:0),
-      'Slot '+i+' must belong to fixed passage '+expectedPassage+'; occupied passages cannot borrow unused slots.',i);
-    if(!isValid){expect(node.every(value=>value===0),'Unused node contains stale packed data.',i);continue;}
-    valid.push(node);metrics.validNodes++;
-    passageNodeCounts[expectedPassage]++;
-    passageWeightSums[expectedPassage]+=dl;
-    expect(g>0,'Nonpositive emitter frequency shift.',i);
-    expect(dl>0,'Nonpositive comoving path weight.',i);
-    expect(lag<=0,'Node is ahead of the observer in coordinate time.',i);
-    // Half rounding can make two ordered times equal; it cannot reverse them.
-    updateWorst(metrics,'maxLagOrderViolation',Math.max(0,lag-previousLag),ray,i);
-    expect(lag<=previousLag,'Retarded times reverse observer-to-source order.',i);
-    expect(Number.isInteger(id)&&id>=0&&id<segments,'Invalid passage ID.',i);
-    expect(id===expectedPassage,'Node passage ID does not match floor(slot/(N/2)).',i);
-    expect(id>=previousSegment,'Passage IDs go backwards.',i);
-    previousLag=lag;previousSegment=id;totalLength+=dl;
-    metrics.minFrequencyShift=Math.min(metrics.minFrequencyShift,g);
-    metrics.maxFrequencyShift=Math.max(metrics.maxFrequencyShift,g);
-    metrics.minPathWeight=Math.min(metrics.minPathWeight,dl);
-    metrics.maxAbsoluteHeight=Math.max(metrics.maxAbsoluteHeight,Math.abs(y));
-    if(Math.abs(y)>.1)metrics.offEquatorialNodes++;
-    const radius=kerrRadius(x,y,z,config.spin),height=config.height.at(radius);
-    const annulusExcess=Math.max(0,config.inner-radius,radius-config.outer);
-    const heightExcess=Math.max(0,Math.abs(y)-1.05*height);
-    updateWorst(metrics,'maxAnnulusExcessRs',annulusExcess,ray,i);
-    updateWorst(metrics,'maxHeightExcessRs',heightExcess,ray,i);
-    expect(annulusExcess<=config.edgeTolerance,'Node lies outside the emitting annulus by '+annulusExcess.toExponential(3)+' Rs.',i);
-    expect(heightExcess<=config.edgeTolerance,'Node lies outside 1.05H by '+heightExcess.toExponential(3)+' Rs.',i);
+  if(ray.label==='escaped corner')expect(escaped,'Known outer corner did not escape.');
+  if(ray.label==='captured center')expect(baseStatus===1&&!escaped,'Central capture ray was not reported captured.');
+  function validateBank(name,nodes,reportedCount,reportedLength){
+    const perPassage=nodes.length/MAX_PASSAGES,segments=reportedCount/perPassage;
+    const valid=[],counts=[0,0],sums=[0,0];let previousLag=Infinity;
+    expect(Number.isInteger(reportedCount)&&[0,perPassage,nodes.length].includes(reportedCount),name+' count is not 0, N/2 or N.');
+    expect(Number.isFinite(reportedLength)&&reportedLength>=0,name+' total path length is invalid.');
+    for(let i=0;i<nodes.length;i++){
+      const node=nodes[i],[x,y,z,lag,g,dl]=node,passage=Math.floor(i/perPassage),isValid=g>0&&dl>0;
+      expect(isValid===(passage<segments),name+' slot '+i+' violates fixed half-bank passage ownership.',name+':'+i);
+      if(!isValid){expect(node.every(value=>value===0),name+' unused node contains stale data.',name+':'+i);continue;}
+      valid.push(node);counts[passage]++;sums[passage]+=dl;metrics.validNodes++;
+      metrics[name==='disk'?'validDiskNodes':'validJetNodes']++;
+      expect(lag<=0,name+' node lies ahead of observer time.',name+':'+i);
+      updateWorst(metrics,'maxLagOrderViolation',Math.max(0,lag-previousLag),ray,name+':'+i);
+      expect(lag<=previousLag,name+' retarded node times reverse ray order.',name+':'+i);previousLag=lag;
+      metrics.minFrequencyShift=Math.min(metrics.minFrequencyShift,g);metrics.maxFrequencyShift=Math.max(metrics.maxFrequencyShift,g);
+      metrics.minPathWeight=Math.min(metrics.minPathWeight,dl);
+      if(name==='disk'){
+        const radius=kerrRadius(x,y,z,config.spin),height=config.height.at(radius);
+        const outside=Math.max(0,config.inner-radius,radius-config.outer),vertical=Math.max(0,Math.abs(y)-1.05*height);
+        updateWorst(metrics,'maxAnnulusExcessRs',outside,ray,i);updateWorst(metrics,'maxHeightExcessRs',vertical,ray,i);
+        expect(outside<=config.edgeTolerance,'Disk node lies outside annulus by '+outside+' Rs.',i);
+        expect(vertical<=config.edgeTolerance,'Disk node lies outside 1.05H by '+vertical+' Rs.',i);
+        if(Math.abs(y)>.1)metrics.offEquatorialNodes++;
+      }else{
+        const height=Math.abs(y),rho=Math.hypot(x,z),radius=config.jet.at(height);
+        const axial=Math.max(0,config.jet.start-height,height-config.jet.length),radial=Math.max(0,rho-config.jet.padding*radius);
+        updateWorst(metrics,'maxJetHeightExcessRs',axial,ray,i);updateWorst(metrics,'maxJetRadiusExcessRs',radial,ray,i);
+        expect(axial<=config.edgeTolerance,'Jet node lies outside launch/length support by '+axial+' Rs.',i);
+        expect(radial<=config.edgeTolerance,'Jet node lies outside padded funnel radius by '+radial+' Rs.',i);
+        if(y>0)metrics.positiveJetNodes++;if(y<0)metrics.negativeJetNodes++;
+        if(rho>.1*radius)metrics.offAxisJetNodes++;
+      }
+    }
+    expect(valid.length===reportedCount,name+' decoded count disagrees with sky metadata.');
+    for(let passage=0;passage<MAX_PASSAGES;passage++){
+      const occupied=passage<segments;
+      expect(counts[passage]===(occupied?perPassage:0),name+' passage does not own its complete fixed half-bank.');
+      expect(occupied?sums[passage]>0:sums[passage]===0,name+' passage has invalid total path weight.');
+      if(!occupied||sums[passage]<=0)continue;
+      // Check the documented quadrature measure, not a duplicate geodesic:
+      // disk q^2 bins have odd-number weights; jet q bins have equal weights.
+      for(let local=0;local<perPassage;local++){
+        const expected=name==='disk'?(2*local+1)/(perPassage*perPassage):1/perPassage;
+        const actual=nodes[passage*perPassage+local][5]/sums[passage];
+        const relative=Math.abs(actual/expected-1);
+        updateWorst(metrics,'maxBinWeightRelativeError',relative,ray,name+':'+(passage*perPassage+local));
+        expect(relative<=.005,name+' node weight does not match its documented fixed quadrature bin.');
+      }
+    }
+    const sum=sums[0]+sums[1];
+    if(!reportedCount)expect(reportedLength===0,name+' empty bank reports a nonzero path length.');
+    else{
+      metrics[name==='disk'?'diskRays':'jetRays']++;
+      const relative=Math.abs(sum-reportedLength)/Math.max(reportedLength,1e-12);
+      updateWorst(metrics,name==='disk'?'maxDiskLengthRelativeError':'maxJetLengthRelativeError',relative,ray,null);
+      expect(relative<=.003,name+' node weights do not reproduce path length within 0.3%.');
+    }
+    return {nodes:valid.length,segments,passageNodeCounts:counts,passageWeightSums:sums,reportedLength,nodeWeightSum:sum};
   }
-  expect(valid.length===reportedCount,'Decoded valid-node count disagrees with sky metadata.');
-  expect(valid.length===segments*NODES_PER_PASSAGE,'Decoded count violates the fixed N/2 slots per retained passage.');
-  expect(valid.length<=NODE_COUNT,'Too many valid nodes.');
-  for(let passage=0;passage<MAX_PASSAGES;passage++){
-    const occupied=passage<segments;
-    expect(passageNodeCounts[passage]===(occupied?NODES_PER_PASSAGE:0),
-      'Passage '+passage+' does not own exactly its fixed half of the cache.');
-    expect(occupied?passageWeightSums[passage]>0:passageWeightSums[passage]===0,
-      'Passage '+passage+' has an invalid accumulated emitter path weight.');
-  }
-  if(segments===0)expect(valid.length===0&&sky[4]===0,'Empty ray reports emission samples or path length.');
-  else{
-    metrics.materialRays++;
-    expect(valid.length>0,'An occupied ray has no quadrature nodes.');
-    const represented=new Set(valid.map(node=>node[6]));
-    expect(represented.size===segments,'An occupied passage has no retained node.');
-    const relative=Math.abs(totalLength-sky[4])/Math.max(sky[4],1e-12);
-    updateWorst(metrics,'maxLengthSumRelativeError',relative,ray,null);
-    expect(relative<=.003,'Node path weights do not reproduce retained path length within 0.3%.');
-  }
-  return {pixel:[ray.x,ray.y],label:ray.label,status,escaped:!!escaped,segments,
-          nodes:valid.length,totalLength:sky[4],nodeWeightSum:totalLength,
-          passageNodeCounts,passageWeightSums,
-          minLag:valid.length?Math.min(...valid.map(node=>node[3])):null,
-          maxLag:valid.length?Math.max(...valid.map(node=>node[3])):null};
+  const disk=validateBank('disk',packet.disk,sky[6],sky[4]),jet=validateBank('jet',packet.jet,sky[7],sky[5]);
+  return {pixel:[ray.x,ray.y],label:ray.label,status,escaped,disk,jet};
 }
 
 runButton.addEventListener('click',async()=>{
@@ -178,11 +199,13 @@ runButton.addEventListener('click',async()=>{
   resultsNode.textContent='Running actual GPU transform-feedback checks.';
   window.volumeRegressionResult=null;
   const started=performance.now();
-  const metrics={rays:0,assertions:0,validNodes:0,materialRays:0,offEquatorialNodes:0,
-    escapedRays:0,capturedRays:0,stepLimitedRays:0,truncatedRays:0,
-    minFrequencyShift:Infinity,maxFrequencyShift:0,minPathWeight:Infinity,maxAbsoluteHeight:0,
+  const metrics={rays:0,assertions:0,validNodes:0,validDiskNodes:0,validJetNodes:0,diskRays:0,jetRays:0,offEquatorialNodes:0,
+    escapedRays:0,capturedRays:0,stepLimitedRays:0,diskTruncatedRays:0,jetTruncatedRays:0,
+    positiveJetNodes:0,negativeJetNodes:0,offAxisJetNodes:0,
+    minFrequencyShift:Infinity,maxFrequencyShift:0,minPathWeight:Infinity,
     maxEscapedDirectionNormError:0,maxLagOrderViolation:0,maxAnnulusExcessRs:0,
-    maxHeightExcessRs:0,maxLengthSumRelativeError:0,worst:{}};
+    maxHeightExcessRs:0,maxJetHeightExcessRs:0,maxJetRadiusExcessRs:0,
+    maxDiskLengthRelativeError:0,maxJetLengthRelativeError:0,maxBinWeightRelativeError:0,worst:{}};
   const failures=[],cases=[];
   let gl,program,buffer,feedback,vao,feedbackActive=false;const shaders=[];
   try{
@@ -191,7 +214,7 @@ runButton.addEventListener('click',async()=>{
       halfToNumber(0x7bff)===65504&&halfToNumber(1)===Math.pow(2,-24)&&
       Object.is(halfToNumber(0x8000),-0),'CPU binary16 decoder self-check failed.');
     const base=new URL(new URLSearchParams(location.search).get('base')||'/',location.href);
-    const paths=['assets/js/academic-black-hole.js','assets/shaders/npgs-kerr.glsl','assets/shaders/npgs-volume-trace.vert'];
+    const paths=['assets/js/academic-black-hole.js','assets/shaders/npgs-jet.glsl','assets/shaders/npgs-kerr.glsl','assets/shaders/npgs-volume-trace.vert'];
     const urls=paths.map(path=>new URL(path,base).href);
     const sources=await Promise.all(urls.map(async url=>{
       const response=await fetch(url,{cache:'no-store'});
@@ -199,12 +222,12 @@ runButton.addEventListener('click',async()=>{
     }));
     const scene=sceneTemplate(sources[0]),height=heightContract(scene);
     const config={spin:floatConstant(scene,'PHYSICAL_A'),inner:floatConstant(scene,'DISK_INNER'),
-      outer:floatConstant(scene,'DISK_OUTER'),height,edgeTolerance:.01};
+      outer:floatConstant(scene,'DISK_OUTER'),height,jet:jetContract(sources[1]),edgeTolerance:.01};
     metrics.sourceURLs=urls;metrics.nodeCount=NODE_COUNT;metrics.mapSize=[MAP_SIZE,MAP_SIZE];
-    metrics.slotContract={maxPassages:MAX_PASSAGES,nodesPerPassage:NODES_PER_PASSAGE,
-      rule:'passage i owns slots i*(N/2) through (i+1)*(N/2)-1; absent passage slots are zero'};
+    metrics.slotContract={maxPassages:MAX_PASSAGES,diskNodes:NODE_COUNT,jetNodes:JET_NODE_COUNT,packetTexels:PACKET_TEXELS,
+      rule:'separate disk/jet banks, each split into two fixed half-banks; six half-floats per node, sky and zero padding follow'};
     metrics.geometry={spin:config.spin,inner:config.inner,outer:config.outer,
-      height:{base:height.base,slope:height.slope,start:height.start},edgeToleranceRs:config.edgeTolerance};
+      height:{base:height.base,slope:height.slope,start:height.start},jet:config.jet,edgeToleranceRs:config.edgeTolerance};
     const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(sources.join('\n')));
     metrics.productionSHA256=Array.from(new Uint8Array(hash),value=>value.toString(16).padStart(2,'0')).join('');
     gl=document.querySelector('#gpu').getContext('webgl2',{antialias:false,depth:false,stencil:false});
@@ -227,13 +250,14 @@ runButton.addEventListener('click',async()=>{
       return shader;
     };
     const header='#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\nprecision highp usampler2D;\n';
-    const vertex=compile(gl.VERTEX_SHADER,header+'#define NODE_COUNT '+NODE_COUNT+'\n'+scene+'\n'+sources[1]+'\n'+sources[2]);
+    const defines='#define NODE_COUNT '+NODE_COUNT+'\n#define JET_NODE_COUNT '+JET_NODE_COUNT+'\n#define PACKET_TEXELS '+PACKET_TEXELS+'\n';
+    const vertex=compile(gl.VERTEX_SHADER,header+defines+scene+'\n'+sources.slice(1).join('\n'));
     const fragment=compile(gl.FRAGMENT_SHADER,header+'out vec4 unusedColor;void main(){unusedColor=vec4(0.0);}\n');
     program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);
-    const varyings=Array.from({length:NODE_COUNT},(_,index)=>'vNode'+index).concat('vSky');
+    const varyings=Array.from({length:PACKET_TEXELS},(_,index)=>'vPack'+index);
     gl.transformFeedbackVaryings(program,varyings,gl.INTERLEAVED_ATTRIBS);gl.linkProgram(program);
     requireCondition(gl.getProgramParameter(program,gl.LINK_STATUS),'GLSL link failed:\n'+gl.getProgramInfoLog(program));
-    requireCondition(gl.getProgramParameter(program,gl.TRANSFORM_FEEDBACK_VARYINGS)===NODE_COUNT+1,'Wrong transform-feedback varying count.');
+    requireCondition(gl.getProgramParameter(program,gl.TRANSFORM_FEEDBACK_VARYINGS)===PACKET_TEXELS,'Wrong transform-feedback varying count.');
     for(let i=0;i<varyings.length;i++){
       const info=gl.getTransformFeedbackVarying(program,i);
       requireCondition(info&&info.name===varyings[i]&&info.type===gl.UNSIGNED_INT_VEC4&&info.size===1,
@@ -275,11 +299,13 @@ runButton.addEventListener('click',async()=>{
       gl.bindBuffer(gl.COPY_READ_BUFFER,buffer);gl.getBufferSubData(gl.COPY_READ_BUFFER,0,words);
       checkGLError(label+' COPY_READ_BUFFER getBufferSubData');
       gl.bindBuffer(gl.COPY_READ_BUFFER,null);
-      const records=Array.from({length:NODE_COUNT+1},(_,record)=>decodeRecord(words,record));
-      cases.push(validateRay(ray,records,config,metrics,failures));metrics.rays++;
+      cases.push(validateRay(ray,decodePacket(words),config,metrics,failures));metrics.rays++;
     }
-    requireCondition(metrics.materialRays>0&&metrics.validNodes>0,'Probe set found no emitting material; empty output cannot pass.');
+    requireCondition(metrics.diskRays>0&&metrics.validDiskNodes>0,'Probe set found no disk; empty output cannot pass.');
     requireCondition(metrics.offEquatorialNodes>0,'All retained nodes lie in the equatorial sheet; finite-height coverage was not exercised.');
+    requireCondition(metrics.jetRays>0&&metrics.positiveJetNodes>0&&metrics.negativeJetNodes>0,
+      'Probe set must exercise actual retained jet nodes in both hemispheres.');
+    requireCondition(metrics.offAxisJetNodes>0,'Only the jet spine was sampled; funnel geometry was not exercised.');
     metrics.elapsedWallMs=Math.round(performance.now()-started);
     metrics.note='Wall time measures this diagnostic, including shader compilation and GPU readback; it is not production animation performance.';
     const result={pass:failures.length===0,metrics,failures,cases};

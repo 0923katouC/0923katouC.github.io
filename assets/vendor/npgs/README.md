@@ -23,8 +23,8 @@ baseline documentation; do not move this tag when improving the renderer.
 ## Finite-height disk and cloud rendering
 
 The active scene contains the Kerr black hole, a finite-height emitting
-accretion volume, and background stars. It does not load the archived jet,
-white-dwarf or SPH model assets. The user explicitly requested a visibly
+accretion volume, a bipolar jet, and background stars. It does not load the
+archived white-dwarf or SPH model assets. The user explicitly requested a visibly
 thicker disk and three-dimensional clouds after approving `1.0BH`.
 
 The accepted camera is retained: distance 28 Rs, elevation 10 degrees,
@@ -45,12 +45,15 @@ resolve the visible layers more finely; stored weights are actual unequal
 bin widths. Higher passages are explicitly marked truncated in the cache.
 This is a bounded web rendering approximation, not unlimited path sampling.
 
-Each cache node stores position, retarded time, frequency shift, comoving
-photon path length, passage ID and validity. The path weight is
+Each cache node stores six half-floats: position, retarded time, frequency
+shift and comoving photon path length. Material/passage IDs follow the fixed
+slot banks; a positive path weight marks a valid node. The path weight is
 (-p_mu u^mu)*abs(delta_lambda); the emitter velocity is normalized in the
 local Kerr metric. Off-equatorial circular emitters are a prescribed,
 pressure-supported kinematic model, not off-equatorial free-fall geodesics.
-Records are half-float pairs packed into a flat RGBA32UI atlas. The GPU uploads
+Three uint words hold each node; words are packed across RGBA32UI texels.
+Desktop disk+jet data and sky metadata fit 15 packets / 60 transform-feedback
+components per ray, without reducing the existing disk-node budget. The GPU uploads
 the transform-feedback buffer directly; production does not read it to CPU.
 
 Every animation frame integrates the cached samples in observer-to-source
@@ -90,11 +93,43 @@ crossfade averaging compensation. `GRAIN_FREQUENCY`,
 contrast in `npgs-render.frag`. Mobile/coarse-pointer/save-data clients use
 35% grain detail. The small inner-cloud emission boost remains co-moving.
 
+## Bipolar jet
+
+The [upstream JetColor](https://github.com/baopinshui/NPGS/blob/91305ca1661f18b60d6d33ed4616e4cd5b977b9f/NPGS/Sources/Engine/Shaders/BlackHole_common.glsl#L2561)
+provides the reference for a widening hollow sheath, weak helical structure,
+retarded outward modulation and blue-white emission. The current jet is a
+three-dimensional emitting volume along the SAME +y/-y spin axis and Kerr
+rays as the black hole and disk; it is not a screen-space light cone.
+
+`npgs-jet.glsl` defines the launch region at |y|=1.15 Rs, emission length
+10.5 Rs, and a smoothly widening radius. These supports are disjoint from
+the disk. The prescribed four-velocity includes radial expansion along
+rho/R(|y|)=constant and is normalized with the local Kerr metric. The 0.8c
+parameter is the far-field axial limit on the spine, not a constant local
+physical speed at every height. Flight time is integrated along that same
+velocity field, so brightness knots and helical strands move outward with
+consistent material coordinates. This is a kinematic emitting outflow;
+it does not solve magnetic launching or GRMHD evolution.
+
+Disk and jet passages are measured independently during the same two ray
+walks. The disk retains its fixed front-biased slots; each of two jet passages
+gets a fixed half of a separate jet bank with uniform proper-length bins.
+Both banks store their own emitter-frame frequency shifts and path weights.
+Extra passages are explicitly flagged as truncated.
+
+As in the upstream jet, jet self-absorption is neglected. Each jet sample is
+attenuated only by disk samples closer to the observer, using the cached
+retarded-time ordering. This is the optically-thin form of joint front-to-back
+transfer, not an unconditional additive overlay. All derivative-dependent
+material evaluations occur at fixed slots before depth-dependent attenuation.
+`JET_EMISSION_GAIN` controls brightness; support and flow parameters live in
+the shared jet helper. Smooth launch/tail masks avoid detached or hard caps.
+
 ## Performance and verification
 
-Desktop: 960² rays, 12 volume nodes, at most 1.5M output pixels. Economy:
-640² rays, 8 nodes, 700k pixels. Mobile/coarse-pointer/save-data: 384² rays,
-6 nodes, 230k pixels. Hardware limits can reduce these settings. The per-frame
+Desktop: 960² rays, 12 disk + 6 jet nodes, at most 1.5M output pixels.
+Economy: 640² rays, 8 + 4 nodes, 700k pixels. Mobile/coarse-pointer/save-data:
+384² rays, 6 + 4 nodes, 230k pixels. Hardware limits can reduce these settings. The per-frame
 passes are ray radiance, viewport projection, then bloom/tone mapping.
 Animation targets 30 fps. Under sustained load both the radiance pass and
 viewport output downscale without retracing the fixed geometry. Hidden pages
@@ -104,7 +139,9 @@ Serve the repository and open `/tests/black-hole-dynamics.html` for actual
 GPU characteristic, renewal and grain-filter checks. Open
 `/tests/black-hole-volume.html?nodes=12` (also 8 or 6) for actual Kerr cache
 checks: capture/escape, node ordering, finite off-plane positions, positive
-frequency shifts, volume support and retained path-weight sums. These are
+frequency shifts, both jet hemispheres, separate material supports and retained
+path-weight sums. `/tests/black-hole-jets.html` checks actual GPU emitter
+normalization, outward motion, flight-time derivatives and advected labels. These are
 invariant/regression checks, not a precision validation against a full fluid
 simulation.
 
@@ -114,5 +151,5 @@ inclusive 0.82 portrait breakpoint. Keep `background-size: auto 100%`;
 `cover` changes apparent size on other aspect ratios. The first live frame
 stays frozen through the canvas fade before motion starts. Re-export both
 atlases after changing the camera, geometry, material or starting time.
-Six local shader files are fetched; there is no external model/data download.
+Seven local shader files are fetched; there is no external model/data download.
 Unsupported WebGL or failed rendering leaves the matching static image visible.

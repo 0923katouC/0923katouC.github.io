@@ -9,6 +9,8 @@ uniform vec2 uMapSize;
 uniform vec2 uRadianceResolution;
 uniform int uCacheWidth;
 uniform int uNodeCount;
+uniform int uJetNodeCount;
+uniform int uPacketTexels;
 uniform float uTime;
 uniform float uGrainDetail;
 
@@ -53,13 +55,42 @@ vec3 background(vec3 direction) {
 }
 
 struct RayNode { vec4 positionTime; vec4 transfer; };
-RayNode readNode(ivec2 ray, int index) {
-    int slot = (ray.y*int(uMapSize.x)+ray.x)*(uNodeCount+1)+index;
-    uvec4 encoded = texelFetch(uRayCache,ivec2(slot%uCacheWidth,slot/uCacheWidth),0);
+uvec4 readPacket(ivec2 ray,int packet) {
+    int slot=(ray.y*int(uMapSize.x)+ray.x)*uPacketTexels+packet;
+    return texelFetch(uRayCache,ivec2(slot%uCacheWidth,slot/uCacheWidth),0);
+}
+uvec4 readFourWords(ivec2 ray,int word) {
+    int shift=word%4;
+    uvec4 a=readPacket(ray,word/4);
+    if(shift==0) return a;
+    uvec4 b=readPacket(ray,word/4+1);
+    if(shift==1) return uvec4(a.yzw,b.x);
+    if(shift==2) return uvec4(a.zw,b.xy);
+    return uvec4(a.w,b.xyz);
+}
+RayNode readNode(ivec2 ray,int index) {
+    int word=3*index,shift=word%4;
+    uvec4 a=readPacket(ray,word/4);
+    uvec3 encoded;
+    if(shift==0) encoded=a.xyz;
+    else if(shift==1) encoded=a.yzw;
+    else {
+        uvec4 b=readPacket(ray,word/4+1);
+        encoded=shift==2 ? uvec3(a.zw,b.x) : uvec3(a.w,b.xy);
+    }
     RayNode node;
-    node.positionTime = vec4(unpackHalf2x16(encoded.x),unpackHalf2x16(encoded.y));
-    node.transfer = vec4(unpackHalf2x16(encoded.z),unpackHalf2x16(encoded.w));
+    node.positionTime=vec4(unpackHalf2x16(encoded.x),unpackHalf2x16(encoded.y));
+    vec2 transport=unpackHalf2x16(encoded.z);
+    node.transfer=vec4(transport,0.0,transport.y>0.0 ? 1.0 : 0.0);
     return node;
+}
+RayNode readSky(ivec2 ray) {
+    uvec4 encoded=readFourWords(ray,3*(uNodeCount+uJetNodeCount));
+    RayNode sky;
+    // positionTime=(direction,statusFlags); transfer=(Ld,Lj,nDisk,nJet).
+    sky.positionTime=vec4(unpackHalf2x16(encoded.x),unpackHalf2x16(encoded.y));
+    sky.transfer=vec4(unpackHalf2x16(encoded.z),unpackHalf2x16(encoded.w));
+    return sky;
 }
 float volumeRadius(vec3 p) {
     float b=dot(p,p)-PHYSICAL_A*PHYSICAL_A;
@@ -218,32 +249,96 @@ vec4 volumeEmission(RayNode node) {
     return vec4(emission*alpha,alpha);
 }
 
+// NPGS-inspired, optically thin spine/sheath emission. The outflow clock
+// follows the same normalized emitter velocity used by the GR ray cache.
+const float JET_EMISSION_GAIN = 0.45;
+vec3 jetEmission(RayNode node) {
+    vec3 pos=node.positionTime.xyz;
+    float height=abs(pos.y);
+    bool valid=node.transfer.w>0.5 && node.transfer.x>0.0
+               && height>JET_START && height<JET_LENGTH;
+    if(!valid) pos=vec3(0.15,JET_START,0.0);
+    if(dot(pos.xz,pos.xz)<1e-8) pos.x=0.0001;
+    float emissionTime=uTime*3.6+node.positionTime.w;
+    vec3 material=jetMaterialCoordinates(pos,emissionTime);
+    float eta=material.x,theta=material.y,launchTime=material.z;
+    vec2 tangent=vec2(pos.z,-pos.x)/max(dot(pos.xz,pos.xz),1e-8);
+    vec2 dtheta=vec2(dot(tangent,dFdx(pos.xz)),dot(tangent,dFdy(pos.xz)));
+    vec2 dlaunch=vec2(dFdx(launchTime),dFdy(launchTime));
+    float helixPhase=2.0*theta-0.35*launchTime;
+    vec2 phaseGradient=2.0*dtheta-0.35*dlaunch;
+    float footprint=abs(phaseGradient.x)+abs(phaseGradient.y);
+    float helix=cos(helixPhase)*exp(-0.25*footprint*footprint);
+    float knots=PerlinNoise(vec3(0.18*launchTime,7.0,11.0));
+    float noiseFootprint=0.18*(abs(dlaunch.x)+abs(dlaunch.y));
+    knots*=1.0-smoothstep(0.3,0.9,noiseFootprint);
+    vec3 finePoint=vec3(1.8*pos.x/jetRadius(abs(pos.y)),1.8*pos.z/jetRadius(abs(pos.y)),0.75*launchTime);
+    float fineFootprint=max(length(dFdx(finePoint)),length(dFdy(finePoint)));
+    float fine=PerlinNoise(finePoint+vec3(7.3,2.9,11.1))*(1.0-smoothstep(0.3,0.9,fineFootprint));
+    // Advected knots and strands stay supplied continuously, not whole-beam flashes.
+    float modulation=(0.80+0.45*knots)*(0.85+0.25*fine)*(0.80+0.20*helix);
+    if(!valid) return vec3(0.0);
+    float radius=jetRadius(height);
+    float sheath=exp(-pow((eta-(0.70+0.06*helix))/0.20,2.0));
+    float spine=0.18*exp(-pow(eta/0.25,2.0));
+    float edge=1.0-smoothstep(0.90,JET_CACHE_PADDING,eta);
+    float launch=smoothstep(JET_START,JET_START+0.30,height);
+    float tail=1.0-smoothstep(0.60*JET_LENGTH,JET_LENGTH,height);
+    float emissivity=JET_EMISSION_GAIN*(sheath+spine)*edge*launch*tail*modulation/max(radius,0.2);
+    float shift=node.transfer.x;
+    vec3 color=KelvinToRgb(clamp(100000.0*shift,8000.0,100000.0));
+    // JetColor also has zero absorption. Cache dl is in the emitter frame.
+    return color*emissivity*min(pow(shift,3.0),6.0)*node.transfer.y;
+}
+
 ivec2 rayForPixel(ivec2 pixel) {
     return min(ivec2((vec2(pixel)+0.5)*uMapSize/uRadianceResolution),ivec2(uMapSize)-1);
 }
 void main() {
     ivec2 pixel=ivec2(gl_FragCoord.xy);
     ivec2 ray=rayForPixel(pixel);
-    RayNode raySky=readNode(ray,uNodeCount);
-    vec3 escapeDirection=raySky.positionTime.w>0.5 ? normalize(raySky.positionTime.xyz)
+    RayNode raySky=readSky(ray);
+    bool escaped=(int(round(raySky.positionTime.w))%4)==0;
+    vec3 escapeDirection=escaped ? normalize(raySky.positionTime.xyz)
         : sceneDirection(mapToPlane((vec2(ray)+0.5)/uMapSize));
-    vec3 sky=raySky.positionTime.w*background(escapeDirection);
-    // Integrate each physical ray completely before screen-space filtering.
-    // Fixed passage slots keep corresponding material nodes aligned in quads.
+    vec3 sky=(escaped ? 1.0 : 0.0)*background(escapeDirection);
+    // Quad-wide guards keep every derivative at the same fixed material slot.
     ivec2 quadBase=pixel-(pixel%2);
-    bool evaluateMaterial=raySky.transfer.z>0.5
-       || readNode(rayForPixel(quadBase),uNodeCount).transfer.z>0.5
-       || readNode(rayForPixel(quadBase+ivec2(1,0)),uNodeCount).transfer.z>0.5
-       || readNode(rayForPixel(quadBase+ivec2(0,1)),uNodeCount).transfer.z>0.5
-       || readNode(rayForPixel(quadBase+ivec2(1,1)),uNodeCount).transfer.z>0.5;
-    vec4 accumulated=vec4(0.0);
-    if(evaluateMaterial) {
-        for(int index=0;index<12;++index) {
-            if(index>=uNodeCount) break;
-            RayNode node=readNode(ray,index);
-            vec4 cloud=volumeEmission(node);
-            accumulated+=(1.0-accumulated.a)*cloud;
+    RayNode qa=readSky(rayForPixel(quadBase));
+    RayNode qb=readSky(rayForPixel(quadBase+ivec2(1,0)));
+    RayNode qc=readSky(rayForPixel(quadBase+ivec2(0,1)));
+    RayNode qd=readSky(rayForPixel(quadBase+ivec2(1,1)));
+    bool evaluateDisk=max(max(qa.transfer.z,qb.transfer.z),max(qc.transfer.z,qd.transfer.z))>0.5;
+    bool evaluateJet=max(max(qa.transfer.w,qb.transfer.w),max(qc.transfer.w,qd.transfer.w))>0.5;
+    vec3 jetLight[6]; float jetLag[6]; float jetTransmission[6];
+    for(int j=0;j<6;++j) {
+        jetLight[j]=vec3(0.0);jetLag[j]=-1e10;jetTransmission[j]=1.0;
+        if(j<uJetNodeCount && evaluateJet) {
+            RayNode node=readNode(ray,uNodeCount+j);
+            jetLight[j]=jetEmission(node);
+            jetLag[j]=node.positionTime.w;
         }
     }
-    fragColor=vec4(max(accumulated.rgb+(1.0-accumulated.a)*sky,vec3(0.0)),accumulated.a);
+    vec4 accumulated=vec4(0.0);
+    if(evaluateDisk) {
+        for(int i=0;i<12;++i) {
+            if(i>=uNodeCount) break;
+            RayNode node=readNode(ray,i);
+            vec4 cloud=volumeEmission(node);
+            accumulated+=(1.0-accumulated.a)*cloud;
+            // Exact front/back ordering for an optically thin jet: only disk
+            // samples nearer the observer attenuate a given jet contribution.
+            // Derivative-dependent emissions were evaluated at fixed slots.
+            for(int j=0;j<6;++j) {
+                if(j>=uJetNodeCount) break;
+                if(node.positionTime.w>jetLag[j]) jetTransmission[j]*=1.0-cloud.a;
+            }
+        }
+    }
+    vec3 color=accumulated.rgb+(1.0-accumulated.a)*sky;
+    for(int j=0;j<6;++j) {
+        if(j>=uJetNodeCount) break;
+        color+=jetLight[j]*jetTransmission[j];
+    }
+    fragColor=vec4(max(color,vec3(0.0)),accumulated.a);
 }
