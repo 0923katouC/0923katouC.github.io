@@ -49,9 +49,8 @@ body.home-page.glass-ui .entry-panel{
   --glass-muted:#f0f5fc;
   --glass-text-shadow:0 1px 3px rgba(5,12,22,.90),0 2px 12px rgba(5,12,22,.50);
   --cover-position:50% 50%;
-  --cover-scale:1.04;
+  --cover-scale:1;
   --cover-origin:50% 50%;
-  min-height:300px;
   padding:24px;
   touch-action:manipulation;
 }
@@ -60,6 +59,9 @@ body.home-page.glass-ui .entry-panel{
   position:absolute;
   inset:8px;
   z-index:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   overflow:hidden;
   border-radius:calc(var(--glass-radius) - 8px);
   pointer-events:none;
@@ -67,9 +69,11 @@ body.home-page.glass-ui .entry-panel{
 
 .home-page .entry-cover{
   display:block;
-  width:100%;
-  height:100%;
-  object-fit:cover;
+  width:auto;
+  height:auto;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
   object-position:var(--cover-position);
   opacity:.74;
   transform:scale(var(--cover-scale));
@@ -77,30 +81,13 @@ body.home-page.glass-ui .entry-panel{
   transition:transform .45s cubic-bezier(.2,.65,.3,1);
 }
 
-/* Cropping is presentation-only; the source photographs stay intact. */
-body.home-page.glass-ui .entry-panel--photography{
-  --cover-position:91% 55%;
-  --cover-scale:1.16;
-  --cover-origin:85% 58%;
-}
-
-body.home-page.glass-ui .entry-panel--academics{
-  --cover-position:50% 40%;
-  --cover-scale:1;
-}
-
-body.home-page.glass-ui .entry-panel--writing{
-  --cover-position:50% 55%;
-}
-
-body.home-page.glass-ui .entry-panel--projects{
-  --cover-position:45% 50%;
-}
-
+/* Images fit inside the shared card dimensions, regardless of source ratio. */
 @supports (mask-composite:intersect) or (-webkit-mask-composite:source-in){
   .home-page .entry-media{
     inset:0;
     border-radius:inherit;
+  }
+  .home-page .entry-cover{
     -webkit-mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 16px),transparent),linear-gradient(0deg,transparent,#000 16px,#000 calc(100% - 16px),transparent);
     mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 16px),transparent),linear-gradient(0deg,transparent,#000 16px,#000 calc(100% - 16px),transparent);
     -webkit-mask-composite:source-in;
@@ -127,7 +114,6 @@ body.home-page.glass-ui .entry-panel--projects{
 
 .home-page .entry-copy{
   margin-top:auto;
-  padding-top:100px;
 }
 
 .home-page .entry-copy h2{
@@ -165,14 +151,6 @@ body.home-page.glass-ui .entry-panel:hover .entry-arrow{
   .home-page .entry-cover{transition:none}
 }
 
-@media(max-width:980px){
-  body.home-page.glass-ui .entry-panel--photography{
-    --cover-scale:1.8;
-    --cover-position:100% 55%;
-    --cover-origin:85% 58%;
-  }
-}
-
 @media(max-width:640px){
   .home-page .home-background::before{
     inset:-2%;
@@ -182,9 +160,5 @@ body.home-page.glass-ui .entry-panel:hover .entry-arrow{
 
   body.home-page::after{
     background:rgba(247,248,250,.08);
-  }
-
-  body.home-page.glass-ui .entry-panel{
-    min-height:280px;
   }
 }
