@@ -7,7 +7,6 @@ body.academic-cosmos{
   --accent:#a7d4ff;
   --accent-soft:rgba(128,183,235,.13);
   --ui-header-tint:rgba(3,8,15,.56);
-  --ui-footer-tint:rgba(3,8,15,.52);
   background:#02050a;
   color:var(--text);
 }
@@ -115,15 +114,6 @@ body.academic-cosmos{
   background:rgba(255,255,255,.14);
 }
 
-.academic-cosmos .site-footer{
-  border-top-color:rgba(218,232,248,.15);
-}
-
-.academic-cosmos .footer-wrap{
-  color:#bac5d2;
-  text-shadow:0 2px 12px rgba(0,0,0,.72);
-}
-
 @media (min-width:981px){
   .academic-overview{
     display:grid;
@@ -152,7 +142,6 @@ body.academic-cosmos{
 @media(max-width:820px){
   body.academic-cosmos{
     --ui-header-tint:rgba(3,8,15,.66);
-    --ui-footer-tint:rgba(3,8,15,.62);
   }
 
   .academic-cosmos .cosmos-bg::after{

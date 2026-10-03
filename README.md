@@ -19,6 +19,12 @@ Personal website hosted with GitHub Pages.
 - `assets/js/main.js` — language switch and common behavior
 - `assets/js/essay-gate.js` — client-side essay access gate
 
+## Homepage entry images
+
+The four homepage cards use responsive WebP images from `assets/images/home-entries/`, served directly by GitHub Pages. The corresponding original JPEGs are preserved in `assets/images/home-entries/originals/`, named `photography`, `academics`, `writing`, and `projects`.
+
+Run `python scripts/build_home_entry_images.py` with Pillow installed to regenerate the 480px and 960px variants. Source images retain their full frame; `assets/css/home.css` controls subject placement, responsive cropping, and translucency.
+
 ## Publication synchronization
 
 The publication block in `academics.html` is synchronized with INSPIRE author record `2107075`.

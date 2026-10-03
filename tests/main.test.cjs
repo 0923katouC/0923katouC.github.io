@@ -9,7 +9,6 @@ const denied = () => new DOMException('Storage access is blocked', 'SecurityErro
 
 function createPage({ saved = null, accessError, readError, writeError } = {}) {
   const writes = [];
-  const year = { textContent: '' };
   const elements = [
     { dataset: { zh: '摄影集', en: 'Photography' }, textContent: '摄影集' },
     { dataset: { zh: '个人主页。', en: 'Personal website.' }, textContent: '个人主页。' },
@@ -29,7 +28,6 @@ function createPage({ saved = null, accessError, readError, writeError } = {}) {
       assert.equal(event, 'DOMContentLoaded');
       ready = listener;
     },
-    getElementById: id => id === 'year' ? year : null,
     querySelector: selector => selector === '.lang-switch' ? button : null,
     querySelectorAll: selector => selector === '[data-zh][data-en]' ? elements : [],
   };
@@ -58,7 +56,6 @@ function createPage({ saved = null, accessError, readError, writeError } = {}) {
 
   return {
     writes,
-    year,
     click: () => click(),
     expectLanguage(lang) {
       assert.equal(document.documentElement.lang, lang === 'zh' ? 'zh-CN' : 'en');
@@ -69,10 +66,9 @@ function createPage({ saved = null, accessError, readError, writeError } = {}) {
   };
 }
 
-test('defaults to Chinese and preserves the current copyright year', () => {
+test('defaults to Chinese without writing a preference', () => {
   const page = createPage();
   page.expectLanguage('zh');
-  assert.equal(Number(page.year.textContent), new Date().getFullYear());
   assert.deepEqual(page.writes, []);
 });
 

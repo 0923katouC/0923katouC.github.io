@@ -1,8 +1,7 @@
 (() => {
   const page = document.querySelector('body.ui-page');
   const header = page?.querySelector('.site-header');
-  const footer = page?.querySelector('.site-footer');
-  if (!header || !footer) return;
+  if (!header) return;
 
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const limit = 12;
@@ -16,24 +15,17 @@
   let lastScrollY = window.scrollY;
   let touchY = null;
   let headerSpace = 0;
-  let footerSpace = 0;
 
-  // Actual bar sizes own the glass, border and centered content together.
+  // The actual header size owns the glass, border and centered content together.
   const paint = () => {
     page.style.setProperty('--ui-header-stretch', stretch.toFixed(3) + 'px');
-    page.style.setProperty('--ui-footer-stretch', (-stretch * 0.75).toFixed(3) + 'px');
   };
-  const measureSpaces = () => {
-    // Reserve resting sizes so the spring never changes the document scroll range.
+  const measureHeader = () => {
+    // Reserve the resting height so the spring never changes the document scroll range.
     const top = header.getBoundingClientRect().height - stretch;
-    const bottom = footer.getBoundingClientRect().height + stretch * 0.75;
     if (Math.abs(top - headerSpace) > 0.5) {
       headerSpace = top;
       page.style.setProperty('--ui-header-space', top.toFixed(2) + 'px');
-    }
-    if (Math.abs(bottom - footerSpace) > 0.5) {
-      footerSpace = bottom;
-      page.style.setProperty('--ui-footer-space', bottom.toFixed(2) + 'px');
     }
   };
   const reset = () => {
@@ -106,22 +98,21 @@
     if (window.performance.now() - lastDirectInput > 120) respond(y - lastScrollY);
     lastScrollY = y;
   }, { passive: true });
-  window.addEventListener('resize', measureSpaces);
-  window.addEventListener('pageshow', measureSpaces);
-  window.visualViewport?.addEventListener('resize', measureSpaces);
+  window.addEventListener('resize', measureHeader);
+  window.addEventListener('pageshow', measureHeader);
+  window.visualViewport?.addEventListener('resize', measureHeader);
   if ('ResizeObserver' in window) {
-    const observer = new window.ResizeObserver(measureSpaces);
+    const observer = new window.ResizeObserver(measureHeader);
     observer.observe(header);
-    observer.observe(footer);
   }
   motion.addEventListener('change', () => {
     if (motion.matches) reset();
-    measureSpaces();
+    measureHeader();
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) reset();
   });
-  document.fonts?.ready.then(measureSpaces);
+  document.fonts?.ready.then(measureHeader);
   paint();
-  measureSpaces();
+  measureHeader();
 })();
