@@ -170,7 +170,7 @@ body.glass-ui.photography-topics .topic-card h2{
 }
 
 /* Neutralize opaque page-specific hover fills before applying glass motion. */
-body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,.back-link,.lang-switch,.invite-row button,.main-nav a):is(:hover,:focus-visible,:active),
+body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,.topic-card:where([data-glass-motion]),.back-link,.lang-switch,.invite-row button,.main-nav a):is(:hover,:focus-visible,:active),
 body.glass-ui.photography-topics a.topic-card:is(:hover,:focus-visible,:active){
   background:var(--glass-surface);
   border-color:rgba(255,255,255,.65);
@@ -180,7 +180,7 @@ body.glass-ui.photography-topics a.topic-card:is(:hover,:focus-visible,:active){
   box-shadow:var(--glass-shadow);
 }
 
-body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,.back-link,.lang-switch,.invite-row button,.main-nav a):focus-visible,
+body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,.topic-card:where([data-glass-motion]),.back-link,.lang-switch,.invite-row button,.main-nav a):focus-visible,
 body.glass-ui.photography-topics a.topic-card:focus-visible{
   outline:3px solid var(--glass-focus);
   outline-offset:4px;
@@ -188,7 +188,7 @@ body.glass-ui.photography-topics a.topic-card:focus-visible{
 }
 
 @media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
-  body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card):hover,
+  body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,.topic-card:where([data-glass-motion])):hover,
   body.glass-ui.photography-topics a.topic-card:hover{
     transform:translateY(-6px) scale(1.012);
     box-shadow:0 18px 38px rgba(12,34,54,.19),inset 0 1px 2px rgba(255,255,255,.85),inset 0 -1px 1px rgba(255,255,255,.32);
@@ -205,7 +205,7 @@ body.glass-ui.photography-topics a.topic-card:focus-visible{
 }
 
 @media(prefers-reduced-motion:no-preference){
-  body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,.back-link,.lang-switch,.invite-row button,.main-nav a):active,
+  body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,.topic-card:where([data-glass-motion]),.back-link,.lang-switch,.invite-row button,.main-nav a):active,
   body.glass-ui.photography-topics a.topic-card:active{
     transform:translateY(0) scale(.975);
     box-shadow:0 3px 10px rgba(12,34,54,.12),inset 0 1px 1px rgba(255,255,255,.58);

@@ -74,16 +74,57 @@ def fetch_publications(bai: str) -> list[dict[str, Any]]:
     }
     url: str | None = f"{LITERATURE_API}?{urllib.parse.urlencode(params)}"
     hits: list[dict[str, Any]] = []
+    expected_total: int | None = None
+    seen_urls: set[str] = set()
+    seen_ids: set[str] = set()
 
     while url:
+        if url in seen_urls:
+            raise RuntimeError("INSPIRE literature pagination contains a repeated URL")
+        seen_urls.add(url)
         data = get_json(url)
-        page_hits = data.get("hits", {}).get("hits", [])
-        if not isinstance(page_hits, list):
+        result = data.get("hits") if isinstance(data, dict) else None
+        if not isinstance(result, dict) or not isinstance(result.get("hits"), list):
             raise RuntimeError("Unexpected INSPIRE literature response")
-        hits.extend(page_hits)
-        next_url = data.get("links", {}).get("next")
-        url = str(next_url) if next_url else None
 
+        # INSPIRE returns an exact integer total on every page. Validate it
+        # before accepting any records so a partial response cannot erase cards.
+        total = result.get("total")
+        if type(total) is not int or total < 0:
+            raise RuntimeError("Unexpected INSPIRE literature total")
+        if expected_total is None:
+            expected_total = total
+        elif total != expected_total:
+            raise RuntimeError("INSPIRE literature total changed during pagination; retry the sync")
+
+        page_hits = result["hits"]
+        for hit in page_hits:
+            metadata = hit.get("metadata") if isinstance(hit, dict) else None
+            if not isinstance(metadata, dict):
+                raise RuntimeError("Unexpected INSPIRE literature hit")
+            control_number = metadata.get("control_number") or hit.get("id")
+            if type(control_number) not in (str, int) or not str(control_number).strip():
+                raise RuntimeError("INSPIRE literature hit is missing a control number")
+            identifier = str(control_number)
+            if identifier in seen_ids:
+                raise RuntimeError(f"INSPIRE returned duplicate publication {identifier}")
+            seen_ids.add(identifier)
+        hits.extend(page_hits)
+
+        links = data.get("links", {})
+        if not isinstance(links, dict):
+            raise RuntimeError("Unexpected INSPIRE literature pagination links")
+        next_url = links.get("next")
+        if next_url is not None and (not isinstance(next_url, str) or not next_url.strip()):
+            raise RuntimeError("Unexpected INSPIRE literature next-page URL")
+        if len(hits) > expected_total or (not page_hits and next_url):
+            raise RuntimeError("INSPIRE literature pagination does not match its total")
+        url = next_url
+
+    if len(hits) != expected_total:
+        raise RuntimeError(
+            f"INSPIRE returned {len(hits)} of {expected_total} publications; refusing to replace the page"
+        )
     if not hits:
         raise RuntimeError(f"INSPIRE returned no publications for BAI {bai}; refusing to erase the page")
     return hits

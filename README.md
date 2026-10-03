@@ -29,7 +29,9 @@ The publication block in `academics.html` is synchronized with INSPIRE author re
 - After a successful sync on `main`, the workflow explicitly requests a GitHub Pages build using `pages: write`, because pushes made with `GITHUB_TOKEN` do not trigger branch-based Pages builds. No-change runs also request a build so retries can recover a previous build-request failure.
 - If the INSPIRE API returns no publications or fails unexpectedly, the script exits without erasing the existing publication list.
 
-Run publication-sync regression tests with `python -B -m unittest discover -s tests -v`.
+Run publication-sync regression tests with `python -B -m unittest discover -s tests -p 'test_sync_inspire_publications.py' -v`.
+
+Run browser-script regression tests with `node --test tests/*.test.cjs` (Node.js 18 or later; no npm dependencies). These cover language switching when browser storage is unavailable and renderer fallback after texture-allocation failures. Run the full Python suite with `python -B -m unittest discover -s tests -v`; the volume-model tests require NumPy.
 
 ## Security notes
 
