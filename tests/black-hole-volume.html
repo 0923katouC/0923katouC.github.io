@@ -20,7 +20,7 @@ button:disabled{opacity:.5}pre{padding:18px;background:#1e293b;border-radius:8px
 'use strict';
 const requestedNodes=Number(new URLSearchParams(location.search).get("nodes")) || 8;
 const NODE_COUNT=[6,8,12].includes(requestedNodes) ? requestedNodes : 8;
-const JET_NODE_COUNT=NODE_COUNT===12?6:4,MAX_PASSAGES=2;
+const JET_NODE_COUNT=6,MAX_PASSAGES=2;
 const MAP_SIZE=65,SKY_WORD_OFFSET=3*(NODE_COUNT+JET_NODE_COUNT);
 const PACKET_TEXELS=Math.ceil((SKY_WORD_OFFSET+4)/4),WORDS_PER_RAY=4*PACKET_TEXELS;
 const statusNode=document.querySelector('#status'),resultsNode=document.querySelector('#results');
@@ -228,6 +228,11 @@ runButton.addEventListener('click',async()=>{
       rule:'separate disk/jet banks, each split into two fixed half-banks; six half-floats per node, sky and zero padding follow'};
     metrics.geometry={spin:config.spin,inner:config.inner,outer:config.outer,
       height:{base:height.base,slope:height.slope,start:height.start},jet:config.jet,edgeToleranceRs:config.edgeTolerance};
+    // heightContract requires a nonnegative flare, so the outer edge bounds
+    // the entire disk cache. Separate material supports must not touch.
+    metrics.supportSeparationRs=config.jet.start-1.05*height.at(config.outer);
+    requireCondition(metrics.supportSeparationRs>0,
+      'Disk and jet cache supports overlap or touch; separation is '+metrics.supportSeparationRs+' Rs.');
     const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(sources.join('\n')));
     metrics.productionSHA256=Array.from(new Uint8Array(hash),value=>value.toString(16).padStart(2,'0')).join('');
     gl=document.querySelector('#gpu').getContext('webgl2',{antialias:false,depth:false,stencil:false});

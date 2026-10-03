@@ -53,7 +53,9 @@ local Kerr metric. Off-equatorial circular emitters are a prescribed,
 pressure-supported kinematic model, not off-equatorial free-fall geodesics.
 Three uint words hold each node; words are packed across RGBA32UI texels.
 Desktop disk+jet data and sky metadata fit 15 packets / 60 transform-feedback
-components per ray, without reducing the existing disk-node budget. The GPU uploads
+components per ray; economy uses 12 packets / 48 components, and mobile uses
+10 packets / 40 components. Every tier retains six jet nodes without reducing
+its existing disk-node budget. The GPU uploads
 the transform-feedback buffer directly; production does not read it to CPU.
 
 Every animation frame integrates the cached samples in observer-to-source
@@ -101,9 +103,16 @@ retarded outward modulation and blue-white emission. The current jet is a
 three-dimensional emitting volume along the SAME +y/-y spin axis and Kerr
 rays as the black hole and disk; it is not a screen-space light cone.
 
-`npgs-jet.glsl` defines the launch region at |y|=1.15 Rs, emission length
-10.5 Rs, and a smoothly widening radius. These supports are disjoint from
-the disk. The prescribed four-velocity includes radial expansion along
+`npgs-jet.glsl` defines the launch support at |y|=0.96 Rs, just above the
+disk cache ceiling of 0.945 Rs, and emission length 10.5 Rs. Its outer radius
+starts at 1.50 Rs and grows as 1.50+0.18z+0.08(sqrt(z+1)-1), where
+z=|y|-0.96. The luminous hollow sheath is centered near 0.78 of that radius,
+comparable to the inner disk radius at its base. Like upstream's active
+outer sheath, it has no added luminous axial core. A gradual emissivity rise
+over 1.10 Rs avoids a bright capped tip inside the apparent shadow; the
+physical axis stays centered at the Kerr origin. The apparent shadow is a
+lensed image boundary, not the event-horizon surface or a clipping mask.
+These supports remain disjoint from the disk. The prescribed four-velocity includes radial expansion along
 rho/R(|y|)=constant and is normalized with the local Kerr metric. The 0.8c
 parameter is the far-field axial limit on the spine, not a constant local
 physical speed at every height. Flight time is integrated along that same
@@ -128,8 +137,8 @@ the shared jet helper. Smooth launch/tail masks avoid detached or hard caps.
 ## Performance and verification
 
 Desktop: 960² rays, 12 disk + 6 jet nodes, at most 1.5M output pixels.
-Economy: 640² rays, 8 + 4 nodes, 700k pixels. Mobile/coarse-pointer/save-data:
-384² rays, 6 + 4 nodes, 230k pixels. Hardware limits can reduce these settings. The per-frame
+Economy: 640² rays, 8 + 6 nodes, 700k pixels. Mobile/coarse-pointer/save-data:
+384² rays, 6 + 6 nodes, 230k pixels. Hardware limits can reduce these settings. The per-frame
 passes are ray radiance, viewport projection, then bloom/tone mapping.
 Animation targets 30 fps. Under sustained load both the radiance pass and
 viewport output downscale without retracing the fixed geometry. Hidden pages

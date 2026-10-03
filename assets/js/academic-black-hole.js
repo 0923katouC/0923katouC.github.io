@@ -6,7 +6,7 @@
   'use strict';
   const canvas = document.getElementById('academic-black-hole');
   if (!canvas) return;
-  const VERSION = '20261003-jet4';
+  const VERSION = '20261003-jet-wide5';
   const baseUrl = new URL('../shaders/', document.currentScript.src);
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobile = matchMedia('(max-width: 820px), (pointer: coarse)');
@@ -82,8 +82,8 @@
   // Disk and jet slots are fixed independently. Three packed uint words per
   // material node are regrouped into RGBA32UI packets for transform feedback.
   let nodeCount = 8;
-  let jetNodeCount = 4;
-  let packetTexels = 10;
+  let jetNodeCount = 6;
+  let packetTexels = 12;
   let rayStrideBytes = 0;
   let totalRays = 0;
   let noise;
@@ -190,14 +190,14 @@
     const maximum = gl.getParameter(gl.MAX_TEXTURE_SIZE);
     const maximumComponents = gl.getParameter(gl.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS);
     nodeCount = low ? 6 : economyDesktop() ? 8 : 12;
-    jetNodeCount = low || economyDesktop() ? 4 : 6;
+    jetNodeCount = 6;
     const packetsFor = (diskNodes, jetNodes) => Math.ceil((3 * (diskNodes + jetNodes) + 4) / 4);
     packetTexels = packetsFor(nodeCount, jetNodeCount);
     if (maximumComponents < 4 * packetTexels && nodeCount > 8) {
-      nodeCount = 8; jetNodeCount = 4; packetTexels = packetsFor(nodeCount, jetNodeCount);
+      nodeCount = 8; packetTexels = packetsFor(nodeCount, jetNodeCount);
     }
     if (maximumComponents < 4 * packetTexels) {
-      nodeCount = 6; jetNodeCount = 4; packetTexels = packetsFor(nodeCount, jetNodeCount);
+      nodeCount = 6; packetTexels = packetsFor(nodeCount, jetNodeCount);
     }
     if (maximumComponents < 4 * packetTexels) throw new Error('Packed transform feedback unavailable');
     const desired = low ? 384 : economyDesktop() ? 640 : 960;

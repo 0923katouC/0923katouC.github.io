@@ -6,9 +6,12 @@
  * 0.8c is the far-field axial speed on the spine; it is NOT a constant local
  * physical speed everywhere. Local normalization and photon shifts are GR.
  */
-const float JET_START = 1.15;
+// Just above the disk cache ceiling (1.05 * 0.9 = 0.945 Rs).
+const float JET_START = 0.96;
 const float JET_LENGTH = 10.5;
-const float JET_BASE_RADIUS = 0.32;
+// A hollow launch funnel surrounds the inner disk, as in NPGS JetColor.
+// Keep its axis at the Kerr origin; apparent offsets follow the traced rays.
+const float JET_BASE_RADIUS = 1.50;
 const float JET_CACHE_PADDING = 1.05;
 const float JET_SPEED = 0.8; // Far-field spine limit, not a local-speed claim.
 const float JET_AXIAL_U = 1.3333333333333333; // Gamma_inf * beta_inf on axis.
@@ -16,8 +19,8 @@ const float JET_AXIAL_U = 1.3333333333333333; // Gamma_inf * beta_inf on axis.
 vec2 jetRadiusAndSlope(float height) {
     float z=max(height-JET_START,0.0);
     float softRoot=sqrt(z+1.0);
-    float radius=JET_BASE_RADIUS+0.10*z+0.05*(softRoot-1.0);
-    float slope=0.10+0.025/softRoot;
+    float radius=JET_BASE_RADIUS+0.18*z+0.08*(softRoot-1.0);
+    float slope=0.18+0.04/softRoot;
     return vec2(radius,slope);
 }
 float jetRadius(float height) { return jetRadiusAndSlope(height).x; }
@@ -52,7 +55,7 @@ vec4 jetEmitterVelocity(vec3 position) {
                 (r*position.z+PHYSICAL_A*position.x)/(r2+a2));
     float ld=dot(l,us);
     // g(U,U)=-1 gives -(1-f)Ut^2+B*Ut+C=0.
-    // The chosen support is outside the ergosphere (|y|>=1.15Rs), so
+    // The chosen support is outside the ergosphere (|y|>=0.96Rs), so
     // 1-f>0 and the positive, future-directed root is unambiguous.
     float oneMinusF=1.0-f;
     if (oneMinusF<=1e-6) return vec4(0.0); // Never invent a spacelike emitter.

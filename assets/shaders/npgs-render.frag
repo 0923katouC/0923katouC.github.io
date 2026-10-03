@@ -249,7 +249,7 @@ vec4 volumeEmission(RayNode node) {
     return vec4(emission*alpha,alpha);
 }
 
-// NPGS-inspired, optically thin spine/sheath emission. The outflow clock
+// NPGS-inspired, optically thin hollow-sheath emission. The outflow clock
 // follows the same normalized emitter velocity used by the GR ray cache.
 const float JET_EMISSION_GAIN = 0.45;
 vec3 jetEmission(RayNode node) {
@@ -279,12 +279,13 @@ vec3 jetEmission(RayNode node) {
     float modulation=(0.80+0.45*knots)*(0.85+0.25*fine)*(0.80+0.20*helix);
     if(!valid) return vec3(0.0);
     float radius=jetRadius(height);
-    float sheath=exp(-pow((eta-(0.70+0.06*helix))/0.20,2.0));
-    float spine=0.18*exp(-pow(eta/0.25,2.0));
+    float sheath=exp(-pow((eta-(0.78+0.04*helix))/0.18,2.0));
     float edge=1.0-smoothstep(0.90,JET_CACHE_PADDING,eta);
-    float launch=smoothstep(JET_START,JET_START+0.30,height);
+    // A gradual emissivity rise hides the artificial support boundary.
+    // Upstream likewise fades its hollow sheath near the equatorial plane.
+    float launch=1.0-exp(-pow((height-JET_START)/1.10,2.0));
     float tail=1.0-smoothstep(0.60*JET_LENGTH,JET_LENGTH,height);
-    float emissivity=JET_EMISSION_GAIN*(sheath+spine)*edge*launch*tail*modulation/max(radius,0.2);
+    float emissivity=JET_EMISSION_GAIN*sheath*edge*launch*tail*modulation/max(radius,0.2);
     float shift=node.transfer.x;
     vec3 color=KelvinToRgb(clamp(100000.0*shift,8000.0,100000.0));
     // JetColor also has zero absorption. Cache dl is in the emitter frame.
