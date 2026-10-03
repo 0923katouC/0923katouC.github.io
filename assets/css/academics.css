@@ -13,12 +13,16 @@ body.academic-cosmos{
 }
 
 .academic-cosmos .cosmos-bg{
+  --cosmos-center-x:58%;
+  --cosmos-center-y:48%;
+  --cosmos-view-span:20;
   position:fixed;
   inset:0;
   z-index:0;
   overflow:hidden;
   pointer-events:none;
-  background:#030710 url("../images/academic-npgs-desktop.webp?v=20261003-blackhole2") center / cover no-repeat;
+  /* Match the renderer's height-based projection and the same image anchor. */
+  background:#030710 url("../images/academic-npgs-desktop.webp?v=20261003-framing2") var(--cosmos-center-x) var(--cosmos-center-y) / auto 100% no-repeat;
 }
 
 .academic-cosmos .cosmos-bg canvas{
@@ -156,15 +160,14 @@ body.academic-cosmos{
       linear-gradient(180deg,rgba(1,4,9,.36) 0%,rgba(1,4,9,.46) 52%,rgba(1,4,9,.60) 100%),
       linear-gradient(90deg,rgba(1,4,9,.28),rgba(1,4,9,.18));
   }
-
-  .academic-cosmos .cosmos-bg canvas{
-    opacity:.94;
-  }
 }
 
 @media(max-aspect-ratio:82/100){
   .academic-cosmos .cosmos-bg{
-    background-image:url("../images/academic-npgs-mobile.webp?v=20261003-blackhole2");
+    --cosmos-center-x:52%;
+    --cosmos-center-y:39%;
+    --cosmos-view-span:36;
+    background-image:url("../images/academic-npgs-mobile.webp?v=20261003-framing2");
   }
 
   .academic-cosmos .cosmos-bg::after{

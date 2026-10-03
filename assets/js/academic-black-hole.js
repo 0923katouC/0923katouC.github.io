@@ -6,10 +6,14 @@
   'use strict';
   const canvas = document.getElementById('academic-black-hole');
   if (!canvas) return;
-  const VERSION = '20261003-blackhole2';
+  const VERSION = '20261003-framing2';
   const baseUrl = new URL('../shaders/', document.currentScript.src);
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobile = matchMedia('(max-width: 820px), (pointer: coarse)');
+  const portrait = matchMedia('(max-aspect-ratio: 82/100)');
+  const surface = canvas.closest('.cosmos-bg') || canvas;
+  let framing = {x:.58,y:.52,span:20};
+  let revealUntil = 0;
   const HEADER = '#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\n';
   const VERTEX = `
     out vec2 vUv;
@@ -216,8 +220,20 @@
     const low = lowPower();
     const cap = (low ? 230000 : economyDesktop() ? 1100000 : 2100000) * scale * scale;
     const dpr = Math.min(devicePixelRatio || 1, low ? 1 : 1.5);
-    let width = Math.max(1, Math.round(innerWidth * dpr));
-    let height = Math.max(1, Math.round(innerHeight * dpr));
+    const bounds = surface.getBoundingClientRect();
+    const style = getComputedStyle(surface);
+    // CSS owns the breakpoint and anchor; CSS Y is measured from the top.
+    const value = (name,fallback) => {
+      const parsed = parseFloat(style.getPropertyValue(name));
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+    framing = {
+      x:value('--cosmos-center-x',portrait.matches?52:58)/100,
+      y:1-value('--cosmos-center-y',portrait.matches?39:48)/100,
+      span:value('--cosmos-view-span',portrait.matches?36:20)
+    };
+    let width = Math.max(1, Math.round(bounds.width * dpr));
+    let height = Math.max(1, Math.round(bounds.height * dpr));
     const correction = Math.min(1, Math.sqrt(cap / (width * height)));
     width = Math.max(1, Math.round(width * correction));
     height = Math.max(1, Math.round(height * correction));
@@ -231,6 +247,7 @@
     }
     canvas.dataset.resolution = `${width}x${height}`;
     canvas.dataset.qualityScale = scale.toFixed(2);
+    canvas.dataset.framing = `${framing.x.toFixed(2)},${framing.y.toFixed(2)},${framing.span}`;
     resetMetrics();
     lastDraw = -Infinity;
   }
@@ -268,10 +285,8 @@
     ['uDiskNear', 'uDiskFar', 'uSky'].forEach((name, index) => bindTexture(render, name, index, maps[index]));
     bindTexture(render, 'uNoise', 3, noise, gl.TEXTURE_3D);
     gl.uniform2f(location(render, 'uResolution'), canvas.width, canvas.height);
-    const portrait = innerWidth / Math.max(innerHeight, 1) < 0.82;
-    // Restore the large black-hole framing used before the extra objects.
-    gl.uniform2f(location(render, 'uCenter'), portrait ? 0.52 : 0.58, portrait ? 0.61 : 0.52);
-    gl.uniform1f(location(render, 'uViewSpan'), portrait ? 36 : 20);
+    gl.uniform2f(location(render, 'uCenter'), framing.x, framing.y);
+    gl.uniform1f(location(render, 'uViewSpan'), framing.span);
     gl.uniform1f(location(render, 'uTime'), elapsed);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -315,10 +330,15 @@
         if (gl.getError() !== gl.NO_ERROR) throw new Error('Background rendering failed');
         setState(reducedMotion.matches ? 'still' : 'ready');
         document.body.classList.remove('academic-cosmos-fallback');
+        // Keep the same t=14 frame throughout the CSS fade, then start motion.
+        const duration = parseFloat(getComputedStyle(canvas).transitionDuration) || 0;
+        revealUntil = performance.now() + duration * 1000;
         lastTick = now;
         lastDraw = now;
       } else if (ready) {
-        if (lastTick && !reducedMotion.matches) elapsed += Math.min((now - lastTick) / 1000, 0.1);
+        if (lastTick && !reducedMotion.matches && now > revealUntil) {
+          elapsed += Math.min((now - Math.max(lastTick,revealUntil)) / 1000, 0.1);
+        }
         lastTick = now;
         const interval = 1000 / 30;
         if (now - lastDraw >= interval - 0.5 || reducedMotion.matches) {
@@ -353,6 +373,8 @@
     const currentGeneration = ++generation;
     failed = false;
     ready = false;
+    elapsed = 14;
+    revealUntil = 0;
     setState('loading');
     try {
       if (!sources) {
@@ -411,6 +433,13 @@
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => { resize(); schedule(); }, 120);
   }, { passive: true });
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(() => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { resize(); schedule(); },120);
+    });
+    observer.observe(surface);
+  }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { stop(); tracePausedAt=performance.now(); if (ready) setState('paused'); }
     else { if(tracePausedAt) traceStarted+=performance.now()-tracePausedAt; tracePausedAt=0; resetMetrics(); lastDraw = -Infinity; if (ready) setState(reducedMotion.matches ? 'still' : 'ready'); schedule(); }

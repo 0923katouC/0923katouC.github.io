@@ -43,6 +43,13 @@ produces a still. Canvas data attributes report the actual tier, dimensions,
 trace duration and 120-draw timing windows.
 
 Both fallback images are rendered from this same disk-only shader path.
+Their t=14 frames use height-scaled atlases (4800x1200 desktop, 984x1200
+portrait), positioned with the same CSS anchor that the renderer reads.
+Keep `background-size: auto 100%`: `cover` changes the apparent black-hole
+size on other aspect ratios. CSS owns the inclusive 0.82 portrait breakpoint;
+its top-origin Y anchor is inverted for WebGL. The first frame stays frozen
+through the canvas fade, then animation begins. Re-export both atlases when
+changing the camera, framing, shader appearance or initial time.
 There is no external model/data download: only the five local shader files
 listed in the renderer are fetched. Unsupported WebGL or failed compilation
 uses the matching static image while keeping the academic page usable.
