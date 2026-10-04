@@ -40,9 +40,9 @@ Run browser-script regression tests with `node --test tests/*.test.cjs` (Node.js
 
 ## Security notes
 
-The GitHub Pages site is static and contains no private essay content or credentials. The essays entry links to a separate Cloudflare Worker at https://cmc-private-essays.cmc-private-essays.workers.dev, which verifies individual invitation codes and server-stored sessions before reading a private R2 bucket. Revoked or expired invitations are checked on every protected request. The old browser-only gate has been removed.
+The GitHub Pages site is static and contains no private essay content or credentials. The essays entry links to a separate Cloudflare Worker at https://cmc-private-essays.cmc-private-essays.workers.dev, which verifies a fixed shared access key using a salted server-only PBKDF2 verifier before creating a server-stored session. Private R2 reads require a valid session and the current key version; changing the key invalidates old sessions. The old browser-only gate has been removed.
 
-Never commit private essay text, invitation codes, credential hashes, session records or private storage exports to this repository. The private service must keep R2 public access and preview URLs disabled, restrict its canonical hostname, and return no-store responses. Authorized readers can still save or share content they have read.
+Never commit private essay text, access keys, credential verifiers, session records or private storage exports to this repository. The private service must keep R2 public access and preview URLs disabled, restrict its canonical hostname, and return no-store responses. Authorized readers can still save or share content they have read.
 
 
 ## Academic background renderer
