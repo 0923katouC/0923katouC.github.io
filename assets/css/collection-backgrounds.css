@@ -1,0 +1,72 @@
+/* Match the photography archive's fixed, full-screen cover background. */
+.collection-page .collection-background{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  display:block;
+  overflow:hidden;
+  pointer-events:none;
+  user-select:none;
+  background:var(--collection-base,#a6afb1);
+}
+
+.collection-page .collection-background img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:var(--collection-focus,center);
+}
+
+body.writing-page{
+  --collection-base:#b3b4ae;
+  --collection-focus:50% 50%;
+}
+
+/* Lift only the dark bookshelf behind the desktop writing heading. */
+.writing-page .collection-background::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:radial-gradient(ellipse at 4% 24%,rgba(247,248,250,.62),rgba(247,248,250,.32) 25%,transparent 60%);
+}
+
+body.projects-page{
+  --collection-base:#a5b6bb;
+  --collection-focus:50% 50%;
+}
+
+.collection-page .page-head h1{
+  color:#0c1015;
+  text-shadow:0 1px 3px rgba(255,255,255,.65),0 2px 20px rgba(255,255,255,.60);
+}
+
+.collection-page .page-head :is(p,.eyebrow,.back-link),
+.collection-page .placeholder-block{
+  color:#17222e;
+  font-weight:550;
+  text-shadow:0 1px 2px rgba(255,255,255,.90),0 1px 10px rgba(255,255,255,.80);
+}
+
+.collection-page .lock-mark{
+  color:var(--glass-muted);
+  text-shadow:var(--glass-text-shadow);
+}
+
+@media(max-width:640px){
+  .writing-page .collection-background::after{
+    display:none;
+  }
+  body.writing-page{
+    --collection-focus:58% 50%;
+  }
+  body.projects-page{
+    --collection-focus:58% 50%;
+  }
+  .projects-page .collection-background::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(180deg,rgba(247,248,250,.20),rgba(247,248,250,.56) 42%,transparent 65%);
+  }
+}
