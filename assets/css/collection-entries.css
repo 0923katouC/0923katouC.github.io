@@ -1,0 +1,103 @@
+/* Image inlays reuse the existing card sizes, labels and glass interactions. */
+body.collection-page.glass-ui .collection-card{
+  --glass-fill:rgba(231,246,255,.10);
+  --glass-top:rgba(255,255,255,.15);
+  --glass-bottom:rgba(201,231,252,.025);
+  --glass-ink:#fff;
+  --glass-muted:#f0f5fc;
+  --glass-text-shadow:0 1px 3px rgba(5,12,22,.90),0 2px 12px rgba(5,12,22,.55);
+  --card-focus:50% 50%;
+  --card-zoom:1.025;
+}
+
+.collection-card-media{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  overflow:hidden;
+  border-radius:inherit;
+  pointer-events:none;
+  user-select:none;
+}
+
+.collection-card-cover{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:var(--card-focus);
+  opacity:.74;
+  transform:scale(var(--card-zoom));
+  transition:transform .45s cubic-bezier(.2,.65,.3,1);
+}
+
+@supports (mask-composite:intersect) or (-webkit-mask-composite:source-in){
+  .collection-card-media{
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent),linear-gradient(0deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent),linear-gradient(0deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);
+    -webkit-mask-composite:source-in;
+    mask-composite:intersect;
+  }
+}
+
+.collection-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  border-radius:inherit;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(8,18,31,.14),transparent 28%,rgba(8,18,31,.10) 46%,rgba(8,18,31,.70));
+}
+
+.collection-card > :is(.entry-index,h2,p,.entry-arrow,.lock-mark){
+  position:relative;
+  z-index:2;
+}
+
+.collection-card .entry-arrow,
+.collection-card .lock-mark{
+  position:absolute;
+}
+
+body.collection-page.glass-ui .collection-card:hover .entry-arrow{
+  color:var(--glass-muted);
+}
+
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  .collection-card:hover .collection-card-cover{
+    transform:scale(calc(var(--card-zoom) * 1.055));
+  }
+}
+
+@media(prefers-reduced-motion:no-preference){
+  .collection-card:focus-visible .collection-card-cover{
+    transform:scale(calc(var(--card-zoom) * 1.055));
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .collection-card-cover{transition:none}
+}
+
+/* Reuse the homepage's personal photograph for the projects backdrop. */
+body.projects-page{
+  --collection-base:#73787e;
+  --collection-focus:47% 50%;
+}
+
+.projects-page .collection-background::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:radial-gradient(ellipse at 5% 20%,rgba(247,248,250,.62),rgba(247,248,250,.28) 25%,transparent 60%);
+}
+
+@media(max-width:640px){
+  body.projects-page{
+    --collection-focus:44% 50%;
+  }
+  .projects-page .collection-background::after{
+    background:linear-gradient(180deg,rgba(247,248,250,.24),rgba(247,248,250,.54) 42%,transparent 67%);
+  }
+}
