@@ -1,0 +1,46 @@
+.essays-portal > .portal-main{
+  display:grid;
+  place-items:center;
+  padding:44px 20px;
+}
+.portal-card{
+  width:min(100%,520px);
+  padding:40px 44px 34px;
+  text-align:center;
+  border:1px solid rgba(255,255,255,.66);
+  border-radius:26px;
+  background:linear-gradient(145deg,rgba(255,255,255,.22),rgba(232,245,255,.05)),rgba(243,249,253,.34);
+  box-shadow:0 18px 54px rgba(25,44,64,.13),inset 0 1px 2px rgba(255,255,255,.8),inset 0 -1px 1px rgba(255,255,255,.32);
+  -webkit-backdrop-filter:blur(24px) saturate(1.18);
+  backdrop-filter:blur(24px) saturate(1.18);
+  color:#14283c;
+}
+.portal-symbol{
+  display:grid;
+  place-items:center;
+  width:52px;
+  height:52px;
+  margin:0 auto 18px;
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:50%;
+  background:rgba(248,252,255,.24);
+  color:#365b7d;
+}
+.portal-symbol svg{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.portal-card .eyebrow{font-size:.7rem;color:#425e77;font-weight:650;letter-spacing:.17em}
+.portal-card h1{font-size:3rem;line-height:1.2;font-weight:760;letter-spacing:.04em;margin:9px 0 14px}
+.portal-card p{margin:0 0 26px;font-size:.94rem;color:#314e67}
+.portal-actions{display:grid;gap:12px;max-width:320px;margin:0 auto}
+.portal-actions .back-link{margin:0;min-height:46px}
+body.glass-ui .portal-actions .portal-enter{
+  --glass-fill:rgba(29,68,106,.86);
+  --glass-top:rgba(177,211,242,.21);
+  --glass-ink:#fff;
+  --glass-text-shadow:none;
+}
+.portal-return{font-size:.8rem;padding:5px;color:#425e77}
+@media(max-width:640px){
+  .essays-portal > .portal-main{padding:28px 14px}
+  .portal-card{padding:30px 24px 26px;border-radius:24px}
+  .portal-card h1{font-size:2.55rem}
+}

@@ -13,7 +13,7 @@ Personal website hosted with GitHub Pages.
 - `academics.html` — research interests, academic background and publications
 - `writing.html` — writing landing page
   - `writing/fiction.html` — fiction
-  - `writing/essays.html` — public entry to server-authenticated private essays
+  - `writing/essays.html` — redirect to server-authenticated private essays and the protected collection list
 - `projects.html` — games, AI tools and pond simulations
 - `assets/css/style.css` — site-wide styles
 - `assets/js/main.js` — language switch and common behavior
