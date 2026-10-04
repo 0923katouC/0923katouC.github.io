@@ -28,8 +28,12 @@ body.photography-entry-page.glass-ui .photo-entry{
 }
 
 .photography-entry-page .photo-time-scene{
-  background:radial-gradient(ellipse at 50% 35%,#34221b,#12161b 75%);
-  opacity:.94;
+  background-color:#21130d;
+  background-image:url("../images/photography-entries/workbench-v3-960.webp");
+  background-image:image-set(url("../images/photography-entries/workbench-v3-960.webp") 1x,url("../images/photography-entries/workbench-v3-1920.webp") 2x);
+  background-size:cover;
+  background-position:center;
+  opacity:.96;
 }
 
 .photography-entry-page .photo-time-scene svg{
@@ -68,7 +72,7 @@ body.photography-entry-page.glass-ui .photo-entry{
 }
 
 .photography-entry-page .photo-film-scene{
-  --film-cell:76px;
+  --film-cell:62px;
   --film-height:calc(var(--film-cell) * 2.222095347);
   --film-radius:calc(var(--film-cell) * 3.797877056);
   --film-strip:url("../images/photography-entries/themes-strip-2048.webp");
@@ -85,18 +89,18 @@ body.photography-entry-page.glass-ui .photo-entry{
 .photography-entry-page .photo-film-perspective{
   position:absolute;
   inset:0;
-  perspective:850px;
-  perspective-origin:50% 43%;
+  perspective:1600px;
+  perspective-origin:50% 44%;
 }
 
 .photography-entry-page .photo-film-tilt{
   position:absolute;
   left:50%;
-  top:43%;
+  top:44%;
   width:0;
   height:0;
   /* Zero screen-plane tilt; the viewing pitch preserves the three-dimensional loop. */
-  transform:rotateZ(0deg) rotateX(-24deg);
+  transform:rotateZ(0deg) rotateX(-7deg);
   transform-style:preserve-3d;
 }
 
@@ -256,18 +260,12 @@ body.photography-entry-page.glass-ui .photo-entry:hover .entry-arrow{
 
 @media(max-width:980px){
   .photography-entry-page .photo-film-scene{
-    --film-cell:60px;
+    --film-cell:min(58px,calc(6.25vw - 3.5px));
   }
 }
 
 @media(max-width:640px){
   .photography-entry-page .photo-film-scene{
-    --film-cell:50px;
-  }
-}
-
-@media(max-width:360px){
-  .photography-entry-page .photo-film-scene{
-    --film-cell:40px;
+    --film-cell:min(42px,calc(12.5vw - 3.5px));
   }
 }
