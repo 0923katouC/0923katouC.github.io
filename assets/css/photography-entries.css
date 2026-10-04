@@ -1,0 +1,246 @@
+/* Animated inlays only; the shared card geometry and glass interactions stay in charge. */
+body.photography-entry-page.glass-ui .photo-entry{
+  --glass-fill:rgba(13,23,31,.16);
+  --glass-top:rgba(255,255,255,.16);
+  --glass-bottom:rgba(201,231,252,.025);
+  --glass-ink:#fff;
+  --glass-muted:#f0f5fc;
+  --glass-text-shadow:0 1px 3px rgba(3,8,15,.92),0 2px 12px rgba(3,8,15,.60);
+}
+
+.photography-entry-page .photo-entry-media{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  overflow:hidden;
+  border-radius:inherit;
+  pointer-events:none;
+  user-select:none;
+}
+
+@supports (mask-composite:intersect) or (-webkit-mask-composite:source-in){
+  .photography-entry-page .photo-entry-media{
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent),linear-gradient(0deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent),linear-gradient(0deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);
+    -webkit-mask-composite:source-in;
+    mask-composite:intersect;
+  }
+}
+
+.photography-entry-page .photo-time-scene{
+  background:radial-gradient(ellipse at 50% 35%,#34221b,#12161b 75%);
+  opacity:.94;
+}
+
+.photography-entry-page .photo-time-scene svg{
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+.photography-entry-page .photo-film-scene{
+  --film-cell:64px;
+  --film-height:142.2px;
+  --film-radius:calc(var(--film-cell) * 3.797877056);
+  --film-strip:url("../images/photography-entries/themes-strip-2048.webp");
+  background:radial-gradient(ellipse at 55% 40%,rgba(92,126,135,.50),rgba(14,27,38,.86));
+  opacity:.88;
+}
+
+@supports (background-image:image-set(url("x") 1x)){
+  .photography-entry-page .photo-film-scene{
+    --film-strip:image-set(url("../images/photography-entries/themes-strip-2048.webp") 1x,url("../images/photography-entries/themes-strip-4096.webp") 2x);
+  }
+}
+
+.photography-entry-page .photo-film-perspective{
+  position:absolute;
+  inset:0;
+  perspective:850px;
+  perspective-origin:50% 43%;
+}
+
+.photography-entry-page .photo-film-tilt{
+  position:absolute;
+  left:50%;
+  top:43%;
+  width:0;
+  height:0;
+  transform:rotateZ(-30deg) rotateX(-24deg);
+  transform-style:preserve-3d;
+}
+
+.photography-entry-page .photo-film-ring{
+  display:block;
+  width:0;
+  height:0;
+  transform-style:preserve-3d;
+  animation:photo-film-orbit 36s linear infinite;
+  animation-play-state:paused;
+}
+
+.photography-entry-page .photo-film-frame{
+  position:absolute;
+  left:calc(var(--film-cell) * -.5);
+  top:calc(var(--film-height) * -.5);
+  /* A subpixel overlap hides raster seams without changing the 64px sampling stride. */
+  width:calc(var(--film-cell) + .4px);
+  height:var(--film-height);
+  background-image:var(--film-strip);
+  background-size:calc(var(--film-cell) * 24) 100%;
+  background-repeat:repeat-x;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.40),inset 0 -1px 0 rgba(255,255,255,.24);
+  backface-visibility:visible;
+}
+
+.photography-entry-page .photo-film-frame:nth-child(1){
+  transform:rotateY(0deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * 0) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(2){
+  transform:rotateY(15deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -1) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(3){
+  transform:rotateY(30deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -2) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(4){
+  transform:rotateY(45deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -3) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(5){
+  transform:rotateY(60deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -4) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(6){
+  transform:rotateY(75deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -5) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(7){
+  transform:rotateY(90deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -6) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(8){
+  transform:rotateY(105deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -7) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(9){
+  transform:rotateY(120deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -8) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(10){
+  transform:rotateY(135deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -9) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(11){
+  transform:rotateY(150deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -10) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(12){
+  transform:rotateY(165deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -11) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(13){
+  transform:rotateY(180deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -12) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(14){
+  transform:rotateY(195deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -13) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(15){
+  transform:rotateY(210deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -14) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(16){
+  transform:rotateY(225deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -15) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(17){
+  transform:rotateY(240deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -16) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(18){
+  transform:rotateY(255deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -17) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(19){
+  transform:rotateY(270deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -18) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(20){
+  transform:rotateY(285deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -19) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(21){
+  transform:rotateY(300deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -20) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(22){
+  transform:rotateY(315deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -21) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(23){
+  transform:rotateY(330deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -22) center;
+}
+.photography-entry-page .photo-film-frame:nth-child(24){
+  transform:rotateY(345deg) translateZ(var(--film-radius));
+  background-position:calc(var(--film-cell) * -23) center;
+}
+
+@keyframes photo-film-orbit{
+  from{transform:rotateY(-45deg)}
+  to{transform:rotateY(315deg)}
+}
+
+@media(prefers-reduced-motion:no-preference){
+  .photography-entry-page [data-motion-state="running"] .photo-film-ring{
+    animation-play-state:running;
+  }
+}
+
+.photography-entry-page .photo-entry::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  border-radius:inherit;
+  background:linear-gradient(180deg,rgba(4,10,18,.06),transparent 32%,rgba(4,10,18,.16) 50%,rgba(4,10,18,.72));
+}
+
+.photography-entry-page .photo-entry :is(.entry-index,h2,p,.entry-arrow){
+  position:relative;
+  z-index:2;
+}
+
+.photography-entry-page .photo-entry .entry-arrow{
+  position:absolute;
+}
+
+body.photography-entry-page.glass-ui .photo-entry:hover .entry-arrow{
+  color:var(--glass-muted);
+}
+
+@media(max-width:980px){
+  .photography-entry-page .photo-film-scene{
+    --film-cell:52px;
+    --film-height:115.5px;
+  }
+}
+
+@media(max-width:640px){
+  .photography-entry-page .photo-film-scene{
+    --film-cell:44px;
+    --film-height:97.8px;
+  }
+}
+
+@media(max-width:360px){
+  .photography-entry-page .photo-film-scene{
+    --film-cell:36px;
+    --film-height:80px;
+  }
+}

@@ -11,8 +11,9 @@
   <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261003-header-only1">
   <link rel="stylesheet" href="/assets/css/photography-background.css?v=20260911-photo-bg1">
   <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261003-project-motion1">
+  <link rel="stylesheet" href="/assets/css/photography-entries.css?v=20261004-photo-motion1">
 </head>
-<body class="ui-page photography-page glass-ui">
+<body class="ui-page photography-page photography-entry-page glass-ui">
   <picture class="photography-background" aria-hidden="true">
     <source media="(max-width: 640px)" srcset="/assets/images/photography-background-mobile.webp" type="image/webp">
     <img src="/assets/images/photography-background-desktop.webp" width="1920" height="1230" alt="" decoding="async" fetchpriority="high">
@@ -20,14 +21,182 @@
   <header class="site-header"><div class="container nav-wrap"><a class="site-title" href="/?v=20260911-glass1">CMC</a><nav class="main-nav" aria-label="Main navigation"><a href="/?v=20260911-glass1" data-zh="Home page" data-en="Home page">Home page</a><a class="active" href="/photography.html?v=20260911-glass1" data-zh="摄影集" data-en="Photography">摄影集</a><a href="/academics.html?v=20260911-glass1" data-zh="学术集" data-en="Academics">学术集</a><a href="/writing.html?v=20260911-glass1" data-zh="码字集" data-en="Writing">码字集</a><a href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a><button class="lang-switch" type="button" aria-label="Switch language">EN</button></nav></div></header>
   <main>
     <section class="container page-head compact-head"><span class="eyebrow" data-zh="影像归档" data-en="Photo archive">影像归档</span><h1 data-zh="摄影集" data-en="Photography">摄影集</h1><p data-zh="按旅程与主题整理照片。" data-en="Photographs organized by journeys and themes.">按旅程与主题整理照片。</p></section>
-    <section class="container section-grid two-up" aria-label="Photography sections">
-      <a class="section-card" href="/photography/travel.html?v=20260911-glass1"><span class="entry-index">01</span><h2 data-zh="旅拍" data-en="Travel">旅拍</h2><p data-zh="按时间整理旅行影像" data-en="Travel photographs arranged by time">按时间整理旅行影像</p><span class="entry-arrow">→</span></a>
-      <a class="section-card" href="/photography/topics.html?v=20260911-glass1"><span class="entry-index">02</span><h2 data-zh="专题" data-en="Themes">专题</h2><p data-zh="漫展、鸟类、天文与外景" data-en="Conventions, birds, astronomy and outdoor scenes">漫展、鸟类、天文与外景</p><span class="entry-arrow">→</span></a>
+    <section class="container section-grid two-up" aria-label="Photography sections" data-photography-motion data-motion-state="paused">
+      <a class="section-card photo-entry photo-entry--travel" href="/photography/travel.html?v=20260911-glass1">
+        <span class="photo-entry-media photo-time-scene" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 260" fill="none" data-nixie-clock="" data-time="12:34:56" role="img" aria-label="六管烟色玻璃辉光管时钟">
+  <defs>
+    <linearGradient id="photo-nixie-background" x1="320" y1="0" x2="320" y2="260" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111b20"/>
+      <stop offset=".6" stop-color="#101519"/>
+      <stop offset="1" stop-color="#060a0e"/>
+    </linearGradient>
+    <radialGradient id="photo-nixie-haze" cx="0" cy="0" r="1" gradientTransform="translate(320 98) scale(266 107)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c35827" stop-opacity=".19"/>
+      <stop offset=".55" stop-color="#7c482b" stop-opacity=".09"/>
+      <stop offset="1" stop-color="#2b3335" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="photo-nixie-glass" x1="4" y1="30" x2="54" y2="42" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#718489" stop-opacity=".23"/>
+      <stop offset=".12" stop-color="#293335" stop-opacity=".3"/>
+      <stop offset=".48" stop-color="#121519" stop-opacity=".74"/>
+      <stop offset=".78" stop-color="#44392e" stop-opacity=".4"/>
+      <stop offset="1" stop-color="#b0b8a5" stop-opacity=".2"/>
+    </linearGradient>
+    <linearGradient id="photo-nixie-edge" x1="7" y1="7" x2="52" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b7cdd1" stop-opacity=".64"/>
+      <stop offset=".36" stop-color="#9baaa7" stop-opacity=".18"/>
+      <stop offset=".78" stop-color="#d5a168" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#f3ab57" stop-opacity=".58"/>
+    </linearGradient>
+    <radialGradient id="photo-nixie-chamber" cx="0" cy="0" r="1" gradientTransform="translate(29 61) scale(25 49)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f86920" stop-opacity=".15"/>
+      <stop offset=".64" stop-color="#a84a27" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#151a1c" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="photo-nixie-socket" x1="3" y1="0" x2="55" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#343838"/>
+      <stop offset=".12" stop-color="#b1a189"/>
+      <stop offset=".25" stop-color="#726d5f"/>
+      <stop offset=".48" stop-color="#3d4240"/>
+      <stop offset=".81" stop-color="#716d5f"/>
+      <stop offset=".94" stop-color="#b3aa91"/>
+      <stop offset="1" stop-color="#3e4140"/>
+    </linearGradient>
+    <linearGradient id="photo-nixie-deck" x1="320" y1="122" x2="320" y2="137" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#75756b"/>
+      <stop offset=".14" stop-color="#424847"/>
+      <stop offset=".74" stop-color="#292f30"/>
+      <stop offset="1" stop-color="#8e826b"/>
+    </linearGradient>
+    <linearGradient id="photo-nixie-front" x1="320" y1="135" x2="320" y2="158" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4a4d49"/>
+      <stop offset=".1" stop-color="#303738"/>
+      <stop offset=".62" stop-color="#192124"/>
+      <stop offset=".93" stop-color="#12191d"/>
+      <stop offset="1" stop-color="#575a50"/>
+    </linearGradient>
+    <linearGradient id="photo-nixie-trim" x1="62" y1="136" x2="578" y2="136" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#94aaa9" stop-opacity=".04"/>
+      <stop offset=".15" stop-color="#afada0" stop-opacity=".52"/>
+      <stop offset=".49" stop-color="#d2b687" stop-opacity=".8"/>
+      <stop offset=".85" stop-color="#afada0" stop-opacity=".52"/>
+      <stop offset="1" stop-color="#94aaa9" stop-opacity=".04"/>
+    </linearGradient>
+    <pattern id="photo-nixie-mesh" width="4" height="4" patternUnits="userSpaceOnUse">
+      <path d="M0 0H4M0 0V4" stroke="#a39072" stroke-width=".45" opacity=".25"/>
+      <circle cx="2" cy="2" r=".28" fill="#b1a28b" opacity=".2"/>
+    </pattern>
+    <pattern id="photo-nixie-brushed" width="6" height="3" patternUnits="userSpaceOnUse">
+      <path d="M0 .5H6" stroke="#b3c0b4" stroke-width=".25" opacity=".13"/>
+    </pattern>
+    <filter id="photo-nixie-glow" x="-50%" y="-35%" width="200%" height="170%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="0" stdDeviation="2.6" flood-color="#ff5b17" flood-opacity=".84"/>
+      <feDropShadow dx="0" dy="0" stdDeviation=".65" flood-color="#ff8f31" flood-opacity=".96"/>
+    </filter>
+    <filter id="photo-nixie-shadow" x="-10%" y="-160%" width="120%" height="420%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <g id="photo-nixie-tube">
+      <path d="M5 104V27C5 11 13 2 29 2S53 11 53 27V104" fill="url(#photo-nixie-glass)" stroke="url(#photo-nixie-edge)" stroke-width=".85"/>
+      <path d="M10 101V27C10 15 17 9 29 9S48 15 48 27V101Z" fill="url(#photo-nixie-chamber)"/>
+      <path d="M12 100V29C12 18 18 13 29 13S46 18 46 29V100Z" fill="url(#photo-nixie-mesh)"/>
+      <path d="M17 102V27M23 105V25M35 105V25M41 102V27" stroke="#96917b" stroke-opacity=".28" stroke-width=".7"/>
+      <path d="M21 98C16 86 15 59 17 41C18 30 24 24 29 25C39 28 42 50 39 69C37 85 29 87 26 76C22 64 22 48 27 41C32 34 36 44 36 60V96" stroke="#ab8b68" stroke-opacity=".15" stroke-width=".7"/>
+      <path d="M13 94H45M13 28H45" stroke="#ad9475" stroke-opacity=".31" stroke-width=".65"/>
+      <path d="M10 59V27C10 16 16 9 24 7" stroke="#d4e6e7" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M12 24C13 17 16 13 19 12" stroke="#e1edeb" stroke-opacity=".4" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M49 40V86M46 95V74" stroke="#dbd5b5" stroke-opacity=".21" stroke-width=".7" stroke-linecap="round"/>
+      <ellipse cx="29" cy="102" rx="23.5" ry="4" fill="#2b2d2b" stroke="#bb9f71" stroke-opacity=".42" stroke-width=".7"/>
+      <path d="M6 102V110C6 115 52 115 52 110V102C52 107 6 107 6 102Z" fill="url(#photo-nixie-socket)"/>
+      <path d="M7 107C15 112 43 112 51 107M7 110C15 115 43 115 51 110" stroke="#181f20" stroke-opacity=".74" stroke-width=".7"/>
+      <path d="M11 104V110M15 105V112M19 106V112M39 106V112M43 105V112M47 104V110" stroke="#d6ba8d" stroke-opacity=".19" stroke-width=".6"/>
+      <path d="M16 101L18 98L21 101L24 98L27 101L30 98L33 101L36 98L39 101L42 98" stroke="#df873e" stroke-opacity=".68" stroke-width=".65"/>
+      <ellipse cx="29" cy="114" rx="27" ry="3" fill="#080d10" opacity=".8"/>
+    </g>
+    <g id="photo-nixie-screw">
+      <circle r="3.1" fill="#131c1f" stroke="#7a8076" stroke-width=".6"/>
+      <circle r="2.2" stroke="#434e4e" stroke-width=".45"/>
+      <path d="M-1.3 1.3L1.3-1.3" stroke="#a2a391" stroke-width=".65"/>
+    </g>
+    <g id="photo-nixie-separator" fill="#ffad61" filter="url(#photo-nixie-glow)">
+      <ellipse cy="65" rx="1.5" ry="2.15"/>
+      <ellipse cy="86" rx="1.5" ry="2.15"/>
+    </g>
+  </defs>
+  <path d="M0 0H640V260H0Z" fill="url(#photo-nixie-background)"/>
+  <path d="M0 0H640V188H0Z" fill="url(#photo-nixie-haze)"/>
+  <ellipse cx="320" cy="162" rx="260" ry="8" fill="#000" opacity=".65" filter="url(#photo-nixie-shadow)"/>
+  <path d="M82 125H558L579 135H61L82 125Z" fill="url(#photo-nixie-deck)" stroke="#70817b" stroke-opacity=".35" stroke-width=".7"/>
+  <path d="M62 135H578V151Q578 157 572 157H68Q62 157 62 151Z" fill="url(#photo-nixie-front)"/>
+  <path d="M65 137H575V154H65Z" fill="url(#photo-nixie-brushed)"/>
+  <path d="M64 135.5H576" stroke="url(#photo-nixie-trim)" stroke-width="1.1"/>
+  <path d="M79 158H110V161H79ZM530 158H561V161H530Z" fill="#080e11"/>
+  <path d="M112 143H163M183 143H218M260 143H311M331 143H366M408 143H459M479 143H527" stroke="#0c1418" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M112 147H163M183 147H218M260 147H311M331 147H366M408 147H459M479 147H527" stroke="#758076" stroke-opacity=".18" stroke-width=".45"/>
+  <use href="#photo-nixie-screw" transform="translate(76 144)"/>
+  <use href="#photo-nixie-screw" transform="translate(564 144)"/>
+  <g transform="translate(88 20)"><use href="#photo-nixie-tube"/></g>
+  <g transform="translate(158 20)"><use href="#photo-nixie-tube"/></g>
+  <g transform="translate(249 20)"><use href="#photo-nixie-tube"/></g>
+  <g transform="translate(319 20)"><use href="#photo-nixie-tube"/></g>
+  <g transform="translate(410 20)"><use href="#photo-nixie-tube"/></g>
+  <g transform="translate(480 20)"><use href="#photo-nixie-tube"/></g>
+  <use href="#photo-nixie-separator" transform="translate(232.5 0)"/>
+  <use href="#photo-nixie-separator" transform="translate(393.5 0)"/>
+  <g stroke="#ffbf74" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" filter="url(#photo-nixie-glow)">
+    <g transform="translate(101 48) scale(.8)"><path data-nixie-digit="0" d="M10 15 L21 4 L21 60"/></g>
+    <g transform="translate(171 48) scale(.8)"><path data-nixie-digit="1" d="M5 17 C5 8 11 3 20 3 C30 3 36 9 35 18 C34 27 26 33 18 41 L5 60 L36 60"/></g>
+    <g transform="translate(262 48) scale(.8)"><path data-nixie-digit="2" d="M6 10 C11 4 18 2 25 4 C40 8 37 28 22 31 C38 32 40 53 27 59 C19 63 10 60 5 54"/></g>
+    <g transform="translate(332 48) scale(.8)"><path data-nixie-digit="3" d="M29 60 L29 4 L4 43 L37 43"/></g>
+    <g transform="translate(423 48) scale(.8)"><path data-nixie-digit="4" d="M34 4 L8 4 L6 29 C13 25 23 25 29 30 C40 42 33 62 19 61 C12 61 7 58 4 53"/></g>
+    <g transform="translate(493 48) scale(.8)"><path data-nixie-digit="5" d="M31 7 C14 1 5 16 5 36 C5 52 10 61 21 61 C33 61 38 50 34 40 C29 28 12 28 5 40"/></g>
+  </g>
+  <path d="M97 45V84M167 45V84M258 45V84M328 45V84M419 45V84M489 45V84" stroke="#d8e8e4" stroke-opacity=".075" stroke-width="2" stroke-linecap="round"/>
+  <path d="M88 169H552" stroke="#657874" stroke-opacity=".05" stroke-width=".5"/>
+</svg>
+        </span>
+        <span class="entry-index">01</span><h2 data-zh="旅拍" data-en="Travel">旅拍</h2><p data-zh="按时间整理旅行影像" data-en="Travel photographs arranged by time">按时间整理旅行影像</p><span class="entry-arrow" aria-hidden="true">→</span>
+      </a>
+      <a class="section-card photo-entry photo-entry--themes" href="/photography/topics.html?v=20260911-glass1">
+        <span class="photo-entry-media photo-film-scene" aria-hidden="true">
+          <span class="photo-film-perspective">
+            <span class="photo-film-tilt"><span class="photo-film-ring">
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+              <span class="photo-film-frame"></span>
+            </span></span>
+          </span>
+        </span>
+        <span class="entry-index">02</span><h2 data-zh="专题" data-en="Themes">专题</h2><p data-zh="漫展、鸟类、天文与外景" data-en="Conventions, birds, astronomy and outdoor scenes">漫展、鸟类、天文与外景</p><span class="entry-arrow" aria-hidden="true">→</span>
+      </a>
     </section>
   </main>
   <script src="/assets/js/main.js?v=20261003-header-only1"></script>
   <script src="/assets/js/site-ui.js?v=20261003-header-only1" defer></script>
   <script src="/assets/js/liquid-glass.js?v=20261003-project-motion1" defer></script>
+  <script src="/assets/js/photography-cards.js?v=20261004-photo-motion1" defer></script>
 </body>
 </html>
 
