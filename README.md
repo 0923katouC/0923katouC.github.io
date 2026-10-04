@@ -13,11 +13,10 @@ Personal website hosted with GitHub Pages.
 - `academics.html` — research interests, academic background and publications
 - `writing.html` — writing landing page
   - `writing/fiction.html` — fiction
-  - `writing/essays.html` — invitation-gated essays
+  - `writing/essays.html` — public entry to server-authenticated private essays
 - `projects.html` — games, AI tools and pond simulations
 - `assets/css/style.css` — site-wide styles
 - `assets/js/main.js` — language switch and common behavior
-- `assets/js/essay-gate.js` — client-side essay access gate
 
 ## Homepage entry images
 
@@ -41,7 +40,9 @@ Run browser-script regression tests with `node --test tests/*.test.cjs` (Node.js
 
 ## Security notes
 
-The site is fully static and contains no server-side secrets. Pages use a restrictive Content Security Policy and conservative referrer settings. The invitation gate on the essay page is intended only as a lightweight browsing barrier; content requiring real confidentiality must not be stored in this public repository or shipped to the browser.
+The GitHub Pages site is static and contains no private essay content or credentials. The essays entry links to a separate Cloudflare Worker at https://cmc-private-essays.cmc-private-essays.workers.dev, which verifies individual invitation codes and server-stored sessions before reading a private R2 bucket. Revoked or expired invitations are checked on every protected request. The old browser-only gate has been removed.
+
+Never commit private essay text, invitation codes, credential hashes, session records or private storage exports to this repository. The private service must keep R2 public access and preview URLs disabled, restrict its canonical hostname, and return no-store responses. Authorized readers can still save or share content they have read.
 
 
 ## Academic background renderer
