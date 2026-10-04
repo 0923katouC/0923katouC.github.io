@@ -4,12 +4,22 @@
   if (!root) return;
 
   const clock = root.querySelector('[data-nixie-clock]');
-  const digits = clock ? [...clock.querySelectorAll('[data-nixie-digit]')] : [];
+  const rows = [
+    { name: 'date', count: 6, initialDelay: 500, update: changeDateHour },
+    { name: 'year', count: 4, initialDelay: 250, update: changeYear }
+  ].map(row => {
+    const group = clock ? clock.querySelector(`[data-nixie-row="${row.name}"]`) : null;
+    return {
+      ...row,
+      digits: group ? [...group.querySelectorAll('[data-nixie-digit]')] : [],
+      jitter: group ? group.querySelector('[data-nixie-jitter]') : null,
+      timer: null
+    };
+  }).filter(row => row.digits.length === row.count);
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const hasObserver = 'IntersectionObserver' in window;
   let visible = !hasObserver;
   let pageActive = true;
-  let timer = null;
 
   // Continuous wire numerals match the static SVG; only the lit cathodes change.
   const paths = {
@@ -24,35 +34,71 @@
     '8': 'M20 31 C5 27 1 17 8 8 C14 0 27 1 33 10 C39 20 31 28 20 31 C6 35 0 47 9 57 C15 64 28 63 34 54 C40 43 32 35 20 31 Z',
     '9': 'M35 26 C30 37 15 37 8 29 C0 20 6 3 19 3 C31 3 35 15 35 30 C35 49 26 64 10 57'
   };
-  const format = seconds => [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
-    .map(value => String(value).padStart(2, '0')).join(':');
+  // Exclude leap day so independently changing years always form valid dates.
+  const monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const hoursPerYear = 365 * 24;
+  const pad = value => String(value).padStart(2, '0');
   const canRun = () => pageActive && visible && !document.hidden && !motion.matches;
 
-  function changeTime() {
-    if (!clock || digits.length !== 6) return;
-    let seconds = Math.floor(Math.random() * 86400);
-    if (format(seconds) === clock.dataset.time) seconds = (seconds + 1) % 86400;
-    const time = format(seconds);
-    const numerals = time.replaceAll(':', '');
-    for (const digit of digits) {
+  function formatDateHour(slot) {
+    let day = Math.floor(slot / 24);
+    let month = 0;
+    while (day >= monthDays[month]) day -= monthDays[month++];
+    return `${pad(month + 1)}-${pad(day + 1)} ${pad(slot % 24)}`;
+  }
+
+  function paint(row, numerals) {
+    for (const digit of row.digits) {
       const value = numerals[Number(digit.dataset.nixieDigit)];
       if (paths[value]) digit.setAttribute('d', paths[value]);
     }
-    clock.dataset.time = time;
+    if (row.jitter) {
+      row.jitter.dataset.jolt = row.jitter.dataset.jolt === 'a' ? 'b' : 'a';
+    }
+  }
+
+  function changeDateHour(row) {
+    let slot = Math.floor(Math.random() * hoursPerYear);
+    if (formatDateHour(slot) === clock.dataset.dateHour) slot = (slot + 1) % hoursPerYear;
+    const dateHour = formatDateHour(slot);
+    clock.dataset.dateHour = dateHour;
+    paint(row, dateHour.replace(/\D/g, ''));
+  }
+
+  function changeYear(row) {
+    const firstYear = 2001;
+    const count = new Date().getFullYear() - firstYear + 1;
+    let year = firstYear + Math.floor(Math.random() * count);
+    if (String(year) === clock.dataset.year && count > 1) {
+      year = firstYear + (year - firstYear + 1) % count;
+    }
+    clock.dataset.year = String(year);
+    paint(row, String(year));
+  }
+
+  function schedule(row, delay) {
+    row.timer = setTimeout(() => {
+      row.timer = null;
+      if (!canRun()) {
+        synchronize();
+        return;
+      }
+      row.update(row);
+      schedule(row, 500);
+    }, delay);
   }
 
   function synchronize() {
     const running = canRun();
     root.dataset.motionState = running ? 'running' : 'paused';
-    if (!running) {
-      if (timer !== null) clearTimeout(timer);
-      timer = null;
-    } else if (timer === null) {
-      timer = setTimeout(() => {
-        timer = null;
-        if (canRun()) changeTime();
-        synchronize();
-      }, 1200 + Math.random() * 400);
+    for (const row of rows) {
+      if (!running) {
+        if (row.timer !== null) clearTimeout(row.timer);
+        row.timer = null;
+        if (row.jitter) delete row.jitter.dataset.jolt;
+      } else if (row.timer === null) {
+        schedule(row, row.initialDelay);
+      }
     }
   }
 

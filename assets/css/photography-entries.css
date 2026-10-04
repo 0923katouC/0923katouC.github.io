@@ -38,9 +38,38 @@ body.photography-entry-page.glass-ui .photo-entry{
   height:100%;
 }
 
+/* Only the glowing cathodes settle when their own row changes. */
+.photography-entry-page [data-nixie-jitter]{
+  transform-box:fill-box;
+  transform-origin:center;
+}
+
+@media(prefers-reduced-motion:no-preference){
+  .photography-entry-page [data-nixie-jitter][data-jolt="a"]{
+    animation:photo-nixie-settle-a .16s ease-out both;
+  }
+  .photography-entry-page [data-nixie-jitter][data-jolt="b"]{
+    animation:photo-nixie-settle-b .16s ease-out both;
+  }
+}
+
+@keyframes photo-nixie-settle-a{
+  0%{transform:translate(-.65px,.30px) rotate(-.08deg)}
+  30%{transform:translate(.40px,-.20px) rotate(.04deg)}
+  65%{transform:translate(-.15px,.08px)}
+  100%{transform:translate(0,0)}
+}
+
+@keyframes photo-nixie-settle-b{
+  0%{transform:translate(.55px,-.30px) rotate(.07deg)}
+  30%{transform:translate(-.35px,.18px) rotate(-.04deg)}
+  65%{transform:translate(.12px,-.06px)}
+  100%{transform:translate(0,0)}
+}
+
 .photography-entry-page .photo-film-scene{
-  --film-cell:64px;
-  --film-height:142.2px;
+  --film-cell:76px;
+  --film-height:calc(var(--film-cell) * 2.222095347);
   --film-radius:calc(var(--film-cell) * 3.797877056);
   --film-strip:url("../images/photography-entries/themes-strip-2048.webp");
   background:radial-gradient(ellipse at 55% 40%,rgba(92,126,135,.50),rgba(14,27,38,.86));
@@ -66,7 +95,8 @@ body.photography-entry-page.glass-ui .photo-entry{
   top:43%;
   width:0;
   height:0;
-  transform:rotateZ(-30deg) rotateX(-24deg);
+  /* Zero screen-plane tilt; the viewing pitch preserves the three-dimensional loop. */
+  transform:rotateZ(0deg) rotateX(-24deg);
   transform-style:preserve-3d;
 }
 
@@ -83,7 +113,7 @@ body.photography-entry-page.glass-ui .photo-entry{
   position:absolute;
   left:calc(var(--film-cell) * -.5);
   top:calc(var(--film-height) * -.5);
-  /* A subpixel overlap hides raster seams without changing the 64px sampling stride. */
+  /* A subpixel overlap hides raster seams without changing the sampling stride. */
   width:calc(var(--film-cell) + .4px);
   height:var(--film-height);
   background-image:var(--film-strip);
@@ -226,21 +256,18 @@ body.photography-entry-page.glass-ui .photo-entry:hover .entry-arrow{
 
 @media(max-width:980px){
   .photography-entry-page .photo-film-scene{
-    --film-cell:52px;
-    --film-height:115.5px;
+    --film-cell:60px;
   }
 }
 
 @media(max-width:640px){
   .photography-entry-page .photo-film-scene{
-    --film-cell:44px;
-    --film-height:97.8px;
+    --film-cell:50px;
   }
 }
 
 @media(max-width:360px){
   .photography-entry-page .photo-film-scene{
-    --film-cell:36px;
-    --film-height:80px;
+    --film-cell:40px;
   }
 }
