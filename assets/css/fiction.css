@@ -1,0 +1,152 @@
+/* A single, wide shelf row per work; keep the complete title page visible. */
+.fiction-page > main{
+  --max:1200px;
+}
+
+.fiction-page .page-head{
+  padding-top:62px;
+}
+
+.fiction-list{
+  display:grid;
+  gap:24px;
+  padding:14px 0 80px;
+}
+
+body.glass-ui .fiction-work{
+  --glass-fill:rgba(245,249,252,.70);
+  --glass-top:rgba(255,255,255,.30);
+  display:grid;
+  grid-template-columns:184px minmax(0,1fr);
+  gap:38px;
+  align-items:center;
+  min-height:0;
+  padding:28px 36px 28px 28px;
+}
+
+.fiction-cover{
+  display:block;
+  line-height:0;
+  border-radius:6px;
+  background:#edf2f7;
+  box-shadow:0 12px 24px rgba(28,49,72,.22),0 2px 5px rgba(28,49,72,.14);
+  transition:transform .3s ease,box-shadow .3s ease;
+}
+
+.fiction-cover img{
+  display:block;
+  width:100%;
+  height:auto;
+  object-fit:contain;
+  border:1px solid rgba(255,255,255,.65);
+  border-radius:inherit;
+}
+
+.fiction-copy{
+  min-width:0;
+}
+
+.fiction-kicker{
+  display:block;
+  margin-bottom:12px;
+  color:#416180;
+  font-size:.73rem;
+  font-weight:650;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+body.glass-ui .fiction-work h2{
+  margin:0 0 8px;
+  font-size:clamp(1.65rem,3.2vw,2.25rem);
+  font-weight:760;
+  letter-spacing:.01em;
+  line-height:1.25;
+}
+
+body.glass-ui .fiction-work .fiction-subtitle{
+  margin:0 0 15px;
+  color:#416180;
+  font-size:.88rem;
+  letter-spacing:.16em;
+}
+
+body.glass-ui .fiction-work .fiction-description{
+  max-width:680px;
+  margin:0 0 18px;
+  color:#283d51;
+  font-size:1rem;
+  line-height:1.9;
+  font-weight:450;
+}
+
+.fiction-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px 18px;
+  margin:0 0 22px;
+  padding:0;
+  list-style:none;
+  color:#4a6075;
+  font-size:.8rem;
+}
+
+.fiction-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+}
+
+body.glass-ui .fiction-actions .back-link{
+  min-height:44px;
+  margin:0;
+  padding:10px 18px;
+  font-size:.87rem;
+}
+
+body.glass-ui .fiction-actions .fiction-read{
+  --glass-fill:rgba(25,64,104,.95);
+  --glass-top:rgba(149,191,230,.22);
+  --glass-bottom:rgba(22,56,95,.10);
+  --glass-glow:rgba(198,225,249,.20);
+  --glass-ink:#fff;
+  --glass-text-shadow:none;
+}
+
+.fiction-cover:focus-visible{
+  outline:3px solid var(--glass-focus);
+  outline-offset:5px;
+}
+
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  .fiction-cover:hover{
+    transform:translateY(-3px);
+    box-shadow:0 16px 28px rgba(28,49,72,.25),0 2px 5px rgba(28,49,72,.14);
+  }
+}
+
+@media(max-width:640px){
+  .fiction-page .page-head{padding-top:38px}
+  .fiction-list{padding-top:8px;padding-bottom:60px}
+  body.glass-ui .fiction-work{
+    grid-template-columns:96px minmax(0,1fr);
+    gap:18px;
+    align-items:start;
+    padding:20px 18px;
+  }
+  .fiction-kicker{font-size:.64rem;letter-spacing:.08em;margin-bottom:8px}
+  body.glass-ui .fiction-work h2{font-size:1.35rem;line-height:1.4;letter-spacing:0}
+  body.glass-ui .fiction-work .fiction-subtitle{font-size:.7rem;letter-spacing:.1em;margin-bottom:12px}
+  body.glass-ui .fiction-work .fiction-description{font-size:.88rem;line-height:1.8;margin-bottom:14px}
+  .fiction-meta{gap:3px 12px;font-size:.72rem;margin-bottom:16px}
+  body.glass-ui .fiction-actions .back-link{padding:9px 13px;font-size:.78rem}
+}
+
+@media(max-width:360px){
+  body.glass-ui .fiction-work{grid-template-columns:76px minmax(0,1fr);gap:14px;padding:18px 14px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .fiction-cover{transition:none}
+}
