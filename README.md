@@ -18,6 +18,29 @@ Personal website hosted with GitHub Pages.
 - `assets/css/style.css` — site-wide styles
 - `assets/js/main.js` — language switch and common behavior
 
+## Interaction motion
+
+`assets/css/site-motion.css` enables native same-origin cross-document View
+Transitions. Backgrounds fade over 220–280 ms while the incoming document stays
+live: `site-motion.js` springs each heading and content module in independently
+with a 75 ms stagger. Cards start at 87–91% scale, overshoot slightly and settle
+over 620 ms. Buttons pop in over 520 ms, squash under a press and rebound with
+two smaller settlements over 500 ms. Content below the fold enters once when
+it approaches the viewport. Only the selected nav pill replays on internal
+navigation; a fresh visit reveals all nav pills.
+
+Native links, history, new-tab gestures, PDF downloads and private-essay access
+keep their browser behavior. No navigation is delayed for an animation. Browsers
+without cross-document transitions get the same module entrances on a normal
+page load. Reduced motion disables the effects; interruptions and restored
+history pages cancel animations and leave the content fully visible. Language
+changes retain a short 180 ms fade.
+
+The reference was [BigNaiWa](https://yhsome.github.io/BigNaiWa/): its button press
+and springing panel entrance informed the interaction. The module choreography
+and cross-page transition are specific to this site's structure; no game code
+was copied.
+
 ## Homepage entry images
 
 The four homepage cards use responsive WebP images from `assets/images/home-entries/`, served directly by GitHub Pages. The corresponding original JPEGs are preserved in `assets/images/home-entries/originals/`, named `photography`, `academics`, `writing`, and `projects`.
