@@ -18,6 +18,21 @@ Personal website hosted with GitHub Pages.
 - `assets/css/style.css` — site-wide styles
 - `assets/js/main.js` — language switch and common behavior
 
+## Interaction motion
+
+`assets/css/site-motion.css` enables native same-origin cross-document View
+Transitions on the public pages: the header stays in place, backgrounds fade
+over 220–280 ms, and content settles over 320 ms. Normal links, browser history,
+new-tab gestures, PDF downloads and the external private-essay service retain
+their browser behavior. Browsers without cross-document transitions receive a
+260 ms content arrival effect through `site-motion.js`; the actual document
+swap remains native. Language changes fade in over 180 ms, and quick clicks
+receive a 220 ms release response. All these effects honor reduced motion.
+
+The reference was [BigNaiWa](https://yhsome.github.io/BigNaiWa/): its short button
+press and soft panel entrance informed the timing. The cross-page transition
+is specific to this site's multi-page structure; no game code was copied.
+
 ## Homepage entry images
 
 The four homepage cards use responsive WebP images from `assets/images/home-entries/`, served directly by GitHub Pages. The corresponding original JPEGs are preserved in `assets/images/home-entries/originals/`, named `photography`, `academics`, `writing`, and `projects`.

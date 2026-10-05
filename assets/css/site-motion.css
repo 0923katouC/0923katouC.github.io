@@ -1,0 +1,67 @@
+/* Same-origin document navigation stays native: history, links and downloads
+   keep their normal browser behavior. No loading screen or artificial delay. */
+@view-transition {
+  navigation:auto;
+}
+
+:root {
+  --motion-settle:cubic-bezier(.22,1,.36,1);
+}
+
+body.ui-page > .site-header { view-transition-name:site-header; }
+body.ui-page > main { view-transition-name:site-content; }
+
+::view-transition { pointer-events:none; }
+::view-transition-group(*) {
+  animation-duration:300ms;
+  animation-timing-function:var(--motion-settle);
+}
+::view-transition-old(root) { animation:scene-out 220ms ease both; }
+::view-transition-new(root) { animation:scene-in 280ms ease both; }
+
+/* Keep the navigation in place while the content and background change. */
+::view-transition-group(site-header) { z-index:2; }
+::view-transition-old(site-header) { display:none; }
+::view-transition-new(site-header) { animation:none; }
+::view-transition-group(site-content) { animation:none; }
+
+::view-transition-old(site-content),
+::view-transition-new(site-content) {
+  height:auto;
+  mix-blend-mode:normal;
+}
+::view-transition-old(site-content) {
+  animation:content-out 140ms ease both;
+}
+::view-transition-new(site-content) {
+  animation:content-in 320ms var(--motion-settle) both;
+}
+
+@keyframes scene-out { to { opacity:0; } }
+@keyframes scene-in { from { opacity:0; } }
+@keyframes content-out {
+  to { opacity:0; transform:translateY(-6px); }
+}
+@keyframes content-in {
+  from { opacity:0; transform:translateY(12px); }
+  to { opacity:1; transform:translateY(0); }
+}
+
+@media(prefers-reduced-motion:no-preference) {
+  body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,a.back-link,.lang-switch,.main-nav a) {
+    transition-timing-function:var(--motion-settle);
+  }
+  body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,a.back-link,.lang-switch,.main-nav a):active,
+  body.glass-ui.photography-topics a.topic-card:active {
+    transform:translateY(1px) scale(.985);
+    transition-duration:90ms;
+  }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  @view-transition { navigation:none; }
+  html { scroll-behavior:auto; }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation:none!important; }
+}
