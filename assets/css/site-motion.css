@@ -6,6 +6,7 @@
 
 :root {
   --motion-settle:cubic-bezier(.22,1,.36,1);
+  --motion-spring:cubic-bezier(.34,1.65,.38,1);
 }
 
 body.ui-page > .site-header { view-transition-name:site-header; }
@@ -37,6 +38,9 @@ body.ui-page > main { view-transition-name:site-content; }
   animation:content-in 320ms var(--motion-settle) both;
 }
 
+/* The incoming snapshot is live: individual modules spring inside it. */
+html.motion-reveal::view-transition-new(site-content) { animation:none; }
+
 @keyframes scene-out { to { opacity:0; } }
 @keyframes scene-in { from { opacity:0; } }
 @keyframes content-out {
@@ -49,12 +53,17 @@ body.ui-page > main { view-transition-name:site-content; }
 
 @media(prefers-reduced-motion:no-preference) {
   body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,a.back-link,.lang-switch,.main-nav a) {
-    transition-timing-function:var(--motion-settle);
+    transition-duration:460ms;
+    transition-timing-function:var(--motion-spring),ease,ease;
   }
   body.glass-ui :is(a.entry-panel,a.section-card,a.topic-card,a.back-link,.lang-switch,.main-nav a):active,
   body.glass-ui.photography-topics a.topic-card:active {
-    transform:translateY(1px) scale(.985);
-    transition-duration:90ms;
+    transform:translateY(2px) scale(.94,.92);
+    transition-duration:80ms;
+    transition-timing-function:ease-out;
+  }
+  body.glass-ui :is(a.back-link,.lang-switch,.main-nav a):active {
+    transform:translateY(2px) scale(.89,.86);
   }
 }
 
