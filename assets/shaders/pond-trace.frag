@@ -2,7 +2,9 @@
  * Pond Kerr experiment. Requires the unchanged NPGS Kerr helpers; attribution
  * and corresponding source/license: ../vendor/npgs/README.md and LICENSE.
  * Coordinates internally use Rs = 2GM/c², spin along +y, signature (+++-).
- * The cache stores only a ray's FIRST opaque photosphere hit. There is no
+ * The cache stops at a ray's FIRST entry into the opaque disk. Only an upper
+ * or lower photosphere emits; truncated radial walls absorb with no emission.
+ * There is no
  * screen-space shadow mask, painted photon ring, or artificial rear image.
  */
 uniform vec2 uMapSize;
@@ -16,9 +18,10 @@ layout(location=0) out vec4 diskHit;
 layout(location=1) out vec4 skyHit;
 
 float surfaceDistance(vec3 position, float radius) {
-    // Only the upper/lower photospheres radiate. The radial numerical limits
-    // clip those surfaces; they are NOT luminous cylindrical inner/outer walls.
-    return abs(position.y) - uThickness * radius;
+    // Signed outside measure of the whole opaque annulus. A ray entering a
+    // radial wall must stop rather than see through to the back of a sheet.
+    return max(abs(position.y) - uThickness * radius,
+               max(uInner - radius, radius - uOuter));
 }
 
 vec4 emissionHit(vec4 x, vec4 p, float a) {
@@ -77,7 +80,7 @@ void main() {
         float nextR=KerrSchildRadius(x.xyz,a,1.0);
         float after=surfaceDistance(x.xyz,nextR);
         bool thinCross = uThickness<0.0001 && previousX.y*x.y<0.0;
-        bool thickCross = uThickness>=0.0001 && before*after<0.0;
+        bool thickCross = uThickness>=0.0001 && before>0.0 && after<=0.0;
         // A coarse RK step can cross BOTH surfaces of a very thin disk. The
         // equatorial midpoint then supplies a guaranteed inside bracket.
         float planeDenominator=previousX.y-x.y;
@@ -91,22 +94,33 @@ void main() {
             float fraction;
             if (thinCross) fraction=previousX.y/(previousX.y-x.y);
             else {
-                // Eight bisections locate a photosphere; both orientations
-                // are valid when a ray previously passed its radial cutout.
+                // Locate the FIRST volume entry, including absorbing radial
+                // walls. Outside-to-inside selects outward-facing emission.
                 float lo=0.0,hi=thickCross?1.0:equatorFraction;
                 for(int j=0;j<8;++j) {
                     float mid=0.5*(lo+hi);
                     vec3 point=mix(previousX.xyz,x.xyz,mid);
-                    if(surfaceDistance(point,KerrSchildRadius(point,a,1.0))*before>0.0)lo=mid;
+                    if(surfaceDistance(point,KerrSchildRadius(point,a,1.0))>0.0)lo=mid;
                     else hi=mid;
                 }
                 fraction=0.5*(lo+hi);
             }
             vec4 hitX=mix(previousX,x,fraction);
             float hitR=KerrSchildRadius(hitX.xyz,a,1.0);
+            if(!thinCross) {
+                float vertical=abs(hitX.y)-uThickness*hitR;
+                float radial=max(uInner-hitR,hitR-uOuter);
+                if(radial>=vertical) {
+                    // A radial truncation is opaque but has no modeled rim
+                    // emissivity. -1 distinguishes rim occlusion in tests;
+                    // the radiance shader treats it as black, never as sky.
+                    skyHit=vec4(0.0,0.0,0.0,-1.0);
+                    return;
+                }
+            }
             if(hitR>=uInner*0.999 && hitR<=uOuter*1.001) {
                 diskHit=emissionHit(hitX,mix(previousP,p,fraction),a);
-                if(diskHit.w>0.0)return;
+                return;
             }
         }
     }
