@@ -78,3 +78,20 @@ The active scene contains only the black hole, its animated accretion disk and
 lensed background stars. It restores the large framing from before the extra
 objects, with higher-resolution central ray sampling. Earlier SPH experiment
 files are retained as research records; the page does not load them.
+
+## Pond experiment 001: Kerr black hole and accretion disk
+
+Open [Pond simulations](https://0923katouC.github.io/projects/pond/) or the
+[black-hole experiment](https://0923katouC.github.io/projects/pond/black-hole.html).
+The page combines cached Kerr null-geodesic ray tracing, Page–Thorne thin-disk
+emission and a time-dependent finite-volume 1D viscous disk. Magnetic stress is
+prescribed; this is not a full 3D GRMHD calculation. Parameters, gas-ring injection,
+frequency-shift and density views are interactive, with Chinese/English UI.
+
+The academic-page renderer and its `1.0BH` baseline are unchanged. The new
+renderer reuses the existing GPL-3.0-only Kerr geometry helpers with their attribution.
+See [the equations, assumptions and papers](projects/pond/MODEL.md).
+
+Run `node --test tests/*.test.cjs`; for actual GPU checks, serve the repository
+with `python3 -m http.server 8765` and open `/tests/pond-gpu.html` and
+`/tests/pond-kerr-geodesics.html`. No build or third-party JavaScript is required.

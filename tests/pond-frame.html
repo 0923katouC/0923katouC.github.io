@@ -1,0 +1,6 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Default physical frame</title>
+<style>body{margin:0;background:#030407}canvas{display:block;width:896px;height:538px}body[data-mobile] canvas{width:360px;height:390px}p{color:#ddd;font:14px monospace}</style>
+<canvas id="frame"></canvas><p id="state">Rendering default t=0 frame…</p>
+<script src="/assets/js/pond-physics.js"></script><script src="/assets/js/pond-black-hole-renderer.js"></script><script>
+(async()=>{if(new URLSearchParams(location.search).has('mobile'))document.body.dataset.mobile='true';const canvas=document.getElementById('frame');const model=PondPhysics.createModel();const r=new PondRenderer(canvas,()=>{});await r.init();function step(){r.render(0,model.getProfile());if(!r.ready&&!r.failed)requestAnimationFrame(step);else document.getElementById('state').textContent=r.ready?'Default t=0 frame ready':'Failed';}step();})();
+</script></html>
