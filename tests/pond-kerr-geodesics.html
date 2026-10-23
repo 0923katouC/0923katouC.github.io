@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Pond Kerr GPU invariant tests</title>
+<style>body{font:15px/1.6 ui-monospace,monospace;background:#09111b;color:#deebf4;padding:30px}pre{white-space:pre-wrap}.ok{color:#81efc0}.bad{color:#ff9c90}</style>
+<h1>Pond Kerr GPU invariant tests</h1><p>Tests execute the actual NPGS GLSL observer tetrad and RK4 integrator.</p>
+<pre id="result">Running…</pre><canvas id="gpu" width="12" height="1" hidden></canvas>
+<script>
+(async()=>{
+const result=document.querySelector('#result'),canvas=document.querySelector('#gpu');
+try{
+const gl=canvas.getContext('webgl2');if(!gl||!gl.getExtension('EXT_color_buffer_float'))throw Error('WebGL2 float targets unavailable');
+const common=await(await fetch('../assets/shaders/npgs-kerr.glsl')).text();
+const head='#version 300 es\nprecision highp float;precision highp int;\n';
+const fragment=head+common+`
+layout(location=0)out vec4 metrics;layout(location=1)out vec4 endpoint;
+void main(){
+ int i=int(gl_FragCoord.x);int pair=i/2;
+ float a=pair>=4?0.35:0.0;
+ float radius=48.0;float critical=3.0*sqrt(3.0)*0.5;
+ float criticalPlane=critical*sqrt(1.0-1.0/radius)/sqrt(1.0-critical*critical*(1.0-1.0/radius)/(radius*radius));
+ float impact=pair==0?0.0:pair==1?criticalPlane-0.025:pair==2?criticalPlane+0.025:pair==3?4.0:pair==4?3.0:-4.0;
+ vec4 x=pair==5?vec4(0,24.0,41.5692193817,0):vec4(0,0,radius,0);
+ vec4 p=GetInitialMomentum(normalize(-x.xyz+vec3(impact,0,0)),x,0,1.0,a,0.0,1.0,false);
+ float energy=-p.w,L0=x.z*p.x-x.x*p.z,maxH=0.0,maxL=0.0,minR=1000.0;
+ float factor=(i%2)==0?1.0:0.5;float escaped=0.0;
+ for(int n=0;n<1800;++n){
+  KerrGeometry geo;ComputeGeometryScalars(x.xyz,a,0.0,1.0,1.0,false,geo);
+  float horizon=0.5+sqrt(0.25-a*a);
+  minR=min(minR,geo.r);
+  if(geo.r<horizon+0.004)break;
+  State s;s.X=x;s.P=p;State d=GetDerivativesAnalytic(s,a,0.0,1.0,false,geo);
+  float h=abs(dot(p,RaiseIndex(p,geo)))/max(dot(p,p),1e-8);
+  float ld=abs((x.z*p.x-x.x*p.z)-L0)/max(abs(L0),energy);
+  maxH=max(maxH,h);maxL=max(maxL,ld);
+  if(geo.r>80.0&&dot(x.xyz,-d.X.xyz)>0.0){escaped=1.0;break;}
+  float ring=length(vec2(x.y,length(x.xz)-abs(a)));
+  float dt=0.16*min(ring/max(length(d.X),1e-6),length(p)/max(length(d.P),1e-8));
+  if(geo.r<25.0)dt=min(dt,0.15*max(1.0,geo.r/4.0)/max(length(d.X.xyz),1e-6));
+  StepGeodesicRK4_Optimized(x,p,energy,-max(dt,1e-6)*factor,a,0.0,1.0,1.0,false,geo,d);
+ }
+ KerrGeometry finalGeometry;ComputeGeometryScalars(x.xyz,a,0.0,1.0,1.0,false,finalGeometry);
+ metrics=vec4(maxH,maxL,escaped,minR);endpoint=vec4(normalize(-RaiseIndex(p,finalGeometry).xyz),-p.w-energy);
+}`;
+function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
+const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,head+'void main(){vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));gl_Position=vec4(p*2.0-1.0,0,1);}'));
+gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
+const fbo=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+for(let i=0;i<2;i++){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,12,1,0,gl.RGBA,gl.FLOAT,null);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0+i,gl.TEXTURE_2D,t,0);}
+gl.drawBuffers([gl.COLOR_ATTACHMENT0,gl.COLOR_ATTACHMENT1]);if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw Error('Framebuffer incomplete');
+gl.useProgram(program);gl.bindVertexArray(gl.createVertexArray());gl.viewport(0,0,12,1);gl.drawArrays(gl.TRIANGLES,0,3);
+const data=new Float32Array(48),positions=new Float32Array(48);gl.readBuffer(gl.COLOR_ATTACHMENT0);gl.readPixels(0,0,12,1,gl.RGBA,gl.FLOAT,data);gl.readBuffer(gl.COLOR_ATTACHMENT1);gl.readPixels(0,0,12,1,gl.RGBA,gl.FLOAT,positions);
+const lines=[],tests=[];
+const check=(name,pass,detail)=>{tests.push({name,pass,detail});lines.push(`${pass?'PASS':'FAIL'} ${name}: ${detail}`);};
+const finite=[...data,...positions].every(Number.isFinite);check('finite rays',finite,'12 rays, two step sizes');
+const maxH=Math.max(...Array.from({length:12},(_,i)=>data[4*i]));check('null Hamiltonian',maxH<0.002,`max |p·p|/||p||² = ${maxH.toExponential(3)}`);
+const maxL=Math.max(...Array.from({length:12},(_,i)=>data[4*i+1]));check('axial angular momentum',maxL<0.003,`max relative drift = ${maxL.toExponential(3)}`);
+const maxE=Math.max(...Array.from({length:12},(_,i)=>Math.abs(positions[4*i+3])));check('stationary energy',maxE<1e-6,`max |ΔE| = ${maxE.toExponential(3)}`);
+const captures=Array.from({length:12},(_,i)=>data[4*i+2]);check('Schwarzschild critical impact',captures[0]===0&&captures[1]===0&&captures[2]===0&&captures[3]===0&&captures[4]===1&&captures[5]===1&&captures[6]===1&&captures[7]===1,JSON.stringify(captures.slice(0,8)));
+let deviation=0;for(let i=0;i<6;i++){if(data[8*i+2]===1&&data[8*i+6]===1)deviation=Math.max(deviation,Math.hypot(...[0,1,2].map(k=>positions[8*i+k]-positions[8*i+4+k])));}
+check('step-halving escaped directions',deviation<0.006,`maximum unit-vector difference ${deviation.toExponential(3)}`);
+const passed=tests.every(t=>t.pass);result.textContent=lines.join('\n')+'\n\n'+(passed?'ALL TESTS PASSED':'TEST FAILURE');result.className=passed?'ok':'bad';document.title=passed?'PASS — Pond Kerr tests':'FAIL — Pond Kerr tests';window.pondRayTests={passed,tests,data:Array.from(data),positions:Array.from(positions)};
+}catch(error){result.textContent=error.stack;result.className='bad';document.title='ERROR — Pond Kerr tests';window.pondRayTests={passed:false,error:error.message};}
+})();
+</script></html>
