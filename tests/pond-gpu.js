@@ -40,6 +40,31 @@
     // The finite-lifetime procedural material must also remain finite at late times.
     renderer.render(1e7,PondPhysics.createModel({spin:-.95}).getProfile());
     check(!renderer.failed,'large animation time stays renderable');
+    // Execute the exact production segment-intersection helper. The first
+    // chord enters and exits the rim with both endpoints outside: sign-only
+    // crossing tests missed it, producing periodic teeth on the back edge.
+    const [metric,surface]=await Promise.all(['npgs-kerr.glsl','pond-trace.frag'].map(name=>
+      fetch('/assets/shaders/'+name+'?v=20261024-camera2').then(r=>r.text())));
+    const probeMain=`void main(){
+      int i=int(gl_FragCoord.x);vec3 origin=vec3(0,1.21,-19.8),delta=vec3(0,-.11,-.6);
+      if(i==1){origin.y=-origin.y;delta.y=-delta.y;}
+      if(i==2){origin=vec3(0,0,21);delta=vec3(0,0,-2);}
+      if(i==3){origin=vec3(0,0,1.6);delta=vec3(0,0,1);}
+      float first;int boundary;intersectOpaqueSegment(origin,delta,.35,first,boundary);
+      float r=KerrSchildRadius(origin+first*delta,.35,1.0);
+      diskHit=vec4(first,float(boundary),r,1.0);skyHit=vec4(0.0);
+    }`;
+    const probe=renderer._program(metric+'\n'+surface.replace('void main()','void productionMain()')+'\n'+probeMain);
+    const gl=renderer.gl,texture=renderer._texture(4,1,gl.RGBA32F),fbo=renderer._framebuffer([texture]);
+    gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);gl.viewport(0,0,4,1);gl.useProgram(probe.handle);
+    renderer._uniform(probe,'uInner','uniform1f',1.7);renderer._uniform(probe,'uOuter','uniform1f',20);
+    renderer._uniform(probe,'uThickness','uniform1f',.06);gl.drawArrays(gl.TRIANGLES,0,3);
+    const roots=new Float32Array(16);gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    gl.readPixels(0,0,4,1,gl.RGBA,gl.FLOAT,roots);
+    for(let i=0;i<2;i++)check(Math.abs(roots[4*i]-.137201459)<2e-4&&roots[4*i+1]===0,
+      `grazing chord ${i===0?'above':'below'} disk is not skipped`);
+    check(roots[9]===1&&Math.abs(roots[10]-20)<1e-4,'outer radial entry stays absorbing');
+    check(roots[13]===2&&Math.abs(roots[14]-1.7)<1e-4,'inner radial entry stays absorbing');
     document.body.dataset.result=failed?'fail':'pass';
     log(failed?'FAILED':'ALL GPU CHECKS PASSED');
   }catch(error){document.body.dataset.result='fail';log('ERROR '+error.message);}

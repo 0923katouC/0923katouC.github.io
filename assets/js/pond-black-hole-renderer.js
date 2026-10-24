@@ -8,6 +8,7 @@
   'use strict';
   const script = document.currentScript;
   const shaderBase = new URL('../shaders/', script ? script.src : document.baseURI);
+  const SHADER_VERSION='20261024-camera2';
   const HEADER = '#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\n';
   const VERTEX = `${HEADER}
     void main() {
@@ -16,7 +17,7 @@
     }`;
   const DEFAULTS = Object.freeze({ spin:0.7, inclination:65, exposure:1.15,
     quality:'balanced', mode:'temperature', mass:4e6, accretionRate:0.25,
-    thickness:0.06, alpha:0.1, zoom:1 });
+    thickness:0.06, alpha:0.1, zoom:1, azimuth:0 });
   const clamp = (x, min, max) => Math.min(max, Math.max(min, x));
   const finite = (x, fallback) => Number.isFinite(Number(x)) ? Number(x) : fallback;
   function isco(spin) {
@@ -34,6 +35,8 @@
       this.state='loading'; this.progress=0; this.ready=false; this.failed=false;
       this.width=0; this.height=0; this._programs=[]; this._textures=[];
       this._framebuffers=[]; this._current=null; this._pending=null;
+      this._preview=null;this._interactionActive=false;this._needsRefinement=false;
+      this._previewFrames=0;this._traceGeneration=0;this._lastRenderedAzimuth=0;
       this._dirty=true; this._traceAt=0; this._profile=null;
       this._profileVersion=null; this._profileReference=null;
       this._mapWidth=0; this._mapHeight=0; this._destroyed=false;
@@ -55,7 +58,8 @@
           throw new Error('此设备需要支持 WebGL 2 与浮点渲染目标。');
         const names=['npgs-kerr.glsl','pond-trace.frag','pond-shade.frag','pond-compose.frag'];
         const source=await Promise.all(names.map(async name => {
-          const response=await fetch(new URL(name,shaderBase));
+          const url=new URL(name,shaderBase);url.searchParams.set('v',SHADER_VERSION);
+          const response=await fetch(url);
           if(!response.ok)throw new Error(`无法加载着色器 ${name} (${response.status})`);
           return response.text();
         }));
@@ -80,7 +84,8 @@
       this.state=state;this.progress=progress;
       this.canvas.dataset.state=state;
       this.canvas.dataset.progress=String(Math.round(progress*100));
-      this.onStatus({state,progress,message,width:this._mapWidth,height:this._mapHeight});
+      this.onStatus({state,progress,message,width:this._mapWidth,height:this._mapHeight,
+        preview:Boolean(this._current && this._current.preview),interactionActive:this._interactionActive});
     }
 
     _program(source) {
@@ -140,10 +145,33 @@
       });
     }
 
+    _invalidate(message,delay=120) {
+      this._dirty=true;this._needsRefinement=true;
+      this._traceAt=performance.now()+(this._interactionActive?0:this._current?delay:0);
+      if(!this._interactionActive)this._status('tracing',0,message);
+    }
+
+    setInteractionActive(active) {
+      const next=Boolean(active);
+      if(next===this._interactionActive)return this;
+      this._interactionActive=next;
+      this.canvas.dataset.interaction=next?'active':'idle';
+      if(next) {
+        // A gesture can also interrupt an unfinished refinement. Its first
+        // actual camera update gets a complete live frame, never partial rows.
+        if(this._pending || !this._current)this._dirty=true;
+        this._traceAt=0;
+      } else if(this._needsRefinement || (this._current && this._current.preview)) {
+        this._invalidate('正在细化当前视角…',0);
+      }
+      return this;
+    }
+
     setParameters(next={}) {
       const old=this.parameters,p={...old,...next};
       p.spin=clamp(finite(p.spin,old.spin),-0.95,0.998);
-      p.inclination=clamp(finite(p.inclination,old.inclination),0,88);
+      p.inclination=clamp(finite(p.inclination,old.inclination),5,175);
+      p.azimuth=((finite(p.azimuth,old.azimuth)+180)%360+360)%360-180;
       p.exposure=clamp(finite(p.exposure,old.exposure),0.05,8);
       p.zoom=clamp(finite(p.zoom,old.zoom),0.6,2.0);
       p.thickness=clamp(finite(p.thickness,old.thickness),0,0.2);
@@ -151,8 +179,7 @@
       if(next.accretion!==undefined && next.accretionRate===undefined)p.accretionRate=next.accretion;
       this.parameters=p;
       if(['spin','inclination','thickness','quality','zoom'].some(key=>p[key]!==old[key])) {
-        this._dirty=true;this._traceAt=performance.now()+(this._current?120:0);
-        this._status('tracing',0,'正在准备重新追踪光线…');
+        this._invalidate('正在准备重新追踪光线…');
         if(p.quality!==old.quality)this.resize();
       }
       return this;
@@ -165,9 +192,9 @@
       const h=Math.max(1,Math.round(finite(height,rect.height||this.canvas.clientHeight||480)));
       const mobile=typeof matchMedia==='function' && matchMedia('(max-width: 760px), (pointer: coarse)').matches;
       const quality=this.parameters.quality;
-      const base=typeof quality==='number'?clamp(quality,240,1024):
-        quality==='high'?(mobile?480:840):quality==='low'?(mobile?280:440):(mobile?360:640);
-      const mapW=Math.max(160,Math.min(base,Math.round(w*1.1)));
+      const base=typeof quality==='number'?clamp(quality,240,1280):
+        quality==='high'?(mobile?720:1280):quality==='low'?(mobile?400:640):(mobile?560:960);
+      const mapW=Math.max(160,Math.min(base,Math.round(w*1.6)));
       const mapH=Math.max(120,Math.round(mapW*h/w));
       const maxPixels=mobile?500000:1600000;
       const dpr=Math.min(window.devicePixelRatio||1,1.5,Math.sqrt(maxPixels/(w*h)));
@@ -178,8 +205,7 @@
       this.width=w;this.height=h;this._mobile=mobile;
       if(mapW!==this._mapWidth || mapH!==this._mapHeight) {
         this._mapWidth=mapW;this._mapHeight=mapH;this._dirty=true;
-        this._traceAt=performance.now()+(this._current?120:0);
-        this._status('tracing',0,'正在适配画面尺寸…');
+        this._invalidate('正在适配画面尺寸…');
       }
     }
 
@@ -189,8 +215,7 @@
       const inner=profile && Number.isFinite(profile.innerRadius)?profile.innerRadius:isco(this.parameters.spin);
       const outer=profile && Number.isFinite(profile.outerRadius)?profile.outerRadius:40;
       if(this._profile && (Math.abs(inner-this._profile.inner)>1e-5 || Math.abs(outer-this._profile.outer)>1e-5)) {
-        this._dirty=true;this._traceAt=performance.now()+(this._current?80:0);
-        this._status('tracing',0,'正在更新吸积盘内缘…');
+        this._invalidate('正在更新吸积盘内缘…',80);
       }
       const count=profile && profile.flux && profile.flux.length>=2?profile.flux.length:256;
       const data=new Float32Array(count*4);
@@ -216,21 +241,42 @@
       this._profileReference=profile;this._profileVersion=profile?profile.version:null;
     }
 
-    _beginTrace() {
+    _createCache(width,height,preview=false) {
       const gl=this.gl;
-      this._releaseCache(this._pending);
-      const width=this._mapWidth,height=this._mapHeight;
       const hit=this._texture(width,height,gl.RGBA32F),sky=this._texture(width,height,gl.RGBA32F);
       const fbo=this._framebuffer([hit,sky]);
       const radiance=this._texture(width,height,gl.RGBA16F);
       const shadeFbo=this._framebuffer([radiance]);
-      this._pending={hit,sky,radiance,fbo,shadeFbo,width,height,row:0,
+      return {hit,sky,radiance,fbo,shadeFbo,width,height,row:0,preview,
         parameters:{...this.parameters},profile:{...this._profile},started:performance.now()};
+    }
+
+    _beginTrace() {
+      if(this._pending!==this._preview)this._releaseCache(this._pending);
+      this._pending=this._createCache(this._mapWidth,this._mapHeight);
       this._dirty=false;
       this._status('tracing',0,'正在重算弯曲时空中的光线…');
     }
 
-    _traceBatch() {
+    _beginPreview() {
+      if(this._pending!==this._preview)this._releaseCache(this._pending);
+      this._pending=null;
+      // This is a fresh physical Kerr solve, not a CSS transform of the old
+      // image. A full small target is updated on every camera-change frame.
+      const width=this._mobile?128:160;
+      const height=Math.max(48,Math.round(width*this.height/Math.max(1,this.width)));
+      if(!this._preview || this._preview.width!==width || this._preview.height!==height) {
+        if(this._current===this._preview)this._current=null;
+        this._releaseCache(this._preview);
+        this._preview=this._createCache(width,height,true);
+      }
+      const cache=this._preview;
+      cache.parameters={...this.parameters};cache.profile={...this._profile};
+      cache.row=0;cache.started=performance.now();
+      this._pending=cache;this._dirty=false;this._needsRefinement=true;
+    }
+
+    _traceBatch(completeFrame=false) {
       const gl=this.gl,cache=this._pending,p=cache.parameters,program=this._trace;
       gl.bindFramebuffer(gl.FRAMEBUFFER,cache.fbo);
       gl.viewport(0,0,cache.width,cache.height);
@@ -245,17 +291,21 @@
       // Constant vertical framing preserves the hole as the viewport changes.
       // On narrow screens widen vertically until the bright disk also fits.
       this._uniform(program,'uSpan','uniform1f',Math.max(28,40*cache.height/cache.width)/p.zoom);
-      const rows=Math.min(this._mobile?6:8,cache.height-cache.row);
+      const rows=Math.min(completeFrame?cache.height:this._mobile?8:12,cache.height-cache.row);
       gl.enable(gl.SCISSOR_TEST);gl.scissor(0,cache.row,cache.width,rows);
       gl.drawArrays(gl.TRIANGLES,0,3);gl.disable(gl.SCISSOR_TEST);
       cache.row+=rows;
       const progress=cache.row/cache.height;
       if(cache.row>=cache.height) {
-        this._releaseCache(this._current);this._current=cache;this._pending=null;
+        if(this._current!==cache && this._current!==this._preview)this._releaseCache(this._current);
+        this._current=cache;this._pending=null;
         this.ready=true;
         this.canvas.dataset.rays=String(cache.width*cache.height);
         this.canvas.dataset.traceMs=String(Math.round(performance.now()-cache.started));
-        this._status('ready',1,'Kerr 光线已就绪');
+        this.canvas.dataset.preview=cache.preview?'true':'false';
+        if(cache.preview)this._previewFrames++;
+        else {this._traceGeneration++;this._needsRefinement=false;}
+        this._status('ready',1,cache.preview?'实时相机预览':'Kerr 光线已就绪');
       } else if(Math.floor(progress*20)!==Math.floor(this.progress*20))
         this._status('tracing',progress,'正在计算 Kerr 光线…');
     }
@@ -269,8 +319,9 @@
       if(!this.gl || !this._trace || this.failed || this._destroyed)return;
       try {
         if(profile)this._uploadProfile(profile);
-        if(this._dirty && performance.now()>=this._traceAt)this._beginTrace();
-        if(this._pending && !this._dirty)this._traceBatch();
+        if(this._dirty && this._interactionActive)this._beginPreview();
+        else if(this._dirty && performance.now()>=this._traceAt)this._beginTrace();
+        if(this._pending && !this._dirty)this._traceBatch(this._interactionActive && this._pending.preview);
         const gl=this.gl,cache=this._current;
         if(!cache) {
           gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.clearColor(0.003,0.005,0.009,1);
@@ -288,6 +339,8 @@
         this._uniform(shade,'uInner','uniform1f',this._profile.inner);
         this._uniform(shade,'uOuter','uniform1f',this._profile.outer);
         this._uniform(shade,'uAccretionScale','uniform1f',Math.max(0,finite(this.parameters.accretionRate,0.25))/0.25);
+        this._uniform(shade,'uAzimuth','uniform1f',this.parameters.azimuth*Math.PI/180);
+        this._lastRenderedAzimuth=this.parameters.azimuth;
         this._uniform(shade,'uMode','uniform1i',mode);
         gl.drawArrays(gl.TRIANGLES,0,3);
         gl.bindFramebuffer(gl.FRAMEBUFFER,null);
@@ -310,7 +363,10 @@
         rays:cache?cache.width*cache.height:0,width:cache?cache.width:0,
         height:cache?cache.height:0,parameters:{...this.parameters},
         profile:this._profile?{...this._profile}:null,
-        traceMilliseconds:Number(this.canvas.dataset.traceMs||0)};
+        traceMilliseconds:Number(this.canvas.dataset.traceMs||0),
+        interactionActive:this._interactionActive,preview:Boolean(cache && cache.preview),
+        previewFrames:this._previewFrames,traceGeneration:this._traceGeneration,
+        renderedParameters:cache?{...cache.parameters,azimuth:this._lastRenderedAzimuth}:null};
     }
 
     // Explicit test-only readback; the animation path never synchronizes or

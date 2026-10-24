@@ -12,6 +12,7 @@ uniform float uSpin;
 uniform float uInner;
 uniform float uOuter;
 uniform float uAccretionScale;
+uniform float uAzimuth;
 uniform int uMode;
 out vec4 fragColor;
 const float PI=3.141592653589793;
@@ -28,6 +29,12 @@ float noise3(vec3 p) {
                mix(mix(hash31(i+vec3(0,0,1)),hash31(i+vec3(1,0,1)),f.x),
                    mix(hash31(i+vec3(0,1,1)),hash31(i+vec3(1,1,1)),f.x),f.y),f.z);
 }
+float filteredNoise(vec3 p,float footprint,float frequency) {
+    // Suppress frequencies that a ray pixel cannot resolve. Centering the
+    // contribution preserves mean emissivity as a lensed image is compressed.
+    float weight=1.0-smoothstep(0.35,0.9,footprint*frequency);
+    return weight*(noise3(p*frequency)-0.5);
+}
 float material(float r,float phi,float t,float offset) {
     // Birth labels reset only when their sin² weight and its derivative vanish.
     // Finite lifetimes prevent accumulated differential shear at late times.
@@ -36,11 +43,14 @@ float material(float r,float phi,float t,float offset) {
     float age=(t+offset)-epoch*lifetime;
     float omega=1.0/(pow(r,1.5)+uSpin); // units 1/t_g
     float phase=phi-omega*age;
-    vec3 p=vec3(log(r)*7.0,cos(phase)*r*0.36,sin(phase)*r*0.36);
+    vec3 p=vec3(log(r)*5.0,cos(phase)*r*0.27,sin(phase)*r*0.27);
     p.x+=epoch*13.731;
-    float n=0.55*noise3(p)+0.28*noise3(p*2.11)+0.17*noise3(p*4.19);
+    float footprint=max(length(dFdx(p)),length(dFdy(p)));
+    float n=0.70*filteredNoise(p,footprint,1.0)+
+            0.24*filteredNoise(p,footprint,2.11)+
+            0.06*filteredNoise(p,footprint,4.19);
     float weight=pow(sin(PI*age/lifetime),2.0);
-    return (0.62+0.8*n)*weight;
+    return (1.0+0.58*n)*weight;
 }
 vec4 radialProfile(float r) {
     float u=clamp(log(r/uInner)/log(uOuter/uInner),0.0,1.0);
@@ -76,13 +86,23 @@ vec3 sky(vec3 d) {
 void main() {
     ivec2 pixel=ivec2(gl_FragCoord.xy);
     vec4 hit=texelFetch(uHits,pixel,0);
+    // Axial symmetry makes rotating the camera equivalent to rotating cached
+    // source azimuths. r, g, delay and the shadow are exactly unchanged. This
+    // avoids needless geodesic retracing during horizontal orbit gestures.
+    float phi=hit.y+uAzimuth;
+    float time=uTime+hit.z;
+    // Derivatives must execute for every fragment in a quad, before the
+    // divergent disk/sky return. Invalid hits only suppress edge texture.
+    float materialRadius=max(hit.x,uInner);
+    float turbulence=material(materialRadius,phi,time,0.0)+
+                     material(materialRadius,phi,time,60.0);
     if(hit.w<=0.0) {
         vec4 escaped=texelFetch(uSky,pixel,0);
+        float c=cos(uAzimuth),s=sin(uAzimuth);
+        escaped.xz=mat2(c,-s,s,c)*escaped.xz;
         fragColor=vec4(escaped.w>0.0?sky(escaped.xyz):vec3(0.0),1.0);return;
     }
     vec4 profile=radialProfile(hit.x);
-    float time=uTime+hit.z;
-    float turbulence=material(hit.x,hit.y,time,0.0)+material(hit.x,hit.y,time,60.0);
     float flux=max(profile.r,0.0)*turbulence;
     float g=clamp(hit.w,0.015,8.0);
     float received=flux*pow(g,4.0)*uAccretionScale;

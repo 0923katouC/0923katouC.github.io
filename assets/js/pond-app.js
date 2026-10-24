@@ -4,7 +4,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const defaults = Object.freeze({ spin:.7, inclination:65, accretionRate:.25,
+  const defaults = Object.freeze({ spin:.7, inclination:65, azimuth:0, accretionRate:.25,
     mass:4e6, thickness:.06, alpha:.1, magneticBeta:30, exposure:1.15,
     quality:'balanced', mode:'temperature', timeScale:8, zoom:1 });
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -29,10 +29,8 @@
   }
   const bindings=[
     {id:'spin',key:'spin',read:v=>v,write:v=>v,format:v=>v.toFixed(2)},
-    {id:'inclination',key:'inclination',read:v=>v,write:v=>v,format:v=>`${Math.round(v)}°`},
     {id:'accretion-rate',key:'accretionRate',read:v=>10**v,write:v=>Math.log10(v),format:v=>`${v.toFixed(2)} ṀEdd`},
     {id:'mass',key:'mass',read:v=>10**v,write:v=>Math.log10(v),format:v=>`${scientific(v)} M☉`},
-    {id:'zoom',key:'zoom',read:v=>v,write:v=>v,format:v=>`${v.toFixed(2)}×`},
     {id:'exposure',key:'exposure',read:v=>v,write:v=>v,format:v=>`${v.toFixed(2)}×`},
     {id:'thickness',key:'thickness',read:v=>v,write:v=>v,format:v=>v.toFixed(2)},
     {id:'alpha',key:'alpha',read:v=>v,write:v=>v,format:v=>v.toFixed(2)},
@@ -47,7 +45,7 @@
       $(binding.id).setAttribute('aria-valuetext',binding.format(value));
     }
     $('quality').value=parameters.quality;$('display-mode').value=parameters.mode;
-    document.querySelectorAll('[data-inclination]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.inclination)===parameters.inclination)));
+    updateCameraReadout();
     $('pause-button').setAttribute('aria-pressed',String(paused));
     localized($('pause-label'),paused?'▶ 继续':'Ⅱ 暂停',paused?'▶ Resume':'Ⅱ Pause');
     const modes={temperature:['热辐射 · 伪彩色 / 相对强度','Thermal · false color / relative intensity'],redshift:['频移 g = νobs / νemit','Frequency shift g = νobs / νemit'],density:['盘面密度 · 相对值','Surface density · relative scale']};
@@ -57,6 +55,20 @@
     if(parameters.mode==='density'){localized($('legend-left'),'低密度','Lower density');localized($('legend-right'),'高密度','Higher density');}
     $('thin-disk-warning').hidden=parameters.accretionRate<=.3;
   }
+  function updateCameraReadout() {
+    $('camera-readout').textContent=`φ ${Math.round(parameters.azimuth)}° · i ${Math.round(parameters.inclination)}° · ${parameters.zoom.toFixed(2)}×`;
+  }
+  function updateCamera(next) {
+    parameters={...parameters,...next};renderNeedsUpdate=true;
+    if(renderer)renderer.setParameters(next);
+    updateCameraReadout();
+  }
+  const cameraInput=window.PondCamera.attach(canvas,{
+    getCamera:()=>({azimuth:parameters.azimuth,inclination:parameters.inclination,zoom:parameters.zoom}),
+    onChange:updateCamera,
+    onActiveChange:active=>{renderNeedsUpdate=true;if(renderer)renderer.setInteractionActive(active);}
+  });
+  $('reset-view').addEventListener('click',()=>cameraInput.reset());
   function setBaseline() {
     if(!model)return;
     const profile=model.getProfile();baseline={radii:Array.from(profile.radii),density:Array.from(profile.density)};
@@ -112,10 +124,10 @@
     const el=$('render-status');el.dataset.state=status.state;
     if(status.state==='ready'){
       ready=true;renderNeedsUpdate=true;canvas.hidden=false;$('loading-overlay').hidden=true;$('fallback-image').hidden=true;
-      localized(el,'光线就绪','Rays ready');
+      localized(el,canvas.dataset.preview==='true'?'拖动预览':'画面就绪',canvas.dataset.preview==='true'?'Moving view':'View ready');
     }else if(status.state==='tracing'){
       const percent=Math.round(lastProgress*100);
-      localized(el,`光线计算 ${percent}%`,`Tracing rays ${percent}%`);
+      localized(el,`${ready?'细化画面':'光线计算'} ${percent}%`,`${ready?'Refining view':'Tracing rays'} ${percent}%`);
     }else if(status.state==='error'){
       ready=false;canvas.hidden=true;$('loading-overlay').hidden=false;$('loading-overlay').dataset.error='true';
       $('fallback-image').hidden=false;$('retry-button').hidden=false;
@@ -140,9 +152,9 @@
   for(const binding of bindings)$(binding.id).addEventListener('input',event=>updateParameters({[binding.key]:binding.read(Number(event.target.value))}));
   $('quality').addEventListener('change',event=>updateParameters({quality:event.target.value}));
   $('display-mode').addEventListener('change',event=>updateParameters({mode:event.target.value}));
-  document.querySelectorAll('[data-inclination]').forEach(button=>button.addEventListener('click',()=>{updateParameters({inclination:Number(button.dataset.inclination)});$('inclination').value=parameters.inclination;}));
   $('pause-button').addEventListener('click',()=>{paused=!paused;updateControls();});
   $('reset-button').addEventListener('click',()=>{
+    cameraInput.cancel();
     parameters={...defaults};paused=motion.matches;time=0;renderNeedsUpdate=true;
     if(model){model.setParameters(parameters);model.reset();setBaseline();}
     if(renderer)renderer.setParameters(parameters);
@@ -158,7 +170,7 @@
   const languageObserver=new MutationObserver(()=>{updateControls();updateMetrics();renderStatus({state:lastStatus,progress:lastProgress});});languageObserver.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
   motion.addEventListener('change',event=>{if(event.matches){paused=true;updateControls();}});
   document.addEventListener('visibilitychange',()=>{previousFrame=0;});
-  window.addEventListener('pagehide',()=>{stopped=true;cancelAnimationFrame(frame);clearTimeout(noticeTimer);resizeObserver.disconnect();languageObserver.disconnect();if(renderer)renderer.destroy();});
+  window.addEventListener('pagehide',()=>{stopped=true;cancelAnimationFrame(frame);clearTimeout(noticeTimer);resizeObserver.disconnect();languageObserver.disconnect();cameraInput.destroy();if(renderer)renderer.destroy();});
   // Restore an intact page when a browser reuses its back/forward cache.
   window.addEventListener('pageshow',event=>{if(event.persisted)window.location.reload();});
   updateControls(true);
