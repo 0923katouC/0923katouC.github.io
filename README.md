@@ -95,3 +95,9 @@ See [the equations, assumptions and papers](projects/pond/MODEL.md).
 Run `node --test tests/*.test.cjs`; for actual GPU checks, serve the repository
 with `python3 -m http.server 8765` and open `/tests/pond-gpu.html` and
 `/tests/pond-kerr-geodesics.html`. No build or third-party JavaScript is required.
+
+Camera interaction: drag the image to orbit, use the wheel or a two-finger
+pinch to zoom. Arrow keys and +/- work while the image is focused; 0 resets
+the view. Camera changes also work while paused. The renderer uses immediate
+low-resolution camera previews followed by a refined, antialiased image.
+Run `/tests/pond-camera-gpu.html` for the actual-GPU interaction checks.
