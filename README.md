@@ -162,3 +162,19 @@ Playwright version into the runner's temporary directory, serves the static
 site, and exercises desktop and mobile pages in headless Chromium. It uploads
 screenshots and a JSON report as a GitHub Actions artifact. The application
 pages themselves have no npm dependencies.
+
+
+## Pond experiment 002: The Orbit Atlas
+
+[Open the orbit atlas](https://0923katouC.github.io/projects/pond/orbits/).
+Select specific energy E and specific angular momentum L in a Newtonian
+point-mass potential and compare circular, elliptic, parabolic and hyperbolic
+orbits. Linked views show the effective potential and radial phase portrait.
+Up to five retained trajectories share the same scale and physical time.
+The Chinese interface supports pointer, touch, keyboard and reduced motion.
+
+Universal-variable Kepler propagation remains continuous across E=0.
+See [definitions, equations and display limits](projects/pond/orbits/MODEL.md).
+Run `node --test tests/orbits.test.mjs`; the existing odd-projects workflow
+also runs `tests/orbits-browser.mjs` with desktop/mobile screenshots.
+

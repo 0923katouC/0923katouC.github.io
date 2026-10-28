@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090d12">
+  <meta name="description" content="在 E–L 参数图中探索牛顿中心引力下的轨道族：圆、椭圆、抛物线与双曲线。联动轨道、有效势和径向相图。">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>轨道图谱 · 池沼仿真 | CMC</title>
+  <link rel="stylesheet" href="./style.css?v=20261029-1">
+  <script type="module" src="./app.mjs?v=20261029-1"></script>
+</head>
+<body>
+  <a class="skip" href="#experiment">跳到实验</a>
+  <header class="site-bar"><a class="brand" href="/">CMC <span>/ 池沼仿真</span></a><nav><a href="/projects/pond/">← 实验目录</a><a href="#methods">模型与方法 ↗</a></nav></header>
+  <main>
+    <header class="masthead"><div><p class="eyebrow">EXPERIMENT 002 <span>/</span> CELESTIAL MECHANICS</p><h1>轨道<span>图谱</span><span class="title-en">THE ORBIT ATLAS</span></h1><p class="intro">一个引力中心，两枚守恒量。改变能量与角动量，看轨道如何相遇、束缚与逃逸。</p></div><div class="formula-stamp"><span>NEWTONIAN GRAVITY</span><strong>Φ(r) = −1/r</strong><small>无量纲单位 · GM = 1</small></div></header>
+
+    <section class="workspace" id="experiment" aria-label="中心引力轨道实验">
+      <div class="main-column">
+        <section class="panel orbit-panel" aria-labelledby="orbit-heading">
+          <div class="panel-bar"><h2 id="orbit-heading"><span class="section-no">01</span> 轨道平面 <span class="subtle">x · y</span></h2><span id="orbit-kind" class="badge" aria-live="polite">椭圆 · 束缚</span></div>
+          <div class="orbit-stage"><canvas id="orbit-canvas" aria-label="轨道平面，中心点为引力源，彩色曲线代表不同能量与角动量的轨道">需要支持 Canvas 的浏览器。</canvas><div class="stage-top"><span>FOCUS AT THE ORIGIN</span><span id="scale-label"></span></div><div id="invalid-overlay" class="invalid-overlay" hidden><strong>这个 E、L 组合没有可达轨道</strong><p>E 低于有效势的最小值。向上移动能量，或点击“圆轨道边界”。</p></div><div class="stage-bottom"><span><i class="key-dot"></i> 当前轨道 <span class="subtle">/ 虚线为保留轨道</span></span><span id="time-label">t = 0</span></div></div>
+          <div class="transport"><div><button id="play" type="button" aria-pressed="true">Ⅱ 暂停</button><button id="restart" type="button">↺ 从头播放</button></div><label for="speed">时间倍率 <select id="speed"><option value="0.25">¼×</option><option value="1" selected>1×</option><option value="4">4×</option><option value="12">12×</option></select></label><button id="fit" type="button">适合画面</button></div>
+          <div class="timeline"><label for="phase">时间位置</label><input id="phase" type="range" min="0" max="1000" step="1" value="500"><span id="loop-note">一个周期</span></div>
+          <dl class="readouts"><div><dt>偏心率 e</dt><dd id="eccentricity">—</dd></div><div><dt>近心点 rₚ</dt><dd id="periapsis">—</dd></div><div><dt>远心点 rₐ</dt><dd id="apoapsis">—</dd></div><div><dt>轨道周期 T</dt><dd id="period">—</dd></div></dl>
+        </section>
+        <div class="plots-row">
+          <section class="panel small-panel"><div class="panel-bar"><h2><span class="section-no">03</span> 有效势 <span class="subtle">V<sub>eff</sub>(r)</span></h2><span class="plot-key">— V<sub>eff</sub> <b>┄ E</b></span></div><canvas id="potential-canvas" aria-label="有效势与能量水平线；两者的交点是径向转向点"></canvas></section>
+          <section class="panel small-panel"><div class="panel-bar"><h2><span class="section-no">04</span> 径向相图 <span class="subtle">r · vᵣ</span></h2><span class="subtle mini">同一条轨道，两种视角</span></div><canvas id="phase-canvas" aria-label="径向相图，横轴为半径，纵轴为径向速度；闭合曲线为束缚轨道"></canvas></section>
+        </div>
+      </div>
+      <aside class="panel controls" aria-label="轨道参数">
+        <div class="panel-bar"><h2><span class="section-no">02</span> 守恒量空间</h2><span class="subtle mini">点击 / 拖动选点</span></div>
+        <canvas id="el-canvas" tabindex="0" role="img" aria-label="E–L 参数图。横轴 L，纵轴 E。方向键微调，Shift 加速；也可用下方滑块与数值输入。"></canvas>
+        <p class="map-caption"><span class="map-mark"></span> E = −1/(2L²)：圆轨道边界<br>边界下方不可达 · E = 0 为逃逸阈值</p>
+        <div class="controls-body">
+          <div class="control"><div class="control-head"><label for="energy">比能量 <em>E</em></label><input id="energy-value" type="number" min="-1.5" max="1" step="0.001" value="-0.35" aria-label="比能量 E 数值"></div><input id="energy" type="range" min="-1.5" max="1" step="0.001" value="-0.35"><div class="range-labels"><span>−1.50 / 深束缚</span><span>+1.00 / 逃逸</span></div></div>
+          <div class="control"><div class="control-head"><label for="momentum">比角动量 <em>L</em></label><input id="momentum-value" type="number" min="0.25" max="2.5" step="0.001" value="1" aria-label="比角动量 L 数值"></div><input id="momentum" type="range" min="0.25" max="2.5" step="0.001" value="1"><div class="range-labels"><span>0.25 / 更径向</span><span>2.50 / 更切向</span></div></div>
+          <div class="presets" aria-label="轨道类型预设"><button type="button" data-preset="circle">圆</button><button type="button" data-preset="ellipse">椭圆</button><button type="button" data-preset="parabola">抛物线</button><button type="button" data-preset="hyperbola">双曲线</button></div>
+          <button id="circular" class="boundary-button" type="button">↗ 移到当前 L 的圆轨道边界</button>
+          <p id="selection-note" class="selection-note" aria-live="polite"></p>
+          <div class="family-heading"><h3>收集一族轨道</h3><span id="pin-count">0 / 5</span></div><p class="family-hint">保留当前轨道，再移动选点。所有轨道共用尺度与物理时间。</p>
+          <div class="family-actions"><button id="pin" class="primary" type="button">＋ 保留当前</button><button id="family" type="button">同能量轨道族</button></div>
+          <div id="pinned-list" class="pinned-list" aria-label="已保留的轨道"></div><button id="clear" class="clear-button" type="button">清空保留轨道</button>
+          <p id="feedback" class="feedback" role="status"></p>
+        </div>
+      </aside>
+    </section>
+    <p class="experiment-note"><span>↳</span> 试一试：点击“同能量轨道族”，观察相同 E 下，椭圆的长半轴保持不变，而角动量改变了它的形状。</p>
+    <section id="methods" class="methods"><div class="methods-title"><p class="eyebrow">READ THE MODEL</p><h2>两枚守恒量，决定什么？</h2></div><div class="method-grid">
+      <article><span class="section-no">I / DEFINITIONS</span><h3>先约定符号</h3><p>中心质量固定，测试粒子无反作用。E 是单位质量的机械能，L = |r × v| 是单位质量的角动量大小，vᵣ = dr/dt。取参考长度 r₀，长度、时间、E、L 的单位依次为 r₀、√(r₀³/GM)、GM/r₀、√(GM r₀)。下式与图中均使用无量纲量。</p><div class="equation">E = ½(vᵣ² + L²/r²) − 1/r</div></article>
+      <article><span class="section-no">II / GEOMETRY</span><h3>从有效势读出轨道</h3><p>径向运动满足 ½vᵣ² + V<sub>eff</sub> = E。圆轨道处于有效势的最小值；其上 E &lt; 0 为椭圆，E = 0 为抛物线，E &gt; 0 为双曲线。中心位于圆锥曲线的焦点，图上统一将近心点朝向 +x，沿逆时针运动。</p><div class="equation">V<sub>eff</sub> = L²/(2r²) − 1/r<br>e² = 1 + 2EL² · r(θ) = L²/(1 + e cos θ)</div></article>
+      <article><span class="section-no">III / SCOPE</span><h3>相图与展示边界</h3><p>E–L 图是守恒量参数空间，并非完整相空间；它不指定轨道取向和初始相位。动画用通用变量开普勒方程按物理时间求解，无耗散、进动或相对论修正。为避开点质量碰撞奇点，此页限定 L ≥ 0.25。</p><p>开放轨道及特别大的椭圆只播放有限半径内的一段，到边界暂停。保留轨道在同一时刻经过近心点；它们离开显示窗口后隐藏，闭合轨道继续运行。</p><a class="model-link" href="./MODEL.md">完整方程与数值验证 ↗</a></article>
+    </div></section>
+    <footer><span>CMC / POND SIMULATIONS</span><span>万有引力，不尽相同的去处。</span><a href="/projects/pond/">返回实验目录 ↗</a></footer>
+  </main>
+  <noscript><p class="noscript">此实验需要 JavaScript。上方“模型与方法”仍可阅读。</p></noscript>
+</body>
+</html>

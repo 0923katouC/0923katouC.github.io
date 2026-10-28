@@ -20,3 +20,7 @@
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(pointer:coarse){.pointer-hint{display:none}.touch-hint{display:inline}}
 @media(max-width:640px){.camera-overlay{inset:11px 11px auto;gap:8px}.camera-hint{font-size:8px;padding:5px 6px}.reset-view{font-size:9px;padding:4px 7px;min-height:28px}.camera-readout{font-size:9px}.color-legend{top:51px}}
+
+
+/* Separate adjacent experiments without changing either renderer. */
+.pond-index .experiment-card + .experiment-card{margin-top:24px}

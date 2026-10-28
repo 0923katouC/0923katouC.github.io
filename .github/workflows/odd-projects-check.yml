@@ -6,6 +6,10 @@ on:
       - 'projects.html'
       - 'projects/games/**'
       - 'projects/toys/**'
+      - 'projects/pond/orbits/**'
+      - 'projects/pond/index.html'
+      - 'assets/css/pond.css'
+      - 'tests/orbits-browser.mjs'
       - 'assets/css/playground.css'
       - 'assets/js/playground.js'
       - 'tests/odd-projects-browser.mjs'
@@ -59,6 +63,12 @@ jobs:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/odd-browser/node_modules/playwright/index.mjs
           ODD_SITE_URL: http://127.0.0.1:8765
         run: node tests/odd-projects-browser.mjs
+
+      - name: Exercise orbit atlas
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/odd-browser/node_modules/playwright/index.mjs
+          ODD_SITE_URL: http://127.0.0.1:8765
+        run: node tests/orbits-browser.mjs
 
       - name: Upload screenshots and results
         if: always()
