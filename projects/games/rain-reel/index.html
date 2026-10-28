@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="一场雨，四位客人，一卷消失的胶片。一个可以慢慢玩的原创中文侦探小游戏。">
+  <meta name="theme-color" content="#101d1b">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>雨夜最后一卷 · 侦探档案 001 | CMC</title>
+  <link rel="stylesheet" href="./game.css?v=20261029-1">
+  <script type="module" src="./game.mjs?v=20261029-1"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到调查内容</a>
+  <header class="site-bar"><a href="/" aria-label="CMC 个人主页">CMC<span class="muted"> / 奇怪项目</span></a><a href="/projects/games/">← 返回游戏</a><span class="case-number">侦探档案 / 001</span></header>
+  <main class="shell" id="main">
+    <header class="masthead"><div><p class="eyebrow">A SMALL MYSTERY FOR A LONG NIGHT</p><h1>雨夜<span class="title-break">最后一卷</span></h1><p class="subtitle">雨把所有人留在旅馆。有人，却让故事的结尾消失了。</p></div><div class="case-meta"><span>原创短篇</span><span>约 10–15 分钟</span><span>无倒计时 · 随时存档</span></div></header>
+    <section class="welcome-card" id="welcome" aria-labelledby="welcome-title">
+      <div class="welcome-art"><img src="./scene.svg" alt="雨夜里亮着暖灯的旧旅馆" width="1280" height="720"></div>
+      <div class="welcome-copy"><p class="eyebrow">雾灯旅馆 / 最后一次放映</p><h2 id="welcome-title">今晚，缺了一个结尾。</h2><div id="intro-copy"></div><p class="muted">搜查四处现场，与四位当事人交谈。把证据连起来，再给出你的答案。不拼手速，也不需要专业知识。</p><div class="dialog-actions"><button class="button primary" id="start" type="button">开始调查 →</button><button class="button ghost" id="welcome-reset" type="button" hidden>重新开始</button></div><p class="muted" id="welcome-save">进度只保存在当前浏览器，不需要登录。</p></div>
+    </section>
+    <div class="game-layout" id="game" hidden>
+      <aside class="locations panel" aria-label="调查地点"><p class="section-label">01 / 现场搜查</p><div id="location-list"></div><div class="notebook-note">没有时间限制。<br>每一条线索都可以重读。</div><button class="button ghost hint-button" id="hint" type="button">需要一点提示？</button></aside>
+      <div class="workspace">
+        <nav class="tabs" aria-label="调查工具"><button type="button" data-tab="scene" class="active" aria-current="page">现场</button><button type="button" data-tab="people">问话</button><button type="button" data-tab="evidence">证据</button><button type="button" data-tab="deduce">推理</button><button type="button" data-tab="accuse">结案</button></nav>
+        <section class="main-panel panel" id="view" tabindex="-1" aria-label="调查内容"></section>
+      </div>
+      <aside class="casebook panel" aria-label="侦探手记"><p class="section-label">02 / 侦探手记</p><div class="progress-label"><span>已收集证据</span><strong id="evidence-count">0 / 12</strong></div><progress id="progress" value="0" max="12" aria-label="证据收集进度"></progress><p id="objective" class="notebook-note"></p><div id="recent-evidence" class="evidence-preview"></div><div id="deduction-summary"></div><label for="notes" class="section-label">随手记一点</label><textarea id="notes" maxlength="2000" rows="4" placeholder="谁的话有矛盾？哪些时间值得留意？"></textarea><p id="save-status" class="muted" role="status">进度自动保存</p><button class="button ghost" id="restart" type="button">重新调查</button></aside>
+    </div>
+    <footer class="bottom-bar"><span>CMC · 夜间小案</span><span>一段虚构的故事。一个可以停下来的夜晚。</span></footer>
+  </main>
+  <dialog id="modal" aria-labelledby="modal-title"><div class="dialog-content"><button type="button" class="dialog-close" id="close-modal" aria-label="关闭">×</button><p id="modal-kicker" class="eyebrow"></p><h2 id="modal-title"></h2><div id="modal-body"></div><div id="modal-actions" class="dialog-actions"></div></div></dialog>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <noscript><p class="shell">这个小游戏需要启用 JavaScript。不会向服务器上传你的游戏进度。</p></noscript>
+</body>
+</html>

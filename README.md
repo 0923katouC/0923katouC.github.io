@@ -101,3 +101,33 @@ pinch to zoom. Arrow keys and +/- work while the image is focused; 0 resets
 the view. Camera changes also work while paused. The renderer uses immediate
 low-resolution camera previews followed by a refined, antialiased image.
 Run `/tests/pond-camera-gpu.html` for the actual-GPU interaction checks.
+
+## Games: Rain Night, Last Reel
+
+The [Games collection](https://0923katouC.github.io/projects/games/) is linked
+from the Games card in `projects.html`. Its first title is the original Chinese
+mystery [雨夜最后一卷](https://0923katouC.github.io/projects/games/rain-reel/),
+a relaxed 10–15 minute investigation with four locations, interviews, evidence
+connections and a final accusation. There is no countdown.
+
+- `projects/games/index.html` — bilingual games collection; the game itself is in Chinese.
+- `projects/games/rain-reel/index.html` — game entry point.
+- `projects/games/rain-reel/case-data.mjs` — original case text and solution data.
+- `projects/games/rain-reel/state.mjs` — investigation rules and save validation.
+- `projects/games/rain-reel/game.mjs` — interface, interviews and progression.
+- `projects/games/rain-reel/game.css` and `scene.svg` — responsive styling and original illustration.
+
+No build, third-party JavaScript, login or server API is required. Serve the
+repository with `python3 -m http.server 8765` and open
+`http://localhost:8765/projects/games/`. ES modules require an HTTP server;
+opening the HTML directly as a local file is not supported.
+
+Run the case progression and save-state checks with
+`node --test tests/rain-reel.test.mjs` (Node.js 18 or later).
+
+Progress and player notes are saved only in the current browser's local storage
+under `cmc-rain-reel-v1`. Nothing is uploaded, and there is no cross-device sync.
+If browser storage is blocked, the current session remains playable and displays
+a save warning. Restart clears only this game's progress after confirmation.
+Because the game is a public static site, its source includes the solution; the
+normal interface reveals it only after the player completes the investigation.
