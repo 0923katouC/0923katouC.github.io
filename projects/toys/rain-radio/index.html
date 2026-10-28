@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#eee5d6">
+  <meta name="description" content="一台只收到虚构地点的收音机。八个频率，二十四段夜间广播，还有可以安静听一会儿的合成环境声。">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>不存在电台 · CMC</title>
+  <link rel="stylesheet" href="./style.css?v=20261029-1">
+  <script type="module" src="./app.mjs?v=20261029-1"></script>
+</head>
+<body data-station="store">
+  <a class="skip-link" href="#radio">跳到收音机</a>
+  <header class="site-bar"><a class="brand" href="/">CMC<span> / 奇怪项目</span></a><a class="back" href="/projects/toys/">← 返回小玩具</a><span class="edition">夜间收藏 / N° 01</span></header>
+  <main class="shell">
+    <header class="masthead"><div><p class="eyebrow">TUNE IN TO NOWHERE</p><h1>不存在<span>电台</span><i aria-hidden="true">✳</i></h1><p class="lede">把频率转到别处。那里刚好有人，替你把夜晚慢下来。</p></div><p class="masthead-note">八个不在地图上的地方<br>不接收新闻，只接收一点安静。</p></header>
+
+    <section class="radio" id="radio" aria-label="不存在电台收音机">
+      <span class="screw screw-tl" aria-hidden="true"></span><span class="screw screw-tr" aria-hidden="true"></span><span class="screw screw-bl" aria-hidden="true"></span><span class="screw screw-br" aria-hidden="true"></span>
+      <aside class="speaker-side"><div class="maker"><span>NOT FOUND</span><strong>RADIO</strong><small>EST. AFTER MIDNIGHT</small></div><div class="speaker-grille" aria-hidden="true"><div class="speaker-circle"></div></div><div class="speaker-footer"><span class="power-light" id="power-light" aria-hidden="true"></span><span id="signal-status">等待你的播放指令</span></div><div class="volume-control"><label for="volume">音量 <output id="volume-value" for="volume">30</output></label><input id="volume" type="range" min="0" max="70" value="30" aria-label="环境声音量，最高70"><div class="volume-marks" aria-hidden="true"><span>轻一点</span><span>刚刚好</span></div></div></aside>
+      <div class="receiver-side">
+        <div class="receiver-top"><span class="model-name">NFR — 008</span><span class="band-label">IMAGINARY FREQUENCIES</span></div>
+        <div class="display"><canvas id="scene" width="960" height="360" aria-hidden="true"></canvas><div class="display-shade" aria-hidden="true"></div><div class="display-top"><span class="live-badge" id="live-badge">静音阅读</span><span id="station-place">旧城西路 / 02:17</span></div><div class="station-ident"><div><span id="station-mark">OPEN ALL NIGHT</span><h2 id="station-name">凌晨便利店</h2><p id="station-subtitle">灯还亮着，什么都不用买。</p></div><div class="frequency-number"><strong id="frequency">88.3</strong><span>MHz / 想象频段</span></div></div><div class="signal-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="frequency-dial"><div class="dial-head"><label for="tuner">调谐 <span>TUNING</span></label><span>用方向键也能换台</span></div><div class="dial-scale" aria-hidden="true"><span>88</span><span>92</span><span>96</span><span>100</span><span>104</span><span>108</span></div><input id="tuner" type="range" min="0" max="7" step="1" value="0" aria-label="切换电台" aria-valuetext="88.3 MHz 凌晨便利店"></div>
+        <div class="transport"><div class="tuning-buttons"><button class="step-button" id="prev" type="button" aria-label="上一个频率">‹</button><button class="tuning-knob" id="knob" type="button" aria-label="调到下一个频率"><span class="knob-line" aria-hidden="true"></span><span class="sr-only">旋转调谐</span></button><button class="step-button" id="next" type="button" aria-label="下一个频率">›</button></div><button class="play-button" id="play" type="button" aria-pressed="false"><span class="play-symbol" id="play-symbol" aria-hidden="true">▶</span><span><strong id="play-label">播放环境声</strong><small id="play-note">默认静音，点这里才会响</small></span></button><button class="save-button" id="favorite" type="button" aria-pressed="false"><span id="favorite-symbol" aria-hidden="true">☆</span><span id="favorite-label">收藏频率</span></button></div>
+        <div class="mobile-volume"><label for="mobile-volume">音量</label><input id="mobile-volume" type="range" min="0" max="70" value="30" aria-label="环境声音量，最高70"><output id="mobile-volume-value" for="mobile-volume">30</output></div>
+      </div>
+    </section>
+    <p class="sound-note" id="audio-status" role="status">可以只读广播，不必打开声音。这里没有真人播音，也没有外部音源。</p>
+
+    <div class="below-radio"><section class="broadcast" aria-labelledby="broadcast-title"><div class="section-heading"><p class="eyebrow" id="broadcast-title">刚刚收到的广播</p><span class="transmission-number" id="transmission-number">01 / 03</span></div><blockquote id="broadcast-text">这里是凌晨便利店。热柜里还剩一只包子，老板说留给最后一个路过的人。你可以坐一会儿，微波炉的倒计时不算你的时间。</blockquote><div class="broadcast-footer"><span id="broadcast-from">— 来自 88.3 MHz</span><button class="text-button" id="next-broadcast" type="button">读下一段文字 <span aria-hidden="true">↗</span></button></div></section><aside class="timer-panel" aria-labelledby="timer-title"><p class="eyebrow" id="timer-title">给夜晚留个句号</p><h3>听一会儿就好。</h3><label for="sleep">播放多久后自动停止</label><select id="sleep"><option value="0">不设定时</option><option value="15">15 分钟</option><option value="30">30 分钟</option><option value="60">60 分钟</option></select><output id="countdown" aria-live="off">随时可以按暂停</output><p class="quiet-note">切换到其他页面时，声音会自动暂停。回来后，由你决定是否继续。</p></aside></div>
+
+    <section class="station-directory" aria-labelledby="directory-title"><div class="section-heading"><div><p class="eyebrow">ON THIS FREQUENCY</p><h2 id="directory-title">还有一些地方，亮着灯。</h2></div><span id="discovered">已找到 1 / 8 个频率</span></div><div class="station-grid" id="stations"></div></section>
+    <section class="favorites" aria-labelledby="favorites-title"><p class="eyebrow" id="favorites-title">留给下次的频率</p><div id="favorite-list"><p class="empty-favorites">按一下收音机上的星星，把喜欢的地方留在这里。</p></div></section>
+    <footer><span>CMC · 无用而安静的东西</span><p>所有地点与广播均属虚构。进度只保存在当前浏览器。<span id="storage-note"></span></p></footer>
+  </main>
+  <noscript><p class="shell">开启 JavaScript 后可以调台和播放环境声。上面的这段广播，仍然是给你的。</p></noscript>
+</body>
+</html>

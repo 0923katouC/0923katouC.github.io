@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="CMC 的小游戏收藏：原创中文侦探短篇《雨夜最后一卷》，无倒计时，随时继续。">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="description" content="CMC 的奇怪项目：不赶时间的小游戏，与没什么用的小玩具。">
   <title>游戏 | CMC</title>
   <link rel="stylesheet" href="/assets/css/style.css?v=20261003-header-only1">
   <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261003-header-only1">
   <link rel="stylesheet" href="/assets/css/collection-backgrounds.css?v=20261004-collections-bg1">
-  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261003-project-motion1">
-  <link rel="stylesheet" href="/assets/css/collection-entries.css?v=20261004-collection-cards1">
   <link rel="stylesheet" href="/assets/css/site-motion.css?v=20261006-spring2">
+  <link rel="stylesheet" href="/assets/css/playground.css?v=20261029-1">
   <script src="/assets/js/site-motion.js?v=20261006-spring2" defer blocking="render"></script>
+  <script src="/assets/js/playground.js?v=20261029-1" defer></script>
 </head>
-<body class="ui-page collection-page projects-page glass-ui">
+<body class="ui-page collection-page projects-page playground-page">
   <picture class="collection-background" aria-hidden="true">
     <source media="(max-width: 640px)" srcset="/assets/images/home-entries/projects-960.webp" type="image/webp">
     <img src="/assets/images/collection-backgrounds/projects-personal-v2.webp" width="1280" height="720" alt="" decoding="async" fetchpriority="high">
@@ -33,26 +33,45 @@
       </nav>
     </div>
   </header>
-  <main>
-    <section class="container page-head compact-head">
+  <main class="playground-main">
+    <section class="container page-head compact-head playground-heading">
       <a class="back-link" href="/projects.html" data-zh="← 奇怪项目" data-en="← Odd Projects">← 奇怪项目</a>
-      <span class="eyebrow" data-zh="游戏 · 随便玩一会儿" data-en="Games · Take a little break">游戏 · 随便玩一会儿</span>
-      <h1 data-zh="游戏" data-en="Games">游戏</h1>
-      <p data-zh="不用准备，不赶时间。点开一个故事，就从这里开始。" data-en="No preparation, no rush. Open a story and begin here.">不用准备，不赶时间。点开一个故事，就从这里开始。</p>
+      <span class="eyebrow" data-zh="来玩一会儿" data-en="CMC / AFTER HOURS">来玩一会儿</span>
+      <div class="playground-title-row"><h1  data-zh="游戏" data-en="Games">游戏</h1><button class="pick-button" id="pick-something" type="button" hidden><span  data-zh="替我挑一个 ↗" data-en="Pick one for me ↗">替我挑一个 ↗</span></button></div>
+      <p  data-zh="不用准备，不赶时间。今晚总有一条回家的路，或一个值得拆开的谜。" data-en="No preparation, no rush. A route home, a puzzle to untangle, or a reset button to outsmart.">不用准备，不赶时间。今晚总有一条回家的路，或一个值得拆开的谜。</p>
+      <div class="playground-notes"><span  data-zh="不用登录" data-en="NO SIGN-IN">不用登录</span><span  data-zh="没有广告" data-en="NO ADS">没有广告</span><span  data-zh="手机也能玩" data-en="PHONE FRIENDLY">手机也能玩</span></div>
     </section>
-    <section class="container section-grid two-up" aria-label="Games">
-      <a class="section-card collection-card collection-card--games" href="/projects/games/rain-reel/" data-glass-motion>
-        <span class="collection-card-media" aria-hidden="true"><img class="collection-card-cover" src="./rain-reel/scene.svg" width="1600" height="700" alt="" decoding="async"></span>
-        <span class="entry-index" data-zh="侦探档案 001 · 中文剧情" data-en="CASE FILE 001 · STORY IN CHINESE">侦探档案 001 · 中文剧情</span>
-        <span class="entry-arrow" aria-hidden="true">↗</span>
-        <h2 data-zh="雨夜最后一卷" data-en="Rain Night, Last Reel">雨夜最后一卷</h2>
-        <p data-zh="一场雨，四位当事人，一卷消失的胶片。搜查现场、询问人物，把故事的结尾找回来。" data-en="A rainy night, four people, a missing film reel. Search the rooms, ask questions, and find the story's ending.">一场雨，四位当事人，一卷消失的胶片。搜查现场、询问人物，把故事的结尾找回来。</p>
-        <p data-zh="约 10–15 分钟 · 自动存档 · 无倒计时" data-en="About 10–15 minutes · Autosave · No countdown">约 10–15 分钟 · 自动存档 · 无倒计时</p>
+    <section class="container play-grid" aria-label="Games">
+      <a class="play-card" href="/projects/games/rain-reel/" data-play-card>
+        <div class="play-cover play-cover--rain-reel"><img src="/projects/games/rain-reel/scene.svg" alt="" width="1200" height="630" loading="lazy" decoding="async"><span class="play-number">01</span></div>
+        <div class="play-copy"><div class="play-kicker"><span  data-zh="侦探短篇" data-en="DETECTIVE STORY">侦探短篇</span><span  data-zh="10–15 分钟" data-en="10–15 min">10–15 分钟</span></div>
+          <h2  data-zh="雨夜最后一卷" data-en="Rain Night, Last Reel">雨夜最后一卷</h2>
+          <p class="play-description" data-zh="雨把四个人留在旧旅馆，一卷胶片却消失了。搜查、问话，把结尾找回来。" data-en="Four people remain in an old hotel, but a film reel has vanished. Follow the evidence and find the ending.">雨把四个人留在旧旅馆，一卷胶片却消失了。搜查、问话，把结尾找回来。</p>
+          <div class="play-foot"><span  data-zh="12 条证据 · 自动存档" data-en="12 clues · Autosave">12 条证据 · 自动存档</span><span class="play-arrow" aria-hidden="true">↗</span></div>
+        </div>
+      </a>
+      <a class="play-card" href="/projects/games/night-train/" data-play-card>
+        <div class="play-cover play-cover--night-train"><img src="/projects/games/night-train/cover.svg" alt="" width="1200" height="630" loading="lazy" decoding="async"><span class="play-number">02</span></div>
+        <div class="play-copy"><div class="play-kicker"><span  data-zh="线路解谜" data-en="ROUTE PUZZLE">线路解谜</span><span  data-zh="随时一关" data-en="ONE STOP AT A TIME">随时一关</span></div>
+          <h2  data-zh="末班列车调度室" data-en="Last Train Dispatch">末班列车调度室</h2>
+          <p class="play-description" data-zh="旋转轨道，接上每一站。让最后一班列车把还没回家的人，送到灯亮着的地方。" data-en="Turn the tracks, connect every stop, and guide the last train to the lights of home.">旋转轨道，接上每一站。让最后一班列车把还没回家的人，送到灯亮着的地方。</p>
+          <div class="play-foot"><span  data-zh="10 条夜间线路 · 可撤销" data-en="10 night routes · Undo">10 条夜间线路 · 可撤销</span><span class="play-arrow" aria-hidden="true">↗</span></div>
+        </div>
+      </a>
+      <a class="play-card" href="/projects/games/quota-arcade/" data-play-card>
+        <div class="play-cover play-cover--quota-arcade"><img src="/projects/games/quota-arcade/cover.svg" alt="" width="1200" height="630" loading="lazy" decoding="async"><span class="play-number">03</span></div>
+        <div class="play-copy"><div class="play-kicker"><span  data-zh="回合策略" data-en="TURN-BASED STRATEGY">回合策略</span><span  data-zh="一局约 5 分钟" data-en="ABOUT 5 MIN">一局约 5 分钟</span></div>
+          <h2  data-zh="额度保卫战" data-en="The Reset Button Strikes Back">额度保卫战</h2>
+          <p class="play-description" data-zh="你努力花额度，神秘按钮努力补满。安排任务、躲过重置，把进度条稳在舒服的位置。" data-en="You spend. The mysterious button refills. Plan your tasks and outsmart the next reset.">你努力花额度，神秘按钮努力补满。安排任务、躲过重置，把进度条稳在舒服的位置。</p>
+          <div class="play-foot"><span  data-zh="三档难度 · 纯属虚构" data-en="3 difficulties · Fictional quota">三档难度 · 纯属虚构</span><span class="play-arrow" aria-hidden="true">↗</span></div>
+        </div>
       </a>
     </section>
+    <footer class="container playground-footer">
+      <p  data-zh="还想逛逛？" data-en="Wander a little more?">还想逛逛？</p><a href="/projects/games/" data-zh="游戏" data-en="Games">游戏</a><a href="/projects/toys/" data-zh="小玩具" data-en="Little Toys">小玩具</a><a href="/projects.html" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
+    </footer>
   </main>
   <script src="/assets/js/main.js?v=20261006-motion1"></script>
   <script src="/assets/js/site-ui.js?v=20261003-header-only1" defer></script>
-  <script src="/assets/js/liquid-glass.js?v=20261003-project-motion1" defer></script>
 </body>
 </html>

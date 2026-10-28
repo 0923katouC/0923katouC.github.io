@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="一款关于神秘重置按钮的原创回合制卡牌小游戏。消耗额度、控制热量、挡住重置，把最后几回合稳在 40–50%。">
+  <meta name="theme-color" content="#111522">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>额度保卫战 · CMC 夜班街机</title>
+  <link rel="stylesheet" href="./style.css?v=20261029-1">
+  <script type="module" src="./app.mjs?v=20261029-1"></script>
+</head>
+<body>
+  <a class="skip-link" href="#hand">跳到手牌</a>
+  <header class="site-nav"><a class="brand" href="/">CMC<span> / 夜班街机</span></a><a href="/projects/games/">← 返回游戏</a><span class="nav-number">CABINET 02</span></header>
+  <main>
+    <section class="hero"><div><p class="eyebrow">THE BUTTON WILL BE PRESSED.</p><h1>额度<span>保卫战</span><i aria-hidden="true">↻</i></h1><p class="hero-copy">你想准点下班。那个神秘按钮，总想再给你补满。</p></div><div class="hero-ticket"><span>本夜目标</span><strong>40—50<span>%</span></strong><small>最后几回合稳住，就算赢。</small></div></section>
+    <div class="game-toolbar"><div class="game-label"><span class="status-dot"></span><strong id="difficulty-label">摸鱼值班</strong><span id="turn-label">第 1 / 12 回合</span></div><div class="toolbar-actions"><button id="help" type="button">怎么玩</button><button id="share" type="button">同种子挑战</button><button id="new-game" type="button">换一班 ↗</button></div></div>
+    <section class="console" aria-label="额度控制台">
+      <div class="meter-area"><div class="meter-heading"><span class="eyebrow">FICTIONAL ALLOWANCE</span><span id="target-status" class="target-status">前往目标区</span></div><div class="quota-number"><span id="quota">100</span><small>%</small><div><span>虚构剩余额度</span><small id="quota-change">所有变化，都在游戏里。</small></div></div><div class="quota-track"><progress id="quota-meter" max="100" value="100" aria-label="虚构剩余额度">100%</progress><span class="target-zone" aria-hidden="true"></span></div><div class="meter-scale" aria-hidden="true"><span>0</span><span>25</span><strong>40–50 · 下班区</strong><span>75</span><span>100</span></div><div class="resource-row"><div class="resource"><span class="resource-title">机器热量</span><div class="heat-pips" id="heat-pips" aria-label="机器热量"></div><small id="heat-label">0 / 7 · 到 7 会过热</small></div><div class="resource"><span class="resource-title">重置护盾</span><strong class="shield-value" id="shield-value">◇ ◇</strong><small>每层挡一次，最多 2 层</small></div><div class="resource"><span class="resource-title">超频蓄能</span><strong class="boost-value" id="boost-value">+0</strong><small>下张任务额外消耗</small></div></div></div>
+      <aside class="reset-panel"><div class="reset-light" aria-hidden="true"><span>↻</span></div><p class="eyebrow">RESET WATCH</p><h2 id="reset-title">按钮还没动静</h2><p id="reset-copy"></p><div id="reset-schedule" class="reset-schedule"></div><p class="reset-note">重置在该回合出牌后发生。<br>先出护盾，来得及。</p></aside>
+    </section>
+    <section class="shift-progress" aria-label="值班进度"><div class="progress-heading"><h2>把最后几分钟，留给自己。</h2><span id="stable-label">目标稳定 0 / 2 回合</span></div><div id="turn-track" class="turn-track"></div><p id="game-guidance" class="guidance" role="status">每回合选一张卡。右下角是这张卡现在的真实效果。</p></section>
+    <section id="result" class="result-panel" aria-labelledby="result-title" hidden><p id="result-rank" class="eyebrow"></p><h2 id="result-title"></h2><p id="result-copy"></p><div id="result-stats" class="result-stats"></div><div class="result-actions"><button id="retry" class="primary-button" type="button">同一班，再来一次</button><button id="result-new" type="button">换个种子 →</button><button id="result-undo" type="button">撤销最后一回合</button></div></section>
+    <section id="hand-section" class="hand-section"><div class="section-heading"><div><p class="eyebrow">ONE CARD. ONE TURN.</p><h2>这一回合，干点什么？</h2></div><button type="button" id="undo" class="undo-button" disabled>↶ 撤销上回合</button></div><div id="hand" class="hand" tabindex="-1" aria-label="当前三张手牌"></div><p class="hand-footnote">快捷键 <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 出牌 · <kbd>Z</kbd> 撤销 · 任务连着出，额外消耗 2、升温 1</p></section>
+    <section class="log-panel"><div class="section-heading"><div><p class="eyebrow">NIGHT SHIFT RECEIPTS</p><h2>刚才发生了什么</h2></div><span id="seed-label" class="seed-label">SEED / NIGHT-045</span></div><ol id="event-log" class="event-log"><li class="empty-log">灯亮了。今天也要认真摸鱼。</li></ol></section>
+    <footer><p>所有额度、重置与卡牌均为虚构游戏机制，<strong>与真实账户无关</strong>。</p><span id="save-status" role="status">本局自动保存在当前浏览器</span></footer>
+  </main>
+  <dialog id="dialog" aria-labelledby="dialog-title"><div class="dialog-inner"><button type="button" id="dialog-close" class="dialog-close" aria-label="关闭">×</button><p id="dialog-kicker" class="eyebrow">NIGHT SHIFT MANUAL</p><h2 id="dialog-title"></h2><div id="dialog-body"></div><div id="dialog-actions" class="dialog-actions"></div></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <noscript><p class="noscript">这台街机需要启用 JavaScript。游戏不会读取你的真实账户或额度。</p></noscript>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1523">
+  <meta name="description" content="转动轨道，连起夜色里的每一站。十关原创中文轨道逻辑小游戏，没有倒计时，可以撤销、提示和随时续玩。">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>末班列车调度室 | CMC</title>
+  <link rel="stylesheet" href="./style.css?v=1">
+  <script type="module" src="./app.mjs?v=1"></script>
+</head>
+<body>
+  <a class="skip" href="#board-heading">跳到轨道调度</a>
+  <header class="topbar wrap"><a class="brand" href="/">CMC <span>夜间营业</span></a><a href="/projects/games/">← 返回游戏</a><span class="top-code">NIGHT LINE / 002</span></header>
+  <main class="wrap">
+    <section class="hero"><div><p class="eyebrow"><span class="signal"></span> AFTER HOURS · DISPATCH OFFICE</p><h1>末班列车<span>调度室</span></h1><p class="lead">最后一班，不必着急。<br>转动轨道，让每一站连成回家的路。</p></div><div class="departure-card"><div class="departure-top"><span>末班时刻</span><b>23:47</b></div><p>今晚还有人，<br>等着这一班。</p><div class="departure-bottom"><span>十条线路</span><span>没有倒计时</span></div></div></section>
+    <section class="level-strip" aria-label="选择线路"><div class="strip-label"><span class="eyebrow">线路簿</span><strong id="completed-label">0 / 10 抵达</strong></div><div class="level-buttons" id="levels"></div></section>
+    <div class="workspace">
+      <section class="dispatch-panel" aria-labelledby="board-heading"><header class="panel-head"><div><p class="eyebrow" id="line-number">LINE 01</p><h2 id="board-heading" tabindex="-1"></h2><p id="level-description"></p></div><div class="move-counter"><strong id="moves">00</strong><span>次转动</span></div></header><div class="route-band"><span class="start-label">始发</span><span id="station-order"></span><span class="end-label">终点</span></div><div class="board-frame"><div class="board" id="board" aria-label="轨道棋盘"></div><svg id="train-overlay" class="train-overlay" viewBox="0 0 600 600" aria-hidden="true"><path id="journey-line" d=""/><g id="train" visibility="hidden"><circle class="train-halo" r="22"/><rect x="-18" y="-12" width="36" height="24" rx="8"/><path d="M-10 -6 L3 -6 L3 6 L-10 6 Z"/><circle cx="12" cy="-5" r="2"/><circle cx="12" cy="5" r="2"/></g></svg></div><div class="board-legend"><span><i class="legend-track"></i>可旋转轨道</span><span><i class="legend-lock">●</i>固定轨道</span><span><i class="legend-station">1</i>按序停靠</span></div><div class="controls"><button id="dispatch" type="button" class="button primary">发车试试 <span>→</span></button><button id="undo" type="button" class="button">撤销</button><button id="reset" type="button" class="button quiet">重排本关</button></div><div class="status-box" id="status" role="status" aria-live="polite"></div><div id="win-panel" class="win-panel" hidden><span class="arrival-mark">✓</span><div><h3 id="win-title">列车已安全抵达</h3><p id="win-copy"></p></div><button id="next" type="button" class="button primary">下一条线路 →</button></div></section>
+      <aside class="briefing"><section class="note-panel"><p class="eyebrow">调度守则 / HOW TO PLAY</p><h2>把路接起来。</h2><ol class="rules"><li><span>01</span><p><strong>点一下，转 90°。</strong>列车从左侧箭头出发，要从右侧箭头离开。</p></li><li><span>02</span><p><strong>按顺序经过车站。</strong>轨道要接到相邻格的接口，绕开空地。</p></li><li><span>03</span><p><strong>接好了就发车。</strong>走不通会停下告诉你原因。没有罚时，随时可以再试。</p></li></ol><p class="keyboard-note">键盘：方向键选格，空格或回车转动。手机直接点轨道即可。</p></section><section class="hint-panel"><p class="eyebrow">值班同事</p><h3>卡住了也没关系。</h3><p id="hint-copy">先指出一格，再由你决定要不要让同事帮忙转好。</p><button class="button" id="hint" type="button">给我一点提示</button></section><section class="ticket-panel"><span class="ticket-dots" aria-hidden="true">••••••••••••••••••••••••••••••</span><p class="eyebrow">本线到站记录</p><strong id="best-record">尚未抵达</strong><p id="save-note">进度自动保存在当前浏览器。</p><div class="ticket-footer"><span>票价：一点点耐心</span><span>ONE WAY</span></div></section></aside>
+    </div>
+    <footer class="footer"><span>CMC · 不务正业交通局</span><span>线路纯属虚构。祝你今晚也能顺利到站。</span></footer>
+  </main>
+  <dialog id="confirm" aria-labelledby="confirm-heading"><div class="dialog-inner"><p class="eyebrow">重排这一关</p><h2 id="confirm-heading">从最初的轨道重新来过？</h2><p>只重置当前线路。已经到站的记录会保留。</p><div class="dialog-actions"><button type="button" class="button" id="cancel-reset">继续调度</button><button type="button" class="button primary" id="confirm-reset">重新开始本关</button></div></div></dialog>
+  <noscript><p class="wrap">这个游戏需要启用 JavaScript。所有游戏进度只保存在你的浏览器中。</p></noscript>
+</body>
+</html>

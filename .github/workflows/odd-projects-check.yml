@@ -1,0 +1,70 @@
+name: Odd projects browser checks
+
+on:
+  push:
+    paths:
+      - 'projects.html'
+      - 'projects/games/**'
+      - 'projects/toys/**'
+      - 'assets/css/playground.css'
+      - 'assets/js/playground.js'
+      - 'tests/odd-projects-browser.mjs'
+      - 'tests/*.test.mjs'
+      - '.github/workflows/odd-projects-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: odd-projects-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify game models
+        run: node --test tests/*.test.mjs
+
+      - name: Install isolated browser test dependencies
+        run: |
+          npm install --prefix "$RUNNER_TEMP/odd-browser" --no-package-lock --no-save playwright@1.56.1
+          "$RUNNER_TEMP/odd-browser/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Start static site
+        run: |
+          mkdir -p artifacts/odd-projects
+          python3 -m http.server 8765 --bind 127.0.0.1 > artifacts/odd-projects/server.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8765/projects/games/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat artifacts/odd-projects/server.log
+          exit 1
+
+      - name: Exercise desktop and mobile pages
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/odd-browser/node_modules/playwright/index.mjs
+          ODD_SITE_URL: http://127.0.0.1:8765
+        run: node tests/odd-projects-browser.mjs
+
+      - name: Upload screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odd-projects-chromium-${{ github.run_number }}
+          path: artifacts/odd-projects/
+          if-no-files-found: warn
+          retention-days: 14

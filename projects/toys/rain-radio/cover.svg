@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+<defs>
+  <linearGradient id="paper" x2="0" y2="1"><stop stop-color="#efe8da"/><stop offset="1" stop-color="#ded4be"/></linearGradient>
+  <linearGradient id="wood" x2="0" y2="1"><stop stop-color="#d5c4a3"/><stop offset="1" stop-color="#b6a37e"/></linearGradient>
+  <linearGradient id="screen" x2="1" y2="1"><stop stop-color="#152e32"/><stop offset="1" stop-color="#344c48"/></linearGradient>
+  <pattern id="grille" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#a99977"/><circle cx="4" cy="4" r="1.5" fill="#665f49"/></pattern>
+  <filter id="shadow"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#443a24" flood-opacity=".2"/></filter>
+</defs>
+<rect width="1200" height="720" fill="url(#paper)"/>
+<path d="M70 77H1130" stroke="#b8ae97"/>
+<text x="71" y="56" fill="#444e3f" font-family="system-ui,sans-serif" font-size="23" font-weight="800" letter-spacing="-1">CMC</text>
+<text x="1130" y="54" text-anchor="end" fill="#867960" font-family="monospace" font-size="12" letter-spacing="2">TUNE IN TO NOWHERE</text>
+<text x="78" y="164" fill="#344b3d" font-family="system-ui,sans-serif" font-weight="800" font-size="65" letter-spacing="5">不存在电台</text>
+<text x="710" y="143" fill="#85765d" font-family="system-ui,sans-serif" font-size="17">八个不在地图上的地方。</text>
+<text x="710" y="172" fill="#85765d" font-family="system-ui,sans-serif" font-size="17">把频率转到别处，听一点安静。</text>
+<rect x="76" y="217" width="1048" height="409" rx="29" fill="url(#wood)" stroke="#928464" stroke-width="3" filter="url(#shadow)"/>
+<rect x="90" y="231" width="1020" height="381" rx="19" fill="none" stroke="#e7d9bb"/>
+<text x="197" y="276" text-anchor="middle" fill="#5c5c44" font-family="monospace" font-size="12" letter-spacing="2">NOT FOUND</text>
+<text x="197" y="301" text-anchor="middle" fill="#4b533e" font-family="system-ui,sans-serif" font-size="22" font-weight="800" letter-spacing="5">RADIO</text>
+<rect x="123" y="324" width="152" height="187" rx="13" fill="url(#grille)" stroke="#9d8c6d"/>
+<circle cx="198" cy="417" r="62" fill="none" stroke="#807458" stroke-width="2" opacity=".4"/>
+<circle cx="146" cy="545" r="4" fill="#c47b45"/><text x="160" y="550" fill="#716449" font-family="system-ui,sans-serif" font-size="11">ONLY IF YOU PRESS PLAY</text>
+<path d="M130 579H265" stroke="#70694f" stroke-width="4" stroke-linecap="round"/><circle cx="177" cy="579" r="8" fill="#e5d9be" stroke="#7a755a"/>
+<text x="322" y="255" fill="#726548" font-family="monospace" font-size="10" letter-spacing="2">NFR — 008</text>
+<text x="1072" y="255" text-anchor="end" fill="#726548" font-family="monospace" font-size="9" letter-spacing="2">IMAGINARY FREQUENCIES</text>
+<rect x="316" y="271" width="766" height="223" rx="11" fill="url(#screen)" stroke="#4d503c" stroke-width="6"/>
+<g opacity=".4"><path d="M840 470V361L925 299L1014 361V470" fill="#6b8a7b"/><path d="M839 361L925 299L1014 361M876 470V334M925 470V299M972 470V334M839 361H1014" stroke="#acb89c" stroke-width="2"/><path d="M855 470Q856 397 889 408Q875 445 855 438M942 470Q944 392 978 403Q974 429 944 433" fill="#9eb38a"/></g>
+<circle cx="344" cy="299" r="3" fill="#b9c894"/><text x="357" y="303" fill="#c4d0b1" font-family="system-ui,sans-serif" font-size="11">静音阅读</text>
+<text x="1055" y="303" text-anchor="end" fill="#afc1b4" font-family="system-ui,sans-serif" font-size="10">植物园后门 / 05:12</text>
+<text x="345" y="345" fill="#9fb98b" font-family="monospace" font-size="10" letter-spacing="2">SLOW GROWTH CLUB</text>
+<text x="342" y="399" fill="#e9e5cf" font-family="system-ui,sans-serif" font-weight="700" font-size="42">玻璃温室</text>
+<text x="346" y="430" fill="#bdcbb7" font-family="system-ui,sans-serif" font-size="14">只有植物知道的节目表。</text>
+<text x="1048" y="424" text-anchor="end" fill="#c3d2a0" font-family="monospace" font-size="62" letter-spacing="-5">99.6</text>
+<text x="1046" y="450" text-anchor="end" fill="#aebeb0" font-family="monospace" font-size="9" letter-spacing="2">MHz / 想象频段</text>
+<path d="M347 461V465M354 457V469M361 454V472M368 459V467M375 451V475M382 458V468M389 455V471M396 460V466" stroke="#a8bc8c" stroke-width="3"/>
+<path d="M333 518H1064" stroke="#7c7b5b"/>
+<g stroke="#7e7c59"><path d="M346 514V523M381 516V521M416 516V521M451 514V523M486 516V521M521 516V521M556 514V523M591 516V521M626 516V521M661 514V523M696 516V521M731 516V521M766 514V523M801 516V521M836 516V521M871 514V523M906 516V521M941 516V521M976 514V523M1011 516V521M1046 516V521"/></g>
+<rect x="778" y="508" width="4" height="24" rx="2" fill="#a76840"/>
+<circle cx="436" cy="567" r="27" fill="#dacfaf" stroke="#777959" stroke-width="3"/><path d="M436 547L447 553" stroke="#596747" stroke-width="4" stroke-linecap="round"/>
+<text x="386" y="576" text-anchor="middle" fill="#596044" font-family="system-ui,sans-serif" font-size="28">‹</text><text x="486" y="576" text-anchor="middle" fill="#596044" font-family="system-ui,sans-serif" font-size="28">›</text>
+<rect x="572" y="543" width="325" height="51" rx="7" fill="#a76a46" stroke="#845035"/><path d="M596 558L596 578L611 568Z" fill="#f4e8cc"/><text x="629" y="573" fill="#f8e9cf" font-family="system-ui,sans-serif" font-size="16" font-weight="600">播放环境声</text>
+<text x="974" y="575" fill="#62664a" font-family="system-ui,sans-serif" font-size="30">☆</text>
+<g fill="#a59775" stroke="#776b52"><circle cx="96" cy="238" r="4"/><circle cx="1103" cy="238" r="4"/><circle cx="96" cy="605" r="4"/><circle cx="1103" cy="605" r="4"/></g>
+<text x="80" y="669" fill="#8b7d64" font-family="system-ui,sans-serif" font-size="12">8 个频率 · 24 段广播 · 不着急</text>
+<text x="1120" y="669" text-anchor="end" fill="#8b7d64" font-family="monospace" font-size="11" letter-spacing="1">NO NEWS. JUST A LITTLE QUIET.</text>
+</svg>

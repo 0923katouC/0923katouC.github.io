@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="description" content="给生活里的小麻烦，开一张不太有用的处方。生成一件荒诞而温柔的发明，收藏你的专属专利蓝图。">
+  <meta name="theme-color" content="#f4eedf">
+  <meta property="og:title" content="无用发明局 · CMC">
+  <meta property="og:description" content="本局认真受理一切不太有用的好主意。">
+  <meta property="og:image" content="https://0923katouC.github.io/projects/toys/odd-inventions/cover.svg">
+  <title>无用发明局 · CMC</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#workbench">跳到发明工作台</a>
+  <div class="site-shell">
+    <header class="site-header"><a class="brand" href="/">CMC<span> / 奇怪项目</span></a><a class="back-link" href="/projects/toys/">← 返回玩具架</a></header>
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div><p class="eyebrow">DEPARTMENT OF UNNECESSARY IDEAS</p><h1 id="page-title">无用发明局<span class="title-dot">。</span></h1><p class="lede">给生活里的小麻烦，<br class="small-break">开一张不太有用的处方。</p></div>
+        <div class="office-seal" aria-hidden="true"><span>本局常年受理</span><strong>不太有用<br>但很认真</strong><span>EST. WHENEVER</span></div>
+      </section>
+      <div class="office-meta"><span><i aria-hidden="true"></i>今日照常空想</span><span>无需证明实用性 · 无需解释为什么</span></div>
+      <div class="workbench" id="workbench">
+        <aside class="application">
+          <div class="section-head"><span class="section-number">01</span><h2>递交一份申请</h2></div>
+          <p class="form-note">先告诉我们，今天什么让你有点在意。</p>
+          <form id="invention-form">
+            <label for="problem">需要解决的小麻烦</label>
+            <select id="problem" name="problem"></select>
+            <label for="material">抽屉里能找到的材料</label>
+            <select id="material" name="material"></select>
+            <div class="range-label"><label for="absurdity">允许多离谱</label><output id="absurdity-value" for="absurdity">03 / 05</output></div>
+            <input id="absurdity" name="level" type="range" min="1" max="5" step="1" value="3" aria-describedby="absurdity-note">
+            <p id="absurdity-note" class="range-note">有理有据地离谱</p>
+            <label for="custom-name">自己命名 <span class="optional">可留空</span></label>
+            <input id="custom-name" name="name" type="text" maxlength="56" placeholder="让本局代拟一个名字" autocomplete="off" aria-describedby="name-note">
+            <p id="name-note" class="field-note">最多保留 28 个字。</p>
+            <details class="seed-details"><summary>给灵感一个档案号</summary><label for="seed">灵感种子</label><input id="seed" name="seed" type="number" min="1" max="4294967295" step="1" value="104729" required><p class="field-note">同一组选择和种子，会找回同一件发明。</p></details>
+            <button id="generate" type="submit" class="button primary"><span>批准这次空想</span><span aria-hidden="true">↗</span></button>
+            <button id="surprise" type="button" class="button quiet">全交给运气</button>
+          </form>
+          <div class="application-footer"><span class="tiny-star" aria-hidden="true">✳</span><p>发明不用改变世界。<br>让一小会儿变得有意思也行。</p></div>
+        </aside>
+        <section class="result" aria-labelledby="invention-title">
+          <div class="result-heading"><div><p class="eyebrow">INVENTION FILE <span id="file-number">—</span></p><h2 id="invention-title">正在整理一份空想</h2></div><span class="file-status">虚构专利<br>已受理</span></div>
+          <div id="blueprint" class="blueprint" aria-label="发明专利蓝图"></div>
+          <div class="blueprint-caption"><span id="figure-label">FIG. 01 / 想象示意图</span><button id="remix" type="button">再造一件 <span aria-hidden="true">↻</span></button></div>
+          <div class="action-bar" aria-label="发明操作"><button id="favorite" type="button">＋ 收藏这件</button><button id="download" type="button">↓ 导出蓝图</button><button id="share" type="button">↗ 复制分享链接</button></div>
+          <div class="dossier">
+            <div class="section-head"><span class="section-number">02</span><h3>一本正经的说明书</h3></div>
+            <p id="invention-purpose" class="purpose"></p>
+            <dl id="invention-specs" class="spec-grid"></dl>
+            <div class="instruction-grid"><section><h4>工作原理</h4><p id="invention-principle"></p></section><section><h4>使用方法</h4><ol id="invention-steps"></ol></section></div>
+            <div class="side-effect"><span>附带现象</span><p id="invention-caution"></p></div>
+            <p class="review-note"><span id="invention-standard"></span><span id="invention-examiner"></span></p>
+          </div>
+        </section>
+      </div>
+      <section class="archive" aria-labelledby="archive-title"><div class="archive-heading"><div class="section-head"><span class="section-number">03</span><h2 id="archive-title">私人发明档案</h2></div><span id="favorite-count">00 / 24</span></div><p class="archive-note">收藏只留在这台设备。想带去别处，可以导出蓝图或保存分享链接。</p><p id="archive-empty" class="empty-note">抽屉还是空的。等一件让你会心一笑的发明。</p><ul id="favorites-list" class="favorites-list"></ul><p id="storage-notice" class="storage-notice" hidden>浏览器暂时无法保存。本次仍可收藏，关闭页面后不会保留；请导出喜欢的蓝图。</p></section>
+      <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+    </main>
+    <footer class="site-footer"><span>CMC · 无用发明局</span><span>纯属空想，欢迎认真收藏。</span><a href="/projects/toys/">去看看别的怪东西 ↗</a></footer>
+  </div>
+  <dialog id="share-dialog" aria-labelledby="share-heading"><form method="dialog"><div class="dialog-heading"><h2 id="share-heading">把这件发明带走</h2><button class="dialog-close" aria-label="关闭分享窗口">×</button></div><p>暂时不能自动复制，请选择下方链接后复制。</p><label for="share-url">这件发明的完整链接</label><input id="share-url" type="url" readonly><button class="button primary">完成</button></form></dialog>
+  <noscript><p class="noscript">发明工作台需要 JavaScript。你仍然可以<a href="./cover.svg">看一张已经完成的专利蓝图</a>。</p></noscript>
+</body>
+</html>

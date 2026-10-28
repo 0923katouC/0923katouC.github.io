@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">末班列车调度室</title><desc id="desc">深蓝夜色中的地铁线路图，一列暖黄色列车正沿薄荷绿轨道驶向终点。</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#122b35"/><stop offset="1" stop-color="#091421"/></linearGradient>
+    <pattern id="grid" width="90" height="90" patternUnits="userSpaceOnUse"><path d="M90 0H0V90" fill="none" stroke="#294251" stroke-width="1"/></pattern>
+    <filter id="shadow" x="-.5" y="-.5" width="2" height="2"><feGaussianBlur stdDeviation="13"/></filter>
+  </defs>
+  <path fill="url(#bg)" d="M0 0H1200V720H0Z"/>
+  <path fill="url(#grid)" opacity=".5" d="M0 0H1200V720H0Z"/>
+  <g fill="none" stroke="#294250" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M720 0V90H810V180H900"/><path d="M1200 360H1080V270H990"/>
+    <path d="M630 720V630H540V540H450"/><path d="M900 720V630H1080V540"/>
+    <path d="M0 540H90V630H180"/>
+  </g>
+  <path d="M0 450H180V360H450V450H630V540H810V450H990V180H1200" fill="none" stroke="#85e6c4" opacity=".2" stroke-width="34" filter="url(#shadow)"/>
+  <path d="M0 450H180V360H450V450H630V540H810V450H990V180H1200" fill="none" stroke="#85e6c4" stroke-width="12" stroke-linejoin="round"/>
+  <g fill="#12372e" stroke="#a0f1d0" stroke-width="5"><circle cx="315" cy="360" r="23"/><circle cx="720" cy="540" r="23"/><circle cx="990" cy="315" r="23"/></g>
+  <g fill="#baf8df" text-anchor="middle" font-family="ui-monospace,monospace" font-size="22" font-weight="700"><text x="315" y="368">1</text><text x="720" y="548">2</text><text x="990" y="323">3</text></g>
+  <g transform="translate(539 450)"><rect x="-43" y="-24" width="86" height="48" rx="15" fill="#ffcf8c" stroke="#112735" stroke-width="4"/><path d="M-28 -12H6V12H-28Z" fill="#214651"/><circle cx="29" cy="-10" r="4" fill="#fff7d3"/><circle cx="29" cy="10" r="4" fill="#fff7d3"/></g>
+  <g font-family="ui-sans-serif,system-ui,-apple-system,sans-serif">
+    <text x="72" y="82" fill="#a7bcb9" font-size="20" letter-spacing="5">CMC / AFTER HOURS</text>
+    <text x="68" y="187" fill="#e3ebe2" font-size="68" font-weight="800" letter-spacing="-2">末班列车</text>
+    <text x="68" y="271" fill="#85e6c4" font-size="68" font-weight="800" letter-spacing="-2">调度室</text>
+    <text x="72" y="656" fill="#8fa5b6" font-size="21">转动轨道。连接车站。慢慢回家。</text>
+  </g>
+  <g transform="translate(1058 80)"><rect x="-90" y="-29" width="164" height="58" rx="5" fill="#1b342e" stroke="#527260"/><text x="-8" y="11" text-anchor="middle" font-family="ui-monospace,monospace" fill="#d0e9cd" font-size="30" letter-spacing="3">23:47</text></g>
+  <path d="M1122 165L1141 180L1122 195" fill="none" stroke="#ffd19b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

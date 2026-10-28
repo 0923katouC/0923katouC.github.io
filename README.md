@@ -14,7 +14,9 @@ Personal website hosted with GitHub Pages.
 - `writing.html` — writing landing page
   - `writing/fiction.html` — fiction
   - `writing/essays.html` — redirect to server-authenticated private essays and the protected collection list
-- `projects.html` — games, AI tools and pond simulations
+- `projects.html` — games, AI tools, pond simulations and little toys
+- `projects/games/` — detective, railway and card-strategy games
+- `projects/toys/` — imaginary radio and absurd inventions
 - `assets/css/style.css` — site-wide styles
 - `assets/js/main.js` — language switch and common behavior
 
@@ -131,3 +133,32 @@ If browser storage is blocked, the current session remains playable and displays
 a save warning. Restart clears only this game's progress after confirmation.
 Because the game is a public static site, its source includes the solution; the
 normal interface reveals it only after the player completes the investigation.
+
+## After-hours games and toys
+
+The Games collection also includes **末班列车调度室** (`night-train/`), ten
+track-rotation puzzles with ordered stops, undo and saved progress, and
+**额度保卫战** (`quota-arcade/`), a seeded card game about keeping a fictional
+quota between 40% and 50%. It does not read or spend any account's real quota.
+
+The [Little Toys collection](https://0923katouC.github.io/projects/toys/)
+contains **不存在电台** (`rain-radio/`), eight fictional stations with original
+text broadcasts and optional synthesized ambience, and **无用发明局**
+(`odd-inventions/`), a configurable invention generator with changing SVG
+blueprints, favorites, reproducible links and downloadable SVG posters.
+Radio audio begins only after an explicit Play action and pauses when the page
+becomes hidden. Returning to the page does not resume it automatically.
+
+Each project keeps its application code and illustration in its own directory.
+They use native browser features, require no build step or third-party scripts,
+and store progress or favorites only in the current browser. Blocked storage
+does not prevent the current session from working. The bilingual collection
+pages share `assets/css/playground.css`; `assets/js/playground.js` adds an
+optional random-project button while preserving ordinary navigation links.
+
+Run all game/toy model checks with `node --test tests/*.test.mjs` (Node.js 22
+or later). `.github/workflows/odd-projects-check.yml` installs a pinned
+Playwright version into the runner's temporary directory, serves the static
+site, and exercises desktop and mobile pages in headless Chromium. It uploads
+screenshots and a JSON report as a GitHub Actions artifact. The application
+pages themselves have no npm dependencies.
