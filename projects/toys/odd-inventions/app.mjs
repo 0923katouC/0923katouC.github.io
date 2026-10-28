@@ -91,7 +91,7 @@ function render(options, notification = '') {
   syncForm(current.options);
   $('invention-title').textContent = current.name;
   $('file-number').textContent = current.serial;
-  $('blueprint').innerHTML = renderBlueprint(current, true);
+  $('blueprint').innerHTML = renderBlueprint(current, true, 'workbench');
   $('figure-label').textContent = `FIG. 0${current.mechanism.form + 1} / 想象示意图`;
   $('invention-purpose').textContent = current.abstract;
   $('invention-principle').textContent = current.principle;
@@ -175,7 +175,7 @@ $('favorites-list').addEventListener('click', event => {
   }
 });
 $('download').addEventListener('click', () => {
-  const blob = new Blob([renderBlueprint(current)], { type: 'image/svg+xml;charset=utf-8' });
+  const blob = new Blob([renderBlueprint(current, false, 'download')], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

@@ -111,3 +111,37 @@ test('static page exposes every app hook, a strict CSP, and external assets only
   assert.match(css, /prefers-reduced-motion/);
   assert.match(html, /href="\/projects\/toys\/"/);
 });
+
+test('inline blueprints keep IDs unique across the real HTML and explicit SVG instances', async () => {
+  const html = await readFile(new URL('../projects/toys/odd-inventions/index.html', import.meta.url), 'utf8');
+  const samples = Array.from({ length: 100 }, (_, i) => invent({ seed: i + 1 }));
+  for (let form = 0; form < MECHANISMS.length; form++) {
+    const invention = samples.find(item => item.mechanism.form === form);
+    assert.ok(invention);
+    const workbench = renderBlueprint(invention, true, 'workbench');
+    const svgs = [
+      workbench,
+      renderBlueprint(invention, true, 'archive-preview'),
+      renderBlueprint(invention, false, 'download'),
+      renderBlueprint(invent({ ...invention.options, name: '<特殊 & 名称>' }), true, 'workbench'),
+      renderBlueprint(invention, true, 'scope "<>&')
+    ];
+    assert.equal(workbench, renderBlueprint(invent(invention.options), true, 'workbench'));
+    const mounted = html.replace(/(<div id="blueprint"[^>]*>)(<\/div>)/, (_, open, close) => open + svgs.join('') + close);
+    assert.notEqual(mounted, html, 'real blueprint mount must be populated');
+    const allIds = [...mounted.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+    assert.equal(new Set(allIds).size, allIds.length, `duplicate document IDs in form ${form}`);
+    assert.equal(allIds.filter(id => id === 'material').length, 1, 'the material select must be the only #material');
+    for (const svg of svgs) {
+      const ids = [...svg.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+      assert.equal(ids.length, 5, 'title, description, grid, hatching and material each need an ID');
+      assert.ok(ids.every(id => /^cmc-odd-[a-z0-9-]+$/.test(id)), 'identifiers must stay in the safe SVG namespace');
+      const paintReferences = [...svg.matchAll(/url\(#([^\)]+)\)/g)].map(match => match[1]);
+      const labelReferences = svg.match(/aria-labelledby="([^"]+)"/)[1].split(' ');
+      assert.ok(paintReferences.length >= 2, 'the page grid and geometric material must retain their pattern references');
+      for (const ref of [...paintReferences, ...labelReferences]) {
+        assert.ok(ids.includes(ref), `reference ${ref} must resolve inside its own SVG`);
+      }
+    }
+  }
+});
