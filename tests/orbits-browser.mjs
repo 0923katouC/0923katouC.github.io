@@ -108,6 +108,12 @@ try {
     await page.waitForFunction(() => document.querySelector('#play').getAttribute('aria-pressed') === 'false');
     assert.match(await page.locator('#feedback').innerText(), /边界/);
 
+    for (const E of [0, 0.3, -0.01]) {
+      await setNumber(page, 'energy-value', E);
+      await page.locator('#family').click();
+      assert.equal(Number(await page.locator('#energy-value').inputValue()), E, 'A family preserves the selected energy');
+    }
+
     // Every edge of the slider domain must remain finite or explicitly forbidden.
     for (const E of [-1.5, -0.001, 0, 0.001, 1]) {
       for (const L of [0.25, 2.5]) {

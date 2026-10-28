@@ -222,10 +222,10 @@ function rebuild(reset = true) {
 }
 function choose(E, L) { state.E = clamp(E, -1.5, 1); state.L = clamp(L, 0.25, 2.5); rebuild(); }
 function family() {
-  const E = state.E < -0.08 ? state.E : -0.35, lc = Math.sqrt(-1 / (2 * E));
-  state.pins = [0.4, 0.65, 0.85, 1].map((factor, color) => ({ E, L: clamp(lc * factor, 0.25, 2.5), color }));
-  choose(E, Math.min(state.L, lc * 0.95));
-  $('feedback').textContent = '同一 E，四个 L。所有椭圆拥有相同的长半轴。';
+  const E = state.E, maxL = E < 0 ? Math.min(2.5, Math.sqrt(-1 / (2 * E))) : 2.5;
+  state.pins = [0.4, 0.65, 0.85, 1].map((factor, color) => ({ E, L: Math.max(0.25, maxL * factor), color }));
+  choose(E, Math.min(state.L, maxL * 0.95));
+  $('feedback').textContent = E < 0 ? '同一 E，四个 L。所有椭圆拥有相同的长半轴。' : '保持当前 E，改变四个 L。比较同一逃逸能量下的轨道。';
 }
 
 for (const [id, key, lo, hi] of [['energy', 'E', -1.5, 1], ['momentum', 'L', 0.25, 2.5]]) {
