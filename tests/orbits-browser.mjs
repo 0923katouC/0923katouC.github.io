@@ -92,7 +92,7 @@ try {
     const paused = await page.locator('#time-label').innerText();
     await page.waitForTimeout(150);
     assert.equal(await page.locator('#time-label').innerText(), paused);
-    await page.locator('#phase').fill('750');
+    await page.locator('#phase').evaluate(el => { el.value = '750'; el.dispatchEvent(new Event('input', { bubbles: true })); });
     assert.equal(await page.locator('#play').getAttribute('aria-pressed'), 'false');
     assert.ok(Number((await page.locator('#time-label').innerText()).split('=')[1]) > 0);
     await page.locator('#speed').selectOption('4');
@@ -102,7 +102,7 @@ try {
 
     // Open trajectories end at the display window rather than teleporting.
     await page.locator('[data-preset="hyperbola"]').click();
-    await page.locator('#phase').fill('999');
+    await page.locator('#phase').evaluate(el => { el.value = '999'; el.dispatchEvent(new Event('input', { bubbles: true })); });
     await page.locator('#speed').selectOption('12');
     await page.locator('#play').click();
     await page.waitForFunction(() => document.querySelector('#play').getAttribute('aria-pressed') === 'false');
