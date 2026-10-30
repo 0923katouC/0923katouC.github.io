@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>双星 · 概率球壳 | CMC 池沼仿真</title>
+<meta name="description" content="交互式开普勒双星实验：时间加权轨迹、朝向平均后的三维概率点云，以及径向概率 p(r) 与体密度 ρ(r)。">
+<style>
+:root{color-scheme:light;--paper:#f3f4ef;--ink:#182b31;--muted:#647579;--edge:#dce1dc;--accent:#166a69;--plot:#0c1924}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","PingFang SC",sans-serif;font-size:14px}main{max-width:1480px;margin:auto;padding:36px 32px 26px}.eyebrow{font-size:11px;letter-spacing:.18em;font-weight:700;color:var(--accent)}header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:25px}h1{font-size:30px;letter-spacing:-.04em;margin:9px 0 10px;font-weight:650}header p{color:var(--muted);margin:0;line-height:1.8}.badge{border:1px solid #cbd8cf;border-radius:30px;padding:8px 13px;white-space:nowrap;color:var(--accent);font-size:12px;margin-top:10px}.controls{background:#fff;border:1px solid var(--edge);border-radius:14px;padding:23px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}.controlhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.controlhead label{font-weight:600}.controlhead input{width:77px;border:1px solid var(--edge);border-radius:6px;padding:5px 7px;font:600 15px ui-monospace,monospace;color:var(--accent);background:#f6f8f4}input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}.rangeends{display:flex;justify-content:space-between;font:11px ui-monospace,monospace;color:var(--muted);margin-top:5px}.toolbar{display:flex;gap:14px 20px;flex-wrap:wrap;align-items:center;margin:18px 0}.toolbar label{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}select,button{font:inherit;color:var(--ink);background:#fff;border:1px solid #ccd6ce;border-radius:6px;padding:7px 9px;cursor:pointer}select{max-width:230px}button:hover{border-color:var(--accent);color:var(--accent)}input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #55aaa8;outline-offset:3px}.toolbar .reset{margin-left:auto}.plots{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel{background:#fff;border:1px solid var(--edge);border-radius:13px;overflow:hidden}.panelhead{padding:19px 21px 14px;display:flex;justify-content:space-between;gap:12px;align-items:center}.panelhead h2{font-size:16px;margin:0;font-weight:650}.panelhead .index{font:11px ui-monospace,monospace;letter-spacing:.08em;color:var(--muted)}.panelhead p{font-size:12px;color:var(--muted);line-height:1.65;margin:7px 0 0}.chartwrap{position:relative;margin:0 14px;background:var(--plot);border-radius:8px;overflow:hidden}.square{height:clamp(310px,36vw,500px)}.chartwrap canvas{width:100%;height:100%;display:block}.legend{padding:14px 21px 16px;min-height:98px}.legendtop{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted);margin-bottom:8px}.gradient{height:8px;border-radius:4px;background:linear-gradient(90deg,#263b60,#42418f,#a64b85,#ed875a,#f9d77d,#ffffd9)}.ticks{display:flex;justify-content:space-between;color:var(--muted);font:11px ui-monospace,monospace;margin-top:5px}.key{display:flex;gap:18px;align-items:center;margin-top:10px;font-size:11px;color:var(--muted)}.stroke{display:inline-block;width:19px;border-top:2px solid #698d9b;vertical-align:middle;margin-right:5px}.stroke.dashed{border-top-style:dashed}.readout{margin:15px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metric{padding:13px 16px;border:1px solid var(--edge);border-radius:9px;background:#eaf0e9}.metric span{display:block;font-size:11px;color:var(--muted);margin-bottom:6px}.metric strong{font:500 17px ui-monospace,monospace}.profile{height:230px;margin-bottom:16px}.profile canvas{width:100%;height:100%;display:block}.caption{font-size:12px;color:var(--muted);line-height:1.8;padding:0 21px 15px;margin:0}.notice{margin:15px 0;padding:12px 16px;border-left:3px solid var(--accent);background:#e8eee7;font-size:12px;line-height:1.8}.notice[hidden]{display:none}details{margin-top:17px;border-top:1px solid var(--edge);padding:17px 0}summary{cursor:pointer;font-weight:600;font-size:13px}.methods{display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-top:18px;font-size:12px;line-height:1.9;color:#52666a}.methods h3{font-size:13px;color:var(--ink);margin:0 0 8px}.formula{background:#e9eee7;padding:10px 12px;border-radius:5px;font-family:ui-monospace,monospace;margin:8px 0;overflow-wrap:anywhere}a{color:var(--accent)}footer{font-size:11px;line-height:1.8;color:var(--muted);margin-top:16px;display:flex;justify-content:space-between;gap:16px}.tooltip{position:absolute;pointer-events:none;white-space:pre-line;background:#f8fcf2f0;color:#163039;border:1px solid #b8cbc2;border-radius:7px;padding:9px 11px;font:11px/1.8 ui-monospace,monospace;z-index:2;box-shadow:0 4px 15px #0002}.tooltip[hidden]{display:none}.hint{font-size:11px;color:var(--muted)}@media(max-width:850px){main{padding:24px 16px}.controls{gap:18px;padding:17px}.toolbar .reset{margin-left:0}.panelhead{padding:16px}.plots{gap:12px}.legend{padding:13px 16px}.badge{display:none}h1{font-size:26px}.readout{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){main{padding:22px 12px}.controls{grid-template-columns:1fr;gap:22px}.plots,.methods{grid-template-columns:1fr}.toolbar{gap:10px}.toolbar label{flex-wrap:wrap}.profile{height:220px}header{margin-bottom:20px}h1{font-size:25px}footer{display:block}.rangeends{margin-top:1px}}
+.plots{grid-template-columns:repeat(3,minmax(0,1fr))}.square{height:clamp(310px,30vw,410px)}.cloud-options{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}.cloud-options label{display:flex;align-items:center;gap:5px}.cloud-options button{padding:5px 8px;font-size:11px}.cloud-key{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.cloud-key.one{background:#69b9ec}.cloud-key.two{background:#ffc281}#cloud{cursor:grab;touch-action:none}#cloud.dragging{cursor:grabbing}.dimflow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 20px;font-size:12px;color:var(--muted)}.dimflow strong{font-weight:500;background:#e8eee7;border-radius:5px;padding:7px 11px;color:var(--accent)}.cloud-description{margin:10px 0 0;font-size:11px;line-height:1.8;color:var(--muted)}@media(max-width:1100px){.plots{grid-template-columns:1fr 1fr}.plots>.panel:last-child{grid-column:1/-1}.plots>.panel:last-child .square{height:380px}}@media(max-width:620px){.plots{grid-template-columns:1fr}.plots>.panel:last-child{grid-column:auto}.plots>.panel:last-child .square{height:310px}.legendtop{flex-wrap:wrap}}
+.plots,.radial-grid,.projection-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.plots>.panel:last-child{grid-column:auto}.plots .square,.plots>.panel:last-child .square{height:clamp(340px,34vw,460px)}.radial-wrap{position:relative;height:285px}.radial-footnote{padding:12px 0 0}.projection-grid .square{height:330px}.projection-grid .profile{height:330px}.radial-controls{margin-top:20px}#radialNorm{margin-left:auto}#projection>summary{color:var(--muted)}#projection>.caption{padding:15px 0 0}@media(max-width:700px){.plots,.radial-grid,.projection-grid{grid-template-columns:1fr}.plots .square,.plots>.panel:last-child .square{height:340px}.radial-wrap{height:260px}#radialNorm{margin-left:0}.radial-grid .panelhead{align-items:flex-start}}
+
+/* Compact desktop workbench; controls remain visible beside all four plots. */
+main{max-width:1740px;padding:14px 20px 20px}header{align-items:center;margin:0 0 12px}h1{font-size:22px;margin:0;letter-spacing:-.03em}header>div{display:flex;align-items:baseline;gap:18px}header p{font-size:12px}.badge{margin:0;padding:5px 10px;font-size:11px}.dashboard{display:grid;grid-template-columns:220px minmax(0,1fr);gap:14px;align-items:start}.control-deck{position:sticky;top:10px;background:#fff;border:1px solid var(--edge);border-radius:11px;padding:14px 12px}.deck-title{font-size:12px;font-weight:650;margin-bottom:18px;color:var(--accent)}.control-deck .controls{padding:0;border:0;display:grid;grid-template-columns:1fr;gap:22px}.controlhead{gap:7px;margin-bottom:7px;font-size:12px}.controlhead input{width:61px;font-size:14px;padding:4px 5px}.controlhead label{font-weight:500}.rangeends{font-size:10px;margin-top:2px}.control-deck .toolbar{display:grid;grid-template-columns:1fr;gap:10px;margin:20px 0 12px;border-top:1px solid var(--edge);padding-top:13px}.control-deck .toolbar label{justify-content:space-between;font-size:11px}.control-deck .toolbar label:has(input){justify-content:flex-start}.control-deck select{font-size:11px;width:124px;padding:5px}.control-deck .reset{margin:0;padding:6px 10px}.readout{margin:14px 0 0;gap:6px;grid-template-columns:1fr 1fr}.metric{padding:7px 8px}.metric span{margin-bottom:3px;font-size:10px}.metric strong{font-size:13px}.workspace{min-width:0}.plots,.radial-grid{gap:12px}.panel{border-radius:10px}.workspace .panelhead{padding:9px 12px 6px;min-height:36px}.workspace .panelhead .index{display:none}.workspace .panelhead h2{font-size:13px}.workspace .panelhead .hint{font-size:10px}.workspace .panelhead>div{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}.chartwrap{margin:0 8px;border-radius:6px}.plots .square,.plots>.panel:last-child .square{height:clamp(220px,calc((100svh - 190px)*.45),330px)}.workspace .legend{padding:7px 12px 8px;min-height:0}.legendtop{margin-bottom:5px;font-size:10px}.legendtop select{font-size:10px;padding:3px 5px;max-width:210px}.gradient{height:5px}.ticks{font-size:10px;margin-top:3px}.key{gap:12px;font-size:10px;margin-top:5px}.cloud-options{gap:6px 9px;font-size:10px;min-height:23px}.cloud-options label{gap:3px}.cloud-options button{font-size:10px;padding:3px 7px;margin-left:auto}#cloudOpacity{width:65px;margin:0}#opacityValue{display:inline-block;width:25px;font:10px ui-monospace,monospace}.density-legend{display:flex;align-items:center;gap:7px;font:10px ui-monospace,monospace;margin-top:6px;min-height:13px}.cloud-gradient{flex:1;height:5px;min-width:35px;border-radius:4px;background:linear-gradient(90deg,#708feb,#358dcc,#31c3ad,#a8d669,#f9d65d,#fff2b5)}.cloud-description{font-size:10px;margin:4px 0 0;line-height:1.4}.radial-controls{margin:8px 0;gap:8px;font-size:10px;min-height:25px}.radial-controls label{font-size:10px}.radial-controls button{font-size:10px;padding:4px 7px}#radialNorm{font-size:10px}.radial-wrap{height:clamp(170px,calc((100svh - 190px)*.32),240px);margin-bottom:3px}.radial-grid .caption{padding:0 12px 8px;font-size:10px;line-height:1.45;min-height:35px}.reading-notes{margin-top:12px}details{margin-top:9px;padding:10px 0}summary{font-size:11px}.notice{font-size:11px;margin:9px 0;padding:8px 12px}.radial-footnote{font-size:11px}.control-deck #zero{font-size:10px;padding:7px;line-height:1.5}footer{margin-top:8px;font-size:10px}#cloud{user-select:none;-webkit-user-select:none;touch-action:none;overscroll-behavior:contain}.projection-grid .panelhead h2{font-size:14px}
+@media(max-width:1050px) and (min-width:901px){.dashboard{grid-template-columns:196px minmax(0,1fr);gap:10px}.cloud-options{gap:5px}.cloud-options button{margin-left:0}.density-legend{gap:4px}.workspace .panelhead .hint{font-size:9px}header p{display:none}}
+@media(max-width:900px){main{padding:12px}.dashboard{display:block}.control-deck{position:static;padding:10px;margin-bottom:10px}.deck-title{display:none}.control-deck .controls{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.control-deck .toolbar{display:flex;flex-wrap:wrap;gap:9px;margin:8px 0 0;padding:8px 0 0}.control-deck .toolbar label{gap:5px}.control-deck .readout{display:flex;flex-wrap:wrap;margin:8px 0 0;gap:12px}.metric{display:flex;align-items:center;gap:6px;background:none;padding:0;border:0}.metric span{margin:0}.plots .square,.plots>.panel:last-child .square{height:220px}.radial-wrap{height:180px}header p,.badge{display:none}.plots,.radial-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.radial-grid .panelhead .hint{display:none}.cloud-options{gap:5px}.cloud-options button{margin-left:0}}
+@media(max-width:580px){.control-deck .controls{gap:9px}.controlhead{flex-wrap:wrap;font-size:10px}.controlhead input{width:57px}.plots,.radial-grid{grid-template-columns:1fr}.plots .square,.plots>.panel:last-child .square{height:250px}.radial-wrap{height:190px}.workspace .panelhead h2{font-size:13px}h1{font-size:19px}#radialNorm{margin-left:0;flex-basis:100%}.control-deck .toolbar label{font-size:10px}.control-deck select{width:115px}}
+.badge.site-back{display:inline-flex;text-decoration:none;flex-shrink:0}.site-back:hover{background:#e8eee7}@media(max-width:580px){.badge.site-back{font-size:10px;padding:5px 7px}}
+</style>
+</head>
+<body><main>
+<header><div><h1>从双星轨道到三维球壳</h1><p>轨道 · 三维概率 · 径向密度</p></div><a class="badge site-back" href="/projects/pond/" aria-label="返回池沼仿真">← 池沼仿真</a></header>
+
+<div class="dashboard"><aside class="control-deck" aria-label="参数与显示设置"><div class="deck-title">轨道参数</div><section class="controls" aria-label="双星参数">
+<div><div class="controlhead"><label for="q">质量比 <i>q</i> = M₂ / M₁</label><input id="qn" aria-label="质量比数值" type="number" min="0.1" max="1" step="0.01" value="0.4"></div><input id="q" aria-label="质量比滑块" type="range" min="0.1" max="1" step="0.01" value="0.4"><div class="rangeends"><span>0.10</span><span>1.00</span></div></div>
+<div><div class="controlhead"><label for="a">相对轨道半长轴 <i>a / a꜀</i></label><input id="an" aria-label="半长轴数值" type="number" min="0" max="1" step="0.01" value="0.7"></div><input id="a" aria-label="半长轴滑块" type="range" min="0" max="1" step="0.01" value="0.7"><div class="rangeends"><span>0.00</span><span>1.00</span></div></div>
+<div><div class="controlhead"><label for="e">偏心率 <i>e</i></label><input id="en" aria-label="偏心率数值" type="number" min="0" max="0.99" step="0.01" value="0.6"></div><input id="e" aria-label="偏心率滑块" type="range" min="0" max="0.99" step="0.01" value="0.6"><div class="rangeends"><span>0.00 · 圆轨道</span><span>0.99 · 高偏心率</span></div></div>
+</section>
+<div class="toolbar">
+<label>显示分量 <select id="component" aria-label="显示分量"><option value="both">双星叠加</option><option value="one">仅 M₁（主星）</option><option value="two">仅 M₂（伴星）</option></select></label>
+<label>叠加权重 <select id="mix" aria-label="叠加权重"><option value="number">等数目：各 1/2</option><option value="mass">按质量：1 : q</option></select></label>
+<label><input type="checkbox" id="fit" checked>自适应视野</label>
+<button type="button" id="reset" class="reset">重置参数</button>
+</div>
+<div id="zero" class="notice" hidden>a = 0 是退化极限，不存在有限周期的开普勒轨道。这里将两颗星都显示为质心处的 δ 分布；线密度和面密度不再是有限值。</div>
+<section class="readout" aria-label="派生参数"><div class="metric"><span>a₁ / a꜀</span><strong id="a1">—</strong></div><div class="metric"><span>a₂ / a꜀</span><strong id="a2">—</strong></div><div class="metric"><span>远 / 近停留比</span><strong id="ratio">—</strong></div><div class="metric"><span>rₘₐₓ / a꜀</span><strong id="rmax">—</strong></div></section>
+</aside><div class="workspace"><section class="plots">
+<article class="panel"><div class="panelhead"><div><div class="index">01 / ORBIT PLANE</div><h2>时间加权轨迹</h2></div></div><div class="chartwrap square"><canvas id="orbit" role="img" aria-label="按停留时间着色的两条质心轨道；主星实线，伴星虚线"></canvas><div id="orbitTip" class="tooltip" hidden></div></div><div class="legend"><div class="legendtop"><label for="lineMode">轨迹颜色</label><select id="lineMode" aria-label="轨迹颜色定义"><option value="length">单位弧长停留概率 λ · a꜀</option><option value="angle">单位真近点角概率 dP/dν</option></select></div><div class="gradient"></div><div class="ticks" id="lineTicks"></div><div class="key"><span><i class="stroke"></i>M₁ 实线</span><span><i class="stroke dashed"></i>M₂ 虚线</span><span>＋ 质心</span></div></div></article>
+<article class="panel"><div class="panelhead"><div><div class="index">02 / THREE-DIMENSIONAL ENSEMBLE</div><h2>三维概率点云</h2><span class="hint">拖动自由旋转 · 方向键微调</span></div></div><div class="chartwrap square"><canvas id="cloud" role="img" tabindex="0" aria-label="可自由旋转的半透明三维概率点云；颜色表示密度，点数表示概率。拖动或使用方向键旋转。" aria-describedby="cloudCaption"></canvas></div><div class="legend cloud-legend"><div class="cloud-options"><label><input type="checkbox" id="cutaway" checked>剖切</label><label><input type="checkbox" id="cloudGuides">边界线</label><label for="cloudOpacity">不透明度 <output id="opacityValue">18%</output></label><input type="range" id="cloudOpacity" min="0.02" max="0.4" step="0.01" value="0.18" aria-label="点云不透明度"><button id="resetView" type="button">复位</button></div><div class="density-legend"><span id="cloudDensityLabel">ρ · a꜀³</span><span id="cloudMin">—</span><div class="cloud-gradient"></div><span id="cloudMax">—</span><span id="cloudScaleLabel">对数</span></div><p class="cloud-description" id="cloudCaption"></p></div></article>
+
+</section>
+
+<div class="toolbar radial-controls"><label><input type="checkbox" id="radialLog">密度纵轴对数增强</label><button type="button" id="circularPreset">查看 e = 0、q = 1</button><span class="hint" id="radialNorm"></span></div>
+<section class="radial-grid" aria-label="三维径向分布">
+<article class="panel"><div class="panelhead"><div><div class="index">03 / RADIAL PROBABILITY</div><h2>径向概率 p(r) = dP/dr</h2></div><div class="hint">p · a꜀</div></div><div class="profile radial-wrap"><canvas id="radialP" role="img" aria-label="三维真实半径的概率密度，圆轨道显示狄拉克 delta 峰"></canvas><div id="radialPTip" class="tooltip" hidden></div></div><p class="caption" id="pCaption"></p></article>
+<article class="panel"><div class="panelhead"><div><div class="index">04 / VOLUME PROBABILITY</div><h2>体密度 ρ(r) = p(r)/(4πr²)</h2></div><div class="hint">ρ · a꜀³</div></div><div class="profile radial-wrap"><canvas id="radialRho" role="img" aria-label="三维概率体密度，以球壳体积为归一化测度"></canvas><div id="radialRhoTip" class="tooltip" hidden></div></div><p class="caption" id="rhoCaption"></p></article>
+</section>
+
+</div></div>
+<details class="reading-notes"><summary>读图说明与当前状态</summary><div class="notice" id="dimensionNote"></div><p class="caption radial-footnote">这里的 r = √(x²+y²+z²) 是到质心的真实三维距离。两图使用各自的纵轴标尺；总和为实线，M₁ 贡献为细实线，M₂ 贡献为虚线。圆轨道用 δ 箭头表示，箭头高度不代表有限峰值。</p></details>
+<details id="projection"><summary>可选辅助视图：沿视线积分后的二维投影 Σ(R)</summary><p class="caption">投影半径 R = √(x²+y²) 不同于真实半径 r。投影会将不同深度叠加，因此三维球面上的 δ 分布会投影成连续圆盘。</p><div class="toolbar"><label><input type="checkbox" id="log" checked>投影增强低密度</label></div><div class="projection-grid"><article class="panel"><div class="panelhead"><div><div class="index">OPTIONAL / LINE-OF-SIGHT PROJECTION</div><h2>三维分布的二维投影</h2><p>Σ(x,y) = ∫ ρ(x,y,z) dz；沿 z 方向积分。</p></div></div><div class="chartwrap square"><canvas id="map" role="img" aria-label="三维空间分布沿视线积分后的二维概率面密度；不是三维分布的截面"></canvas><div id="mapTip" class="tooltip" hidden></div></div><div class="legend"><div class="legendtop"><span>概率面密度 Σ · a꜀²</span><span id="mapScale">增强低密度</span></div><div class="gradient"></div><div class="ticks" id="mapTicks"></div><div class="key"><span id="mapInfo">∫ Σ dA = 1</span><span>悬停查看数值</span></div></div></article><article class="panel"><div class="panelhead"><div><div class="index">OPTIONAL / PROJECTED RADIAL PROFILE</div><h2>投影面密度的径向剖面</h2><p>与二维投影热图使用同一密度与纵轴映射；不是每个圆环的总概率。</p></div><div class="hint">Σ(R) · a꜀²</div></div><div class="profile"><canvas id="profile" role="img" aria-label="投影面密度随质心投影半径的变化曲线，含主星伴星贡献"></canvas></div><p class="caption" id="insight"></p></article></div></details>
+<div class="notice">朝向假设：cos i 在 [−1, 1] 均匀，升交点角 Ω 与近心点角 ω 均在 [0, 2π) 均匀。仅令角动量方向均匀并不足以唯一确定偏心轨道的平均图；这里额外采用均匀的 ω。因此三维分布球对称，但体密度通常不均匀。</div>
+<details><summary>三维图如何表示概率？</summary><div class="methods"><div><h3>等时间采样，而不是沿轨迹均匀取点</h3><p>三维图采用 18,000 个静态等概率样本。令平近点角 M 均匀分布，解开普勒方程 E − e sin E = M，然后取 rᵢ = aᵢ(1−e cos E)。方向通过均匀的 cos θ 和 φ 生成。使用固定的低差异序列，调参时没有重新随机抽样的闪烁。这与完整三维旋转平均的一点概率分布等价。</p><p>点数比例按等数目或质量权重分配（整数取整误差不超过 1/18000）。偏心轨道的点颜色表示所选分量叠加后的体密度 ρ(r)，使用与右下图相同的有限径向区间平均值，以对数色标显示。半透明点的数量表示概率，屏幕叠加亮度不直接等于体密度。圆轨道的体密度为 δ 分布，因此颜色改为有限的球面概率面密度 η = w/(4πaᵢ²)，重合球面先合并权重；不会将 δ 伪装成有限体密度。可选边界线只标出几何范围，没有填充的剖切面遮挡点云。三维图的点云采样不参与二维热图计算。</p></div><div><h3>径向概率与三维体密度</h3><p>e &gt; 0 时，球对称三维概率体密度在 rₚ &lt; r &lt; rₐ 内为：</p><div class="formula">rₚ = aᵢ(1−e)，rₐ = aᵢ(1+e)<br>pᵢ(r) = r / [π aᵢ √((r−rₚ)(rₐ−r))]<br>ρᵢ(r) = pᵢ(r)/(4πr²)<br>∫ 4πr²ρᵢ(r) dr = 1</div><p>主图在每个分量的 [rₚ, rₐ] 内划分 640 个径向区间。使用解析累计概率 F(r) = (E−e sin E)/π，其中 E = arccos[(1−r/aᵢ)/e]，以区间概率差分别除以区间宽度 Δr 和球壳体积 ΔV，得到 p 与 ρ 的区间平均值。两者分别满足 Σ p̄ Δr = 1 与 Σ ρ̄ ΔV = 1。边界附近显示的有限高度取决于分辨率；真正的端点密度发散。</p><p>圆轨道使用精确的 δ 表示，不把它数值展宽。p 的 δ 系数是分量概率 w；ρ 的径向 δ 系数是 w/(4πaᵢ²)，其概率须对 4πr²dr 积分。重合半径合并为一个峰。</p><p>范围之外密度为零，转折处的发散可积。e = 0 时不能把这个普通函数公式直接代入；分布退化为 ρᵢ(r) = δ(r−aᵢ)/(4πaᵢ²)，支撑在球面上。再沿视线积分才得到 Σ(R)。</p><p>剖切移去固定在物体坐标中的 x &gt; 0、y &gt; 0、z &gt; 0 八分之一，仅供观察；不重新归一化、不改变物理分布或二维投影。拖动只旋转相机，不推进轨道相位。</p></div></div></details>
+<details><summary>查看物理定义、平均方法与数值精度</summary><div class="methods"><div><h3>01　双星与时间权重</h3><p>令 q = M₂/M₁ ≤ 1，a 为两星相对轨道的半长轴。两颗星绕同一质心运动，具有相同周期；a₁ = aq/(1+q)，a₂ = a/(1+q)。用相对轨道偏近点角 E 参数化：</p><div class="formula">r⃗ = a (cos E − e, √(1−e²) sin E, 0)<br>r⃗₁ = −q r⃗/(1+q)，r⃗₂ = r⃗/(1+q)<br>dP = dt/T = (1−e cos E) dE/(2π)</div><p>轨迹线默认显示单位弧长概率密度 λᵢ = (dt/T)/dsᵢ，颜色在两颗星间共用标尺。它对每条完整轨道积分为 1；叠加权重作用于三维点云、p(r)、ρ(r) 及可选二维投影。切换为角概率密度后，颜色代表等真近点角区间的停留概率，而不是等弧长区间。</p><div class="formula">λᵢ a꜀ = √[(1−e cos E)/(1+e cos E)] / [2π(aᵢ/a꜀)]<br>dP/dν = (1−e²)^(3/2) / [2π(1+e cos ν)²]</div><p>远近心点的 λ 比为 (1+e)/(1−e)；角概率密度比则是其平方。页面所有长度均以 a꜀ 为单位。<a href="https://farside.ph.utexas.edu/teaching/celestial/Celestial/node33.html" target="_blank" rel="noopener noreferrer">参考：UT Austin · Elliptic orbits</a>。</p></div><div><h3>02　从三维旋转到二维面密度</h3><p>完整随机旋转将任意固定半径 r 的位置分布变成均匀球面。把球壳沿 z 积分投影后，投影半径 R 的累计概率有解析形式：</p><div class="formula">F(R | r) = 1 − √[1−(R/r)²]　(0 ≤ R &lt; r)<br>F(R | r) = 1　(R ≥ r)<br>Σᵢ(R) = ⟨ 1 / [2πrᵢ√(rᵢ²−R²)] · 𝟙(R&lt;rᵢ) ⟩ₜ</div><p>计算对 E 使用 8192 点中点积分，按 dP 加权；每个分量在其自身外半径内划分 640 个圆环，用累计概率之差除以圆环面积。这样直接计算全部朝向的平均，避免随机抽取有限条轨迹的噪声。图像显示有限圆环分辨率下的密度，边缘和尖峰高度会依赖分辨率。</p><p>等数目叠加为 Σ = (Σ₁+Σ₂)/2；质量叠加为 Σ = (Σ₁+qΣ₂)/(1+q)。单独查看一颗星时归一化为 1。均满足 ∫₂ᴅ Σ dA = 1；这是一点概率分布，不表示两颗星的位置彼此独立。质量模式乘以总质量即可得到物理质量面密度。</p><p>增强模式只改变颜色和曲线纵轴：u = ln(1+999Σ/Σₘₐₓ)/ln(1000)，不改变概率。圆轨道的球壳投影在边缘有可积发散；e &gt; 0 的内转折半径也可形成尖峰。二维图是视线积分后的投影，不是三维分布在 z = 0 的截面。</p></div></div></details>
+<footer><span>离线可用 · 所有计算在浏览器本地完成 · 调节参数后自动重算</span><span id="status" role="status" aria-live="polite">准备计算</span></footer>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), TAU=2*Math.PI, BINS=640, QUAD=8192;
+const state={q:.4,a:.7,e:.6,component:'both',mix:'number',fit:true,log:true,lineMode:'length'};
+const palette=[[38,59,96],[66,65,143],[166,75,133],[237,135,90],[249,215,125],[255,255,217]];
+let dist1,dist2,peak=1,lineMin=0,lineMax=1,view=2.08,geometry={},pending=false,lastKey='',calcMs=0;
+let radial1,radial2;
+const camera={q:initialOrientation()};
+let cloudPoints=[],cloudKey='',cloudPending=false,drag=null,cloudDensityMin=0,cloudDensityMax=1;
+const cloudBuckets=Array.from({length:48},()=>[]);
+const cloudColors=Array.from({length:128},(_,i)=>cloudColor(i/127));
+const fmt=x=>!Number.isFinite(x)?'—':x===0?'0':Math.abs(x)<.001||Math.abs(x)>=1000?x.toExponential(2):Number(x.toPrecision(3)).toString();
+function rgb(u){u=Math.max(0,Math.min(1,u));const z=u*(palette.length-1),i=Math.min(palette.length-2,Math.floor(z)),f=z-i;return palette[i].map((v,j)=>Math.round(v*(1-f)+palette[i+1][j]*f));}
+function color(u){return 'rgb('+rgb(u).join(',')+')';}
+function transfer(x,max=peak){const u=Math.max(0,Math.min(1,x/max));return state.log?Math.log1p(999*u)/Math.log(1000):u;}
+function inverse(u){return state.log?Math.expm1(u*Math.log(1000))/999*peak:u*peak;}
+function weights(){return state.component==='one'?[1,0]:state.component==='two'?[0,1]:state.mix==='mass'?[1/(1+state.q),state.q/(1+state.q)]:[.5,.5];}
+// Exact orientation average of each radial shell, integrated over orbital phase.
+// sqrt differences below are rationalized to preserve accuracy near R=0.
+function distribution(ai,e){
+ const outer=ai*(1+e),dr=outer/BINS,mass=new Float64Array(BINS),density=new Float64Array(BINS);
+ if(!outer)return {outer,dr,mass,density,total:0};
+ const n=e===0?1:QUAD;
+ for(let k=0;k<n;k++){
+  const E=TAU*(k+.5)/n,h=1-e*Math.cos(E),r=ai*h,w=h/n,r2=r*r;
+  let prev=1;
+  for(let j=0;j<BINS;j++){
+   const lo=j*dr,hi=(j+1)*dr;if(lo>=r)break;
+   const end=hi>=r||j===BINS-1;
+   const next=end?0:Math.sqrt(Math.max(0,1-hi*hi/r2));
+   const difference=end?prev:((hi-lo)*(hi+lo)/r2)/(prev+next);
+   mass[j]+=w*difference;prev=next;
+  }
+ }
+ let total=0;for(let j=0;j<BINS;j++){total+=mass[j];density[j]=mass[j]/(Math.PI*dr*dr*(2*j+1));}
+ return {outer,dr,mass,density,total};
+}
+function at(d,r){return d.outer>0&&r<d.outer?d.density[Math.min(BINS-1,Math.floor(r/d.dr))]:0;}
+function values(r){const w=weights(),v1=w[0]*at(dist1,r),v2=w[1]*at(dist2,r);return [v1+v2,v1,v2];}
+// Exact radial CDF from the monotone outward half of a Kepler orbit.
+function radialCDF(r,ai,e){
+ if(r<=ai*(1-e))return 0;if(r>=ai*(1+e))return 1;
+ const E=Math.acos(Math.max(-1,Math.min(1,(1-r/ai)/e)));
+ return (E-e*Math.sin(E))/Math.PI;
+}
+function radialDistribution(ai,e){
+ const inner=ai*(1-e),outer=ai*(1+e),dr=(outer-inner)/BINS;
+ const mass=new Float64Array(BINS),p=new Float64Array(BINS),rho=new Float64Array(BINS);
+ if(ai===0||e===0)return {inner,outer,dr,mass,p,rho,total:1,delta:ai};
+ let previous=0,total=0;
+ for(let j=0;j<BINS;j++){
+  const lo=inner+j*dr,hi=j===BINS-1?outer:inner+(j+1)*dr,F=j===BINS-1?1:radialCDF(hi,ai,e),m=Math.max(0,F-previous);
+  mass[j]=m;p[j]=m/(hi-lo);rho[j]=m/(4*Math.PI/3*(hi-lo)*(hi*hi+hi*lo+lo*lo));previous=F;total+=m;
+ }
+ return {inner,outer,dr,mass,p,rho,total,delta:null};
+}
+function radialAt(d,r,kind){if(d.delta!==null||r<d.inner||r>=d.outer)return 0;return d[kind][Math.min(BINS-1,Math.floor((r-d.inner)/d.dr))];}
+function radialValues(r,kind){const w=weights(),one=w[0]*radialAt(radial1,r,kind),two=w[1]*radialAt(radial2,r,kind);return [one+two,one,two];}
+function deltaPeaks(){
+ const w=weights(),ais=[state.a*state.q/(1+state.q),state.a/(1+state.q)],peaks=[];
+ ais.forEach((r,i)=>{if(!w[i])return;const existing=peaks.find(p=>p.r===r);if(existing)existing.weight+=w[i];else peaks.push({r,weight:w[i]});});return peaks;
+}
+function renderRadial(id,kind){
+ const {c,w,h}=prepare($(id)),L=66,R=w-24,T=28,B=h-34,wts=weights();
+ const outer=Math.max(wts[0]?radial1.outer:0,wts[1]?radial2.outer:0),xmax=state.fit&&outer?outer*1.12:2;
+ c.fillStyle='#fff';c.fillRect(0,0,w,h);c.font='11px ui-monospace,monospace';
+ const X=r=>L+r/xmax*(R-L),delta=!state.a||state.e===0,log=$('radialLog').checked;
+ let ymax=1,intervals=[];
+ if(!delta){
+  const edges=new Set([0,xmax]);[radial1,radial2].forEach((d,i)=>{if(!wts[i])return;for(let j=0;j<=BINS;j++)edges.add(j===BINS?d.outer:d.inner+j*d.dr);});
+  const xs=[...edges].filter(x=>x<=xmax).sort((a,b)=>a-b);let peakValue=0;
+  for(let j=0;j<xs.length-1;j++){const lo=xs[j],hi=xs[j+1],v=radialValues((lo+hi)/2,kind);intervals.push({lo,hi,v});peakValue=Math.max(peakValue,v[0]);}ymax=peakValue*1.08||1;
+ }
+ const unit=v=>log?Math.log1p(999*v/ymax)/Math.log(1000):v/ymax;
+ const inverse=u=>log?Math.expm1(u*Math.log(1000))/999*ymax:u*ymax;
+ const Y=v=>B-unit(v)*(B-T);
+ geometry[id]={L,R,T,B,xmax,delta,kind};
+ for(let j=0;j<=4;j++){if(delta&&j>0)continue;const u=j/4,y=B-u*(B-T);c.strokeStyle='#e6ece7';c.beginPath();c.moveTo(L,y);c.lineTo(R,y);c.stroke();c.fillStyle='#647579';c.textAlign='right';if(!delta)c.fillText(fmt(inverse(u)),L-9,y+4);else if(j===0)c.fillText('0',L-9,y+4);}
+ for(let j=0;j<=4;j++){c.fillStyle='#647579';c.textAlign='center';c.fillText(fmt(xmax*j/4),X(xmax*j/4),B+15);}c.fillText('r / a꜀' ,(L+R)/2,h-5);
+ if(delta){
+  c.textAlign='left';c.fillStyle='#647579';c.fillText('δ 示意：箭头无有限高度',L,19);
+  if(!state.a&&kind==='rho'){c.textAlign='center';c.fillStyle='#206d68';c.font='16px system-ui';c.fillText('ρ(x⃗) = δ³(x⃗)',(L+R)/2,(T+B)/2);c.font='12px system-ui';c.fillText('全部概率位于原点；不定义有限体密度',(L+R)/2,(T+B)/2+25);}
+  else {const peaks=deltaPeaks();peaks.forEach((p,i)=>{const x=X(p.r),y=T+24;c.strokeStyle='#206d68';c.lineWidth=2;c.beginPath();c.moveTo(x,B);c.lineTo(x,y);c.moveTo(x-5,y+9);c.lineTo(x,y);c.lineTo(x+5,y+9);c.stroke();c.fillStyle='#206d68';c.textAlign='center';c.font='15px serif';c.fillText('δ',x,y-8);c.font='11px ui-monospace,monospace';const coefficient=kind==='p'?p.weight:p.weight/(4*Math.PI*p.r*p.r),near=peaks.length>1&&Math.abs(X(peaks[1].r)-X(peaks[0].r))<110,labelY=T+57+(near?i*32:0),leftSide=near||x-L>110,labelX=near?X(peaks[0].r)-12:x+(leftSide?-12:12);c.textAlign=leftSide?'right':'left';c.fillText((kind==='p'?'w = ':'c = ')+fmt(coefficient),labelX,labelY);c.fillText('r/a꜀='+fmt(p.r),labelX,labelY+15);});}
+ }else{
+  const colors=['#206d68','#7498af','#bf814c'],series=state.component==='both'?[1,2,0]:[0];
+  series.forEach(index=>{c.strokeStyle=colors[index];c.lineWidth=index===0?2:1.15;c.setLineDash(index===2?[4,3]:[]);c.beginPath();intervals.forEach((segment,j)=>{const y=Y(segment.v[index]);if(j===0)c.moveTo(X(segment.lo),y);else c.lineTo(X(segment.lo),y);c.lineTo(X(segment.hi),y);});c.stroke();});c.setLineDash([]);
+  c.textAlign='left';c.fillStyle='#647579';c.fillText(log?'对数增强 · 区间平均':'线性纵轴 · 区间平均',L,20);c.textAlign='right';if(state.component==='both'){['M₂','M₁','总和'].forEach((name,i)=>{c.fillStyle=colors[2-i];c.fillText(name,R-i*42,20);});}else{c.fillStyle=colors[0];c.fillText('选中分量',R,20);}
+ }
+}
+function renderRadialProfiles(){
+ const delta=!state.a||state.e===0;$('radialLog').disabled=delta;
+ renderRadial('radialP','p');renderRadial('radialRho','rho');
+ const w=weights(),norm=w[0]*radial1.total+w[1]*radial2.total;
+ $('radialNorm').textContent=delta?'精确 δ 表示 · 总概率 = 1':'∫ p dr = ∫ 4πr²ρ dr = '+norm.toFixed(6);
+ if(!state.a){$('pCaption').textContent='p(r) = δ(r)：在 r ≥ 0 上约定原点处概率为 1，箭头表示点质量。';$('rhoCaption').textContent='这是三维原点处的 δ³ 分布；不能直接使用含 1/r² 的普通函数表达式。';return;}
+ if(state.e===0){const peaks=deltaPeaks(),term=(p,kind)=>fmt(kind==='p'?p.weight:p.weight/(4*Math.PI*p.r*p.r))+' δ(x−'+fmt(p.r)+')';$('pCaption').textContent='令 x = r/a꜀，p a꜀ = '+peaks.map(p=>term(p,'p')).join(' + ')+'；w 为概率，重合峰合并。';$('rhoCaption').textContent='ρ a꜀³ = '+peaks.map(p=>term(p,'rho')).join(' + ')+'；对 dV 积分为 1。';return;}
+ $('pCaption').textContent='∫p dr = 1 · 640 区间平均；端点发散，有限峰高依赖分辨率。';
+ $('rhoCaption').textContent='∫ρ dV = 1 · 各区间概率除以球壳体积；不是对 dr 归一化。';
+}
+function halton(n,base){let x=0,f=1;while(n>0){f/=base;x+=f*(n%base);n=Math.floor(n/base);}return x;}
+function eccentricAnomaly(M,e){
+ let lo=0,hi=TAU,E=M;
+ for(let j=0;j<40;j++){const residual=E-e*Math.sin(E)-M;if(Math.abs(residual)<1e-13)break;if(residual>0)hi=E;else lo=E;const trial=E-residual/(1-e*Math.cos(E));E=trial>lo&&trial<hi?trial:(lo+hi)/2;}
+ return E;
+}
+// Uniform mean anomaly gives equal time probability; independent isotropic
+// directions are equivalent to the full SO(3) average for this one-point density.
+function makeCloud(){
+ const key=[state.q,state.a,state.e,state.component,state.mix].join(',');if(key===cloudKey)return;
+ cloudKey=key;cloudPoints=[];if(!state.a){refreshCloudColors();return;}
+ const w=weights(),ais=[state.a*state.q/(1+state.q),state.a/(1+state.q)],counts=[Math.round(18000*w[0]),0];counts[1]=18000-counts[0];
+ for(let star=0;star<2;star++)for(let k=1;k<=counts[star];k++){
+  const E=eccentricAnomaly(TAU*halton(k,2),state.e),r=ais[star]*(1-state.e*Math.cos(E));
+  const mu=2*halton(k,3)-1,phi=TAU*halton(k,5),s=Math.sqrt(1-mu*mu),sign=star===0?-1:1;
+  const density=state.e===0?ais.reduce((sum,ai,i)=>sum+(ai===ais[star]?w[i]/(4*Math.PI*r*r):0),0):cloudVolumeDensity(r);
+  cloudPoints.push({x:sign*r*s*Math.cos(phi),y:sign*r*s*Math.sin(phi),z:sign*r*mu,star,density,px:0,py:0,colorIndex:0});
+ }
+ refreshCloudColors();
+}
+function quaternionMultiply(a,b){return [a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1],a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0],a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3],a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]];}
+function normalizedQuaternion(q){const n=Math.hypot(...q);return q.map(v=>v/n);}
+function initialOrientation(){return quaternionMultiply([Math.sin(.31),0,0,Math.cos(.31)],[0,0,Math.sin(.325),Math.cos(.325)]);}
+function rotationMatrix(){const [x,y,z,w]=camera.q;return [1-2*(y*y+z*z),2*(x*y-z*w),2*(x*z+y*w),2*(x*y+z*w),1-2*(x*x+z*z),2*(y*z-x*w),2*(x*z-y*w),2*(y*z+x*w),1-2*(x*x+y*y)];}
+function rotatePoint(p,m=rotationMatrix()){return {x:m[0]*p.x+m[1]*p.y+m[2]*p.z,y:m[3]*p.x+m[4]*p.y+m[5]*p.z,z:m[6]*p.x+m[7]*p.y+m[8]*p.z};}
+function arcballPoint(x,y,rect){const size=Math.min(rect.width,rect.height),xx=(2*(x-rect.left)-rect.width)/size,yy=(rect.height-2*(y-rect.top))/size,r2=xx*xx+yy*yy;return r2<=1?[xx,yy,Math.sqrt(1-r2)]:[xx/Math.sqrt(r2),yy/Math.sqrt(r2),0];}
+function arcballRotation(from,to){const dot=Math.max(-1,Math.min(1,from.reduce((sum,v,i)=>sum+v*to[i],0)));let q=[from[1]*to[2]-from[2]*to[1],from[2]*to[0]-from[0]*to[2],from[0]*to[1]-from[1]*to[0],1+dot];if(dot<-.999999){const axis=Math.abs(from[0])<.9?[1,0,0]:[0,1,0];q=[from[1]*axis[2]-from[2]*axis[1],from[2]*axis[0]-from[0]*axis[2],from[0]*axis[1]-from[1]*axis[0],0];}return normalizedQuaternion(q);}
+function cloudColor(u){const stops=[[112,143,235],[53,141,204],[49,195,173],[168,214,105],[249,214,93],[255,242,181]],z=Math.max(0,Math.min(1,u))*5,i=Math.min(4,Math.floor(z)),f=z-i;return 'rgb('+stops[i].map((v,j)=>Math.round(v*(1-f)+stops[i+1][j]*f)).join(',')+')';}
+function cloudVolumeDensity(r){const w=weights();return [radial1,radial2].reduce((sum,d,i)=>sum+(w[i]&&r>=d.inner&&r<=d.outer?w[i]*d.rho[Math.min(BINS-1,Math.max(0,Math.floor((r-d.inner)/d.dr)))]:0),0);}
+function refreshCloudColors(){
+ cloudDensityMin=Infinity;cloudDensityMax=0;
+ for(const p of cloudPoints){if(p.density>0)cloudDensityMin=Math.min(cloudDensityMin,p.density);cloudDensityMax=Math.max(cloudDensityMax,p.density);}
+ if(!cloudPoints.length){cloudDensityMin=0;cloudDensityMax=1;return;}
+ const span=Math.log(cloudDensityMax/cloudDensityMin);
+ for(const p of cloudPoints)p.colorIndex=Math.max(0,Math.min(127,Math.round(127*(p.density<=0?0:span>1e-12?Math.log(p.density/cloudDensityMin)/span:.6))));
+}
+function isCut(p){return $('cutaway').checked&&p.x>0&&p.y>0&&p.z>0;}
+function renderCloud(){
+ const {c,w,h}=prepare($('cloud')),cx=w/2,cy=h/2,scale=Math.max(1,Math.min(w-60,h-50))/(2*view),wts=weights(),ais=[state.a*state.q/(1+state.q),state.a/(1+state.q)],m=rotationMatrix();
+ c.fillStyle='#0c1924';c.fillRect(0,0,w,h);
+ const screen=p=>{const t=rotatePoint(p,m);return {x:cx+t.x*scale,y:cy-t.y*scale,z:t.z};};
+ const outer=Math.max(wts[0]?dist1.outer:0,wts[1]?dist2.outer:0),opacity=+$('cloudOpacity').value,cut=$('cutaway').checked;
+ $('opacityValue').textContent=Math.round(opacity*100)+'%';
+ $('cloudDensityLabel').textContent=state.e===0?'η·a꜀²（球面）':'ρ·a꜀³';
+ $('cloudScaleLabel').textContent=cloudDensityMax/cloudDensityMin>1+1e-10?'对数':'等密度';
+ $('cloudMin').textContent=state.a?fmt(cloudDensityMin):'—';$('cloudMax').textContent=state.a?fmt(cloudDensityMax):'—';
+ if(!state.a){c.fillStyle='#fff2b5';c.beginPath();c.arc(cx,cy,3,0,TAU);c.fill();$('cloudDensityLabel').textContent='δ³ 极限';$('cloudCaption').textContent='所有概率集中于质心。';return;}
+ // Depth buckets avoid sorting and allocating 18,000 objects on every drag frame.
+ for(const bucket of cloudBuckets)bucket.length=0;
+ for(let i=0;i<cloudPoints.length;i++){const p=cloudPoints[i];if(cut&&p.x>0&&p.y>0&&p.z>0)continue;const x=m[0]*p.x+m[1]*p.y+m[2]*p.z,y=m[3]*p.x+m[4]*p.y+m[5]*p.z,z=m[6]*p.x+m[7]*p.y+m[8]*p.z;p.px=cx+x*scale;p.py=cy-y*scale;cloudBuckets[Math.max(0,Math.min(47,Math.floor((z/outer+1)*24)))].push(i);}
+ for(let b=0;b<48;b++){c.globalAlpha=opacity*(.65+.35*b/47);for(const i of cloudBuckets[b]){const p=cloudPoints[i];c.fillStyle=cloudColors[p.colorIndex];c.beginPath();c.arc(p.px,p.py,.85,0,TAU);c.fill();}}c.globalAlpha=1;
+ // Only faint, optional geometry guides: no filled surfaces hide the interior.
+ if($('cloudGuides').checked){
+  const seen=new Set(),spherical=(r,lat,lon)=>({x:r*Math.cos(lat)*Math.cos(lon),y:r*Math.cos(lat)*Math.sin(lon),z:r*Math.sin(lat)});
+  function segment(p,q){if(cut&&(p.x+q.x)>0&&(p.y+q.y)>0&&(p.z+q.z)>0)return;const a=screen(p),b=screen(q);c.globalAlpha=(a.z+b.z)>0?.19:.07;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();}
+  c.strokeStyle='#adc5cf';c.lineWidth=.7;
+  ais.forEach((ai,i)=>{if(!wts[i])return;for(const r of [ai*(1-state.e),ai*(1+state.e)]){if(seen.has(r))continue;seen.add(r);for(const lat of [-Math.PI/3,0,Math.PI/3])for(let j=0;j<48;j++)segment(spherical(r,lat,TAU*j/48),spherical(r,lat,TAU*(j+1)/48));for(let l=0;l<6;l++)for(let j=0;j<24;j++)segment(spherical(r,-Math.PI/2+Math.PI*j/24,TAU*l/6),spherical(r,-Math.PI/2+Math.PI*(j+1)/24,TAU*l/6));}});c.globalAlpha=1;
+ }
+ // Camera-oriented triad identifies rotations without drawing across the cloud.
+ const origin={x:w-35,y:34};c.font='10px ui-monospace,monospace';c.textAlign='center';
+ for(const [label,p,tint] of [['x',{x:1,y:0,z:0},'#eaa181'],['y',{x:0,y:1,z:0},'#8bd6b4'],['z',{x:0,y:0,z:1},'#96b9f3']]){const t=rotatePoint(p,m),x=origin.x+22*t.x,y=origin.y-22*t.y;c.strokeStyle=tint;c.beginPath();c.moveTo(origin.x,origin.y);c.lineTo(x,y);c.stroke();c.fillStyle=tint;c.fillText(label,x+5*t.x,y-5*t.y+3);}
+ cross(c,{cx,cy});
+ const bar=view*.5,bx=12,by=h-19;c.strokeStyle='#8aabb8';c.beginPath();c.moveTo(bx,by);c.lineTo(bx+bar*scale,by);c.stroke();c.fillStyle='#a8bdc5';c.textAlign='left';c.fillText(fmt(bar)+' a꜀',bx,by-5);c.textAlign='right';c.fillText(cut?'剖去 1/8':'完整分布',w-10,h-12);
+ $('cloudCaption').textContent=ais.map((ai,i)=>wts[i]?'M'+(i+1)+' '+(state.e===0?fmt(ai):fmt(ai*(1-state.e))+'–'+fmt(ai*(1+state.e))):'').filter(Boolean).join('  ·  ')+'（r/a꜀）';
+}
+function scheduleCloud(){if(!cloudPending){cloudPending=true;requestAnimationFrame(()=>{cloudPending=false;renderCloud();});}}
+function prepare(canvas){const rect=canvas.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1),width=Math.max(1,Math.round(rect.width*dpr)),height=Math.max(1,Math.round(rect.height*dpr));if(canvas.width!==width)canvas.width=width;if(canvas.height!==height)canvas.height=height;const c=canvas.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.setLineDash([]);return {c,w:rect.width,h:rect.height,dpr};}
+function axes(c,w,h){
+ c.fillStyle='#0c1924';c.fillRect(0,0,w,h);
+ const size=Math.max(20,Math.min(w-84,h-54)),cx=w/2,cy=(h-28)/2,scale=size/(2*view);
+ const raw=2*view/Math.max(2,size/48),base=10**Math.floor(Math.log10(raw)),step=([1,2,5,10].find(v=>v*base>=raw)||10)*base;
+ c.font='10px ui-monospace,monospace';c.lineWidth=1;c.textAlign='center';
+ for(let t=Math.ceil(-view/step)*step;t<view;t+=step){const x=cx+t*scale,y=cy-t*scale;c.strokeStyle=Math.abs(t)<step*.01?'#819ba74a':'#9db7c015';c.beginPath();c.moveTo(x,cy-size/2);c.lineTo(x,cy+size/2);c.moveTo(cx-size/2,y);c.lineTo(cx+size/2,y);c.stroke();c.fillStyle='#8b9fa9';c.fillText(fmt(Math.abs(t)<step*.01?0:t),x,cy+size/2+17);if(Math.abs(t)>step*.01){c.textAlign='right';c.fillText(fmt(t),cx-size/2-8,y+3);c.textAlign='center';}}
+ c.fillStyle='#b2c5cb';c.fillText('x / a꜀',cx,h-9);c.save();c.translate(13,cy);c.rotate(-Math.PI/2);c.fillText('y / a꜀',0,0);c.restore();return {cx,cy,scale,size,w,h};
+}
+function cross(c,g){c.strokeStyle='#eaf7ec';c.lineWidth=1.25;c.beginPath();c.moveTo(g.cx-4,g.cy);c.lineTo(g.cx+4,g.cy);c.moveTo(g.cx,g.cy-4);c.lineTo(g.cx,g.cy+4);c.stroke();}
+function lineWeight(E,ai){const h=1-state.e*Math.cos(E);return state.lineMode==='length'?Math.sqrt(h/(1+state.e*Math.cos(E)))/(TAU*ai):h*h/(TAU*Math.sqrt(1-state.e*state.e));}
+function lineUnit(v){return lineMax>lineMin+1e-12?Math.log(v/lineMin)/Math.log(lineMax/lineMin):.6;}
+function renderOrbit(){
+ const {c,w,h}=prepare($('orbit')),g=axes(c,w,h);geometry.orbit=g;
+ if(!state.a){c.fillStyle=color(1);c.beginPath();c.arc(g.cx,g.cy,5,0,TAU);c.fill();cross(c,g);return;}
+ const ais=[state.a*state.q/(1+state.q),state.a/(1+state.q)],active=weights().map(x=>x>0);let lo=Infinity,hi=0;
+ ais.forEach((ai,i)=>{if(active[i]){lo=Math.min(lo,lineWeight(0,ai));hi=Math.max(hi,lineWeight(Math.PI,ai));}});lineMin=lo;lineMax=hi;
+ const seg=1800,b=Math.sqrt(1-state.e*state.e);
+ ais.forEach((ai,i)=>{if(!active[i])return;const sign=i===0?-1:1;for(let j=0;j<seg;j++){if(i===1&&j%16>=10)continue;const E=TAU*j/seg,F=TAU*(j+1)/seg;c.strokeStyle=color(lineUnit(lineWeight((E+F)/2,ai)));c.lineWidth=i===0?3.2:2.6;c.beginPath();c.moveTo(g.cx+sign*ai*(Math.cos(E)-state.e)*g.scale,g.cy-sign*ai*b*Math.sin(E)*g.scale);c.lineTo(g.cx+sign*ai*(Math.cos(F)-state.e)*g.scale,g.cy-sign*ai*b*Math.sin(F)*g.scale);c.stroke();}
+ c.font='11px system-ui';c.fillStyle='#cedbdc';const xa=g.cx-sign*ai*(1+state.e)*g.scale;c.textAlign=sign>0?'right':'left';c.fillText(i===0?'M₁':'M₂',xa-sign*7,g.cy+5);
+ });cross(c,g);$('lineTicks').innerHTML='<span>'+fmt(lo)+'</span><span>对数色标'+(Math.abs(hi-lo)<1e-12?' · 等权':'')+'</span><span>'+fmt(hi)+'</span>';
+}
+function renderMap(){
+ const {c,w,h,dpr}=prepare($('map')),g=axes(c,w,h);geometry.map=g;
+ if(!state.a){c.fillStyle=color(1);c.beginPath();c.arc(g.cx,g.cy,5,0,TAU);c.fill();cross(c,g);return;}
+ const size=Math.ceil(g.size*dpr),off=document.createElement('canvas');off.width=off.height=size;const ctx=off.getContext('2d'),im=ctx.createImageData(size,size),wts=weights(),R=Math.max(wts[0]?dist1.outer:0,wts[1]?dist2.outer:0);
+ const lut=Array.from({length:1024},(_,i)=>rgb(i/1023));
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){const r=Math.hypot(x+.5-size/2,y+.5-size/2)/(g.scale*dpr);if(r>=R)continue;const v=wts[0]*at(dist1,r)+wts[1]*at(dist2,r),co=lut[Math.round(transfer(v)*1023)],j=(y*size+x)*4;im.data[j]=co[0];im.data[j+1]=co[1];im.data[j+2]=co[2];im.data[j+3]=255;}
+ ctx.putImageData(im,0,0);c.drawImage(off,g.cx-g.size/2,g.cy-g.size/2,g.size,g.size);cross(c,g);
+ $('mapTicks').innerHTML=[0,.25,.5,.75,1].map(u=>'<span>'+fmt(inverse(u))+'</span>').join('');
+}
+function renderProfile(){
+ const {c,w,h}=prepare($('profile'));c.fillStyle='#fff';c.fillRect(0,0,w,h);const L=68,R=w-24,T=15,B=h-42,outer=Math.max(weights()[0]?dist1.outer:0,weights()[1]?dist2.outer:0),xmax=state.fit&&outer?outer*1.08:2;
+ c.font='11px ui-monospace,monospace';for(let i=0;i<=4;i++){const u=i/4,y=B-u*(B-T);c.strokeStyle='#e6ece7';c.beginPath();c.moveTo(L,y);c.lineTo(R,y);c.stroke();c.fillStyle='#647579';c.textAlign='right';c.fillText(state.a?fmt(inverse(u)):'—',L-9,y+4);}
+ for(let i=0;i<=5;i++){const x=L+i/5*(R-L);c.fillStyle='#647579';c.textAlign='center';c.fillText(fmt(xmax*i/5),x,B+19);}c.fillText('R / a꜀', (L+R)/2,h-5);
+ if(!state.a){c.fillText('a = 0：质心处的 δ 分布',w/2,h/2);return;}
+ const sample=new Set([0,xmax]);[dist1,dist2].forEach(d=>{for(let j=1;j<=BINS;j++){const r=j*d.dr;if(r<=xmax){sample.add(r*(1-1e-9));sample.add(r);}}});const xs=[...sample].sort((a,b)=>a-b);
+ const series=state.component==='both'?[1,2,0]:[0],colors=['#206d68','#849baf','#be7d4c'];series.forEach(s=>{c.strokeStyle=colors[s];c.lineWidth=s===0?2:1.2;c.setLineDash(s===2?[4,3]:[]);c.beginPath();xs.forEach((r,j)=>{const x=L+r/xmax*(R-L),y=B-transfer(values(r)[s])*(B-T);j?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();});c.setLineDash([]);
+ const names=state.component==='both'?['总和','M₁ 贡献','M₂ 贡献']:['选中分量'];c.textAlign='right';names.slice().reverse().forEach((name,i)=>{c.fillStyle=colors[names.length-1-i];c.fillText(name,R-i*95,T+8);});
+}
+function update(){
+ pending=false;const t=performance.now(),a1=state.a*state.q/(1+state.q),a2=state.a/(1+state.q),key=[state.q,state.a,state.e].join(',');
+ if(key!==lastKey){dist1=distribution(a1,state.e);dist2=distribution(a2,state.e);radial1=radialDistribution(a1,state.e);radial2=radialDistribution(a2,state.e);lastKey=key;calcMs=performance.now()-t;}
+ const w=weights(),outer=Math.max(w[0]?dist1.outer:0,w[1]?dist2.outer:0);view=state.fit&&outer?outer*1.12:2.08;
+ peak=0;[dist1,dist2].forEach(d=>{for(let j=0;j<BINS;j++){const r=(j+.5)*d.dr;peak=Math.max(peak,values(r)[0],values(j*d.dr)[0]);}});peak=peak||1;
+ $('a1').textContent=a1.toFixed(4);$('a2').textContent=a2.toFixed(4);$('ratio').textContent=state.a?fmt((1+state.e)/(1-state.e))+' : 1':'—';$('rmax').textContent=outer.toFixed(4);$('zero').hidden=state.a!==0;$('mix').disabled=state.component!=='both';
+ makeCloud();renderOrbit();renderCloud();renderRadialProfiles();if($('projection').open){renderMap();renderProfile();}$('mapScale').textContent=state.log?'对数增强 · 自动色标':'线性 · 自动色标';
+ $('dimensionNote').textContent=!state.a?'a = 0 是零维点状极限，不是有限尺寸的轨道或球壳。':state.e===0?'当前 e = 0：每个分量的三维半径固定，p(r) 为 δ 峰。q = 1 时两颗星的半径同为 a/2，合并为总权重为 1 的单个 δ 峰。':'当前 e > 0：每个分量占据 aᵢ(1−e) ≤ r ≤ aᵢ(1+e) 的三维厚球壳。p(r) 表示不同半径的停留概率，ρ(r) 表示单位体积中的概率；这是统计平均，不是某一时刻真实铺开的物质。';
+ if(!state.a){$('lineTicks').innerHTML='<span>δ 极限</span><span>无有限线密度</span>';$('mapTicks').innerHTML='<span>δ 极限</span><span>无有限面密度</span>';}
+ $('mapInfo').textContent=state.a?'∫ Σ dA = '+(w[0]*dist1.total+w[1]*dist2.total).toFixed(6):'全部概率集中于 R = 0';
+ $('insight').textContent=!state.a?'零半长轴仅作为几何退化极限展示。':state.e===0?'圆轨道旋转平均后是球面，投影呈边缘增亮的圆盘；盘内仍有非零密度。q = 1 时两个分量的平均图完全重合。':'完整朝向平均消除了偏心轨道的方向性。投影的内转折半径 R = aᵢ(1−e) 附近可能出现亮环；三维半径的内边界并不会使投影中心成为空洞。';
+ $('status').textContent=state.a?(state.e===0?'圆轨道 · 精确 δ 分布':'解析径向累计概率 · 640 区间/分量')+' · '+Math.round(calcMs)+' ms':'a = 0 · 退化极限';
+}
+function schedule(){if(!pending){pending=true;requestAnimationFrame(update);}}
+$('radialLog').addEventListener('change',renderRadialProfiles);
+$('projection').addEventListener('toggle',()=>{if($('projection').open)schedule();});
+$('circularPreset').addEventListener('click',()=>{state.q=1;state.e=0;if(!state.a)state.a=.7;for(const id of ['q','a','e'])$(id).value=$(id+'n').value=state[id];schedule();});
+function radialTooltip(id,event){
+ const g=geometry[id],canvas=$(id),tip=$(id+'Tip'),rect=canvas.getBoundingClientRect(),x=event.clientX-rect.left,y=event.clientY-rect.top;
+ if(x<g.L||x>g.R||y<g.T||y>g.B){tip.hidden=true;return;}
+ const r=(x-g.L)/(g.R-g.L)*g.xmax;
+ if(g.delta)tip.textContent='δ 分布：无有限峰高\n'+(g.kind==='p'?'系数为积分概率 w':'球壳 δ 系数为 w/(4πaᵢ²)');
+ else {const v=radialValues(r,g.kind);tip.textContent='r/a꜀ = '+fmt(r)+'\n'+(g.kind==='p'?'p a꜀':'ρ a꜀³')+' = '+fmt(v[0])+'\nM₁ 贡献 = '+fmt(v[1])+'\nM₂ 贡献 = '+fmt(v[2])+'\n有限区间平均';}
+ tip.hidden=false;tip.style.left=Math.max(6,Math.min(x+12,rect.width-tip.offsetWidth-6))+'px';tip.style.top=Math.max(6,Math.min(y+12,rect.height-tip.offsetHeight-6))+'px';
+}
+for(const id of ['radialP','radialRho']){$(id).addEventListener('pointermove',ev=>radialTooltip(id,ev));$(id).addEventListener('pointerleave',()=>$(id+'Tip').hidden=true);}
+for(const id of ['q','a','e']){const slider=$(id),number=$(id+'n');slider.addEventListener('input',()=>{state[id]=+slider.value;number.value=slider.value;schedule();});number.addEventListener('input',()=>{const v=Number(number.value);if(number.value!==''&&Number.isFinite(v)&&v>=+slider.min&&v<=+slider.max){state[id]=v;slider.value=v;schedule();}});number.addEventListener('change',()=>{const raw=number.value===''?state[id]:Number(number.value);state[id]=Math.max(+slider.min,Math.min(+slider.max,Number.isFinite(raw)?raw:state[id]));slider.value=number.value=state[id];schedule();});}
+for(const id of ['component','mix','lineMode'])$(id).addEventListener('change',()=>{state[id]=$(id).value;schedule();});
+for(const id of ['fit','log'])$(id).addEventListener('change',()=>{state[id]=$(id).checked;schedule();});
+$('reset').addEventListener('click',()=>{Object.assign(state,{q:.4,a:.7,e:.6,component:'both',mix:'number',fit:true,log:true,lineMode:'length'});for(const id of ['q','a','e'])$(id).value=$(id+'n').value=state[id];for(const id of ['component','mix','lineMode'])$(id).value=state[id];for(const id of ['fit','log'])$(id).checked=state[id];schedule();});
+function tooltip(id,event){const canvas=$(id),tip=$(id+'Tip'),g=geometry[id],rect=canvas.getBoundingClientRect(),px=event.clientX-rect.left,py=event.clientY-rect.top,x=(px-g.cx)/g.scale,y=(g.cy-py)/g.scale,r=Math.hypot(x,y);let content='';if(!state.a)content='a = 0：质心 δ 分布';else if(id==='map'){const v=values(r);content='R/a꜀ = '+fmt(r)+'\nΣ a꜀² = '+fmt(v[0])+'\nM₁ 贡献 = '+fmt(v[1])+'\nM₂ 贡献 = '+fmt(v[2]);}else{let best=Infinity,hit=null;const ais=[state.a*state.q/(1+state.q),state.a/(1+state.q)];ais.forEach((ai,i)=>{if(!weights()[i])return;const sign=i===0?-1:1,E=Math.atan2(y/(sign*ai*Math.sqrt(1-state.e*state.e)),x/(sign*ai)+state.e),ox=sign*ai*(Math.cos(E)-state.e),oy=sign*ai*Math.sqrt(1-state.e*state.e)*Math.sin(E),distance=Math.hypot(ox-x,oy-y);if(distance<best){best=distance;hit={ai,i,E};}});if(best*g.scale>18){tip.hidden=true;return;}content='M'+(hit.i+1)+' · '+(state.lineMode==='length'?'λ a꜀':'dP/dν')+' = '+fmt(lineWeight(hit.E,hit.ai))+'\nr/a꜀ = '+fmt(hit.ai*(1-state.e*Math.cos(hit.E)));}tip.textContent=content;tip.hidden=false;tip.style.left=Math.max(6,Math.min(px+13,rect.width-tip.offsetWidth-8))+'px';tip.style.top=Math.max(6,Math.min(py+13,rect.height-tip.offsetHeight-8))+'px';}
+for(const id of ['orbit','map']){$(id).addEventListener('pointermove',ev=>tooltip(id,ev));$(id).addEventListener('pointerleave',()=>$(id+'Tip').hidden=true);}
+function finishDrag(){const old=drag;drag=null;$('cloud').classList.remove('dragging');if(old&&$('cloud').hasPointerCapture(old.id))$('cloud').releasePointerCapture(old.id);}
+function moveCloudPointer(ev){if(!drag||drag.id!==ev.pointerId)return;ev.preventDefault();const point=arcballPoint(ev.clientX,ev.clientY,drag.rect);camera.q=normalizedQuaternion(quaternionMultiply(arcballRotation(drag.point,point),drag.orientation));scheduleCloud();}
+$('cloud').addEventListener('pointerdown',ev=>{if(drag||!ev.isPrimary||ev.button!==0)return;ev.preventDefault();const rect=$('cloud').getBoundingClientRect();drag={id:ev.pointerId,rect,point:arcballPoint(ev.clientX,ev.clientY,rect),orientation:camera.q.slice()};$('cloud').focus({preventScroll:true});$('cloud').setPointerCapture(ev.pointerId);$('cloud').classList.add('dragging');});
+window.addEventListener('pointermove',moveCloudPointer,{passive:false});
+window.addEventListener('pointerup',ev=>{if(drag&&drag.id===ev.pointerId){moveCloudPointer(ev);finishDrag();}});
+window.addEventListener('pointercancel',ev=>{if(drag&&drag.id===ev.pointerId)finishDrag();});
+$('cloud').addEventListener('lostpointercapture',ev=>{if(drag&&drag.id===ev.pointerId)finishDrag();});
+window.addEventListener('blur',finishDrag);document.addEventListener('visibilitychange',()=>{if(document.hidden)finishDrag();});
+$('cloud').addEventListener('keydown',ev=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(ev.key))return;ev.preventDefault();if(ev.key==='Home'){resetCamera();return;}const angle=(ev.key==='ArrowLeft'||ev.key==='ArrowDown'?-.1:.1),s=Math.sin(angle/2),c=Math.cos(angle/2),q=ev.key==='ArrowLeft'||ev.key==='ArrowRight'?[0,s,0,c]:[s,0,0,c];camera.q=normalizedQuaternion(quaternionMultiply(q,camera.q));scheduleCloud();});
+function resetCamera(){finishDrag();camera.q=initialOrientation();scheduleCloud();}
+$('cutaway').addEventListener('change',scheduleCloud);$('cloudGuides').addEventListener('change',scheduleCloud);$('cloudOpacity').addEventListener('input',scheduleCloud);$('resetView').addEventListener('click',resetCamera);
+$('reset').addEventListener('click',()=>{$('cutaway').checked=true;$('radialLog').checked=false;$('cloudGuides').checked=false;$('cloudOpacity').value=.18;resetCamera();});
+new ResizeObserver(schedule).observe(document.querySelector('.workspace'));window.addEventListener('resize',schedule);update();
+</script>
+</body></html>
