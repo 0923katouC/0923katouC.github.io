@@ -86,6 +86,14 @@ async function checkParentNavigation(browser, viewport) {
         await checkReturn(shelf, shelfTitle);
       }
     }
+    if (viewport.name === 'desktop') {
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await page.goto(baseURL + '/projects/pond/orbits/');
+      for (const destination of ['/projects/pond/', root]) {
+        await parentLink.click();
+        await page.waitForURL(baseURL + destination);
+      }
+    }
     console.log('PASS ' + viewport.name + ' parent navigation');
   } finally {
     await page.close();

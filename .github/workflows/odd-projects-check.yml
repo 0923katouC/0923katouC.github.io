@@ -11,6 +11,7 @@ on:
       - 'assets/css/*navigation.css'
       - 'assets/css/style.css'
       - 'assets/css/site-ui.css'
+      - 'assets/css/site-motion.css'
       - 'assets/css/liquid-glass.css'
       - 'assets/js/site-motion.js'
       - 'assets/js/liquid-glass.js'

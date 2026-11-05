@@ -1,3 +1,15 @@
+/* A captured page cannot receive pointer input during a cross-page transition.
+   Let the real links receive repeated clicks while the heading and scenery animate. */
+@view-transition {
+  navigation: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.projects-page > .collection-background {
+    animation: scene-in 280ms ease both;
+  }
+}
+
 /* Only the navigation and title use the site's column. The workbench below
    keeps its own colors, type, and available drawing area. */
 .project-app .site-header,
