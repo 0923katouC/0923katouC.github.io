@@ -55,12 +55,13 @@ async function checkParentNavigation(browser, viewport) {
   try {
     await page.goto(baseURL + '/photography/topics.html');
     // Exercise both language settings, including the different header wrap on a phone.
-    if (viewport.name === 'mobile') await page.locator('.lang-switch').click();
+    if (viewport.name !== 'desktop') await page.locator('.lang-switch').click();
     const reference = await geometry();
     const menu = await paths('.main-nav a');
 
     async function checkReturn(parentPath, parentTitle) {
       const path = new URL(page.url()).pathname;
+      await checkLayout(page);
       assert.deepEqual(await paths('.main-nav a'), menu, path + ' section menu');
       assert.deepEqual(await geometry(), reference, path + ' parent link placement and style');
       assert.equal(await parentLink.locator('.back-label').innerText(), parentTitle, path + ' parent name');
@@ -333,8 +334,10 @@ async function makeInvention(page) {
 const browser = await chromium.launch({ headless: true });
 const results = [];
 try {
-  for (const viewport of viewports) {
+  for (const viewport of [...viewports, { name: 'narrow', width: 320, height: 800 }]) {
     await checkParentNavigation(browser, viewport);
+  }
+  for (const viewport of viewports) {
     for (const spec of pages) {
       const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, reducedMotion: 'reduce', locale: 'zh-CN', acceptDownloads: true });
       if (spec.name === 'rain-radio') {

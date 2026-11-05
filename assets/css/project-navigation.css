@@ -48,8 +48,18 @@ body.project-dark {
 .project-heading-links {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0 1rem;
+}
+
+.project-heading-links > .back-link {
+  flex: none;
+  white-space: nowrap;
+}
+
+.project-methods {
+  margin-bottom: 18px;
 }
 
 .project-edition,
