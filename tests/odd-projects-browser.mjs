@@ -22,7 +22,43 @@ const pages = [
   { name: 'quota-arcade', path: '/projects/games/quota-arcade/', interact: playQuota },
   { name: 'rain-radio', path: '/projects/toys/rain-radio/', interact: tuneRadio },
   { name: 'odd-inventions', path: '/projects/toys/odd-inventions/', interact: makeInvention },
+  { name: 'binary-waves', path: '/projects/pond/binary-waves/', interact: observeBinary },
 ];
+
+async function observeBinary(page) {
+  const ready = () => page.locator('#time:not(:disabled)').waitFor();
+  await ready();
+  assert.equal(await page.locator('#play').getAttribute('aria-pressed'), 'false');
+  const picture = id => page.locator('#' + id).evaluate(canvas => canvas.toDataURL());
+  const originalField = await picture('field');
+  await page.locator('#eccentric').click();
+  await page.locator('#mass-ratio').press('Home');
+  await ready();
+  assert.equal(await page.locator('#eccentricity-value').innerText(), '0.65');
+  assert.equal(await page.locator('#mass-ratio-value').innerText(), '0.10');
+  assert.match(await page.locator('#masses').innerText(), /54.5.+5.5/);
+  assert.notEqual(await picture('field'), originalField);
+  const field = await picture('field'), signal = await picture('signal');
+  await page.locator('#inclination').press('End');
+  assert.equal(await page.locator('#inclination-value').innerText(), '90°');
+  assert.notEqual(await picture('signal'), signal);
+  assert.equal(await picture('field'), field, 'Observer inclination only changes the received signal');
+  await page.locator('#mass-ratio').press('End');
+  await ready();
+  await page.locator('#time').press('End');
+  assert.match(await page.locator('#status').innerText(), /12 GM/);
+  assert.match(await page.locator('#separation').innerText(), /^12.00 /);
+  await page.locator('#restart').click();
+  assert.match(await page.locator('#clock').innerText(), /^0.000 /);
+  await page.locator('#play').click();
+  await page.waitForFunction(() => Number(document.querySelector('#time').value) > 0);
+  await page.locator('#play').click();
+  assert.equal(await page.locator('#play').getAttribute('aria-pressed'), 'false');
+  await page.locator('.lang-switch').click();
+  assert.equal(await page.locator('h1').innerText(), 'Binary black hole waves');
+  await page.locator('#methods summary').click();
+  await page.locator('.equations').waitFor({state:'visible'});
+}
 
 async function checkLayout(page) {
   const layout = await page.evaluate(() => ({
