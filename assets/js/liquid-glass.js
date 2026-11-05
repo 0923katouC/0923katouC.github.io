@@ -1,7 +1,7 @@
 (() => {
   const page = document.querySelector('body.glass-ui');
   if (!page) return;
-  const selector = 'a.entry-panel,a.section-card,a.topic-card,.topic-card[data-glass-motion],a.back-link,button,.main-nav a';
+  const selector = 'a.entry-panel,a.section-card,a.topic-card,.topic-card[data-glass-motion],a.back-link,.main-nav a,.lang-switch,body:not(.project-app) button';
   const fineMotion = window.matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)');
   let active = null;
   let frame = null;

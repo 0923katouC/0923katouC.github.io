@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="ui-root">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,14 +7,42 @@
   <meta name="theme-color" content="#101d1b">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>雨夜最后一卷 · 侦探档案 001 | CMC</title>
-  <link rel="stylesheet" href="./game.css?v=20261029-1">
+  <link rel="stylesheet" href="./game.css?v=20261105-nav1">
   <script type="module" src="./game.mjs?v=20261029-1"></script>
+  <link rel="stylesheet" href="/assets/css/site-navigation.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-motion.css?v=20261006-spring2">
+  <link rel="stylesheet" href="/assets/css/project-navigation.css?v=20261105-nav2">
+  <script src="/assets/js/site-motion.js?v=20261105-nav1" defer blocking="render"></script>
+  <script src="/assets/js/main.js?v=20261006-motion1" defer></script>
+  <script src="/assets/js/site-ui.js?v=20261003-header-only1" defer></script>
+  <script src="/assets/js/liquid-glass.js?v=20261105-nav1" defer></script>
 </head>
-<body>
-  <a class="skip-link" href="#main">跳到调查内容</a>
-  <header class="site-bar"><a href="/" aria-label="CMC 个人主页">CMC<span class="muted"> / 奇怪项目</span></a><a href="/projects/games/">← 返回游戏</a><span class="case-number">侦探档案 / 001</span></header>
-  <main class="shell" id="main">
-    <header class="masthead"><div><p class="eyebrow">A SMALL MYSTERY FOR A LONG NIGHT</p><h1>雨夜<span class="title-break">最后一卷</span></h1><p class="subtitle">雨把所有人留在旅馆。有人，却让故事的结尾消失了。</p></div><div class="case-meta"><span>原创短篇</span><span>约 10–15 分钟</span><span>无倒计时 · 随时存档</span></div></header>
+<body class="ui-page glass-ui project-app project-dark">
+  <a class="skip-link" href="#main" lang="zh-CN">跳到调查内容</a>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="site-title" href="/?v=20260911-glass1">CMC</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/?v=20260911-glass1" data-zh="Home page" data-en="Home page">Home page</a>
+        <a href="/photography.html?v=20260911-glass1" data-zh="摄影集" data-en="Photography">摄影集</a>
+        <a href="/academics.html?v=20260911-glass1" data-zh="学术集" data-en="Academics">学术集</a>
+        <a href="/writing.html?v=20260911-glass1" data-zh="码字集" data-en="Writing">码字集</a>
+        <a class="active" aria-current="location" href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
+        <button class="lang-switch" type="button" aria-label="Switch language">EN</button>
+      </nav>
+    </div>
+  </header>
+  <main id="main">
+    <div class="container page-head project-heading">
+      <div class="project-heading-links">
+        <a class="back-link" href="/projects/games/"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="游戏" data-en="Games">游戏</span></a>
+        <span class="project-edition" lang="zh-CN">侦探档案 / 001</span>
+      </div>
+      <header lang="zh-CN" class="masthead"><div><p class="eyebrow">A SMALL MYSTERY FOR A LONG NIGHT</p><h1>雨夜<span class="title-break">最后一卷</span></h1><p class="subtitle">雨把所有人留在旅馆。有人，却让故事的结尾消失了。</p></div><div class="case-meta"><span>原创短篇</span><span>约 10–15 分钟</span><span>无倒计时 · 随时存档</span></div></header>
+    </div>
+    <div class="project-content shell" lang="zh-CN">
     <section class="welcome-card" id="welcome" aria-labelledby="welcome-title">
       <div class="welcome-art"><img src="./scene.svg" alt="雨夜里亮着暖灯的旧旅馆" width="1280" height="720"></div>
       <div class="welcome-copy"><p class="eyebrow">雾灯旅馆 / 最后一次放映</p><h2 id="welcome-title">今晚，缺了一个结尾。</h2><div id="intro-copy"></div><p class="muted">搜查四处现场，与四位当事人交谈。把证据连起来，再给出你的答案。不拼手速，也不需要专业知识。</p><div class="dialog-actions"><button class="button primary" id="start" type="button">开始调查 →</button><button class="button ghost" id="welcome-reset" type="button" hidden>重新开始</button></div><p class="muted" id="welcome-save">进度只保存在当前浏览器，不需要登录。</p></div>
@@ -28,9 +56,10 @@
       <aside class="casebook panel" aria-label="侦探手记"><p class="section-label">02 / 侦探手记</p><div class="progress-label"><span>已收集证据</span><strong id="evidence-count">0 / 12</strong></div><progress id="progress" value="0" max="12" aria-label="证据收集进度"></progress><p id="objective" class="notebook-note"></p><div id="recent-evidence" class="evidence-preview"></div><div id="deduction-summary"></div><label for="notes" class="section-label">随手记一点</label><textarea id="notes" maxlength="2000" rows="4" placeholder="谁的话有矛盾？哪些时间值得留意？"></textarea><p id="save-status" class="muted" role="status">进度自动保存</p><button class="button ghost" id="restart" type="button">重新调查</button></aside>
     </div>
     <footer class="bottom-bar"><span>CMC · 夜间小案</span><span>一段虚构的故事。一个可以停下来的夜晚。</span></footer>
+    </div>
   </main>
-  <dialog id="modal" aria-labelledby="modal-title"><div class="dialog-content"><button type="button" class="dialog-close" id="close-modal" aria-label="关闭">×</button><p id="modal-kicker" class="eyebrow"></p><h2 id="modal-title"></h2><div id="modal-body"></div><div id="modal-actions" class="dialog-actions"></div></div></dialog>
-  <div class="toast" id="toast" role="status" hidden></div>
-  <noscript><p class="shell">这个小游戏需要启用 JavaScript。不会向服务器上传你的游戏进度。</p></noscript>
+  <dialog lang="zh-CN" id="modal" aria-labelledby="modal-title"><div class="dialog-content"><button type="button" class="dialog-close" id="close-modal" aria-label="关闭">×</button><p id="modal-kicker" class="eyebrow"></p><h2 id="modal-title"></h2><div id="modal-body"></div><div id="modal-actions" class="dialog-actions"></div></div></dialog>
+  <div class="toast" id="toast" role="status" hidden lang="zh-CN"></div>
+  <noscript lang="zh-CN"><p class="shell">这个小游戏需要启用 JavaScript。不会向服务器上传你的游戏进度。</p></noscript>
 </body>
 </html>

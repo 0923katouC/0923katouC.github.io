@@ -4,7 +4,7 @@
   if (!page) return;
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const running = new Map();
-  const controls = 'a.entry-panel,a.section-card,a.topic-card,a.back-link,.main-nav a,button';
+  const controls = 'a.entry-panel,a.section-card,a.topic-card,a.back-link,.main-nav a,.lang-switch,body:not(.project-app) button';
   const blocks = 'main .home-intro,main .page-head,main .entry-panel,main .section-card,main .topic-card,main .archive-block,main .placeholder-block,main .gate-card,main .portal-card,main .academic-overview > .academic-section,main .pub';
   const settle = 'cubic-bezier(.2,.75,.3,1)';
   let observer = null;
@@ -50,8 +50,16 @@
   };
 
   const revealBlock = (element, delay) => {
+    // Keep the parent link under the pointer even when a visitor immediately goes back.
+    const parentLink = element.matches('.page-head') && element.querySelector('a.back-link');
+    if (parentLink) {
+      for (const child of element.children) {
+        if (!child.contains(parentLink)) pop(child, delay, 'heading');
+      }
+      return;
+    }
     pop(element, delay, element.matches('.home-intro,.page-head') ? 'heading' : 'card');
-    // Back/read/download buttons get a later, smaller beat inside their panel.
+    // Action buttons get a later, smaller beat inside their panel.
     element.querySelectorAll('a.back-link,button').forEach((button, i) => {
       pop(button, delay + 110 + i * 45, 'button');
     });

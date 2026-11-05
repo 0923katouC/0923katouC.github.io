@@ -39,6 +39,67 @@ async function checkLayout(page) {
   assert.deepEqual(layout.brokenImages, [], 'Images must load');
 }
 
+// Follow the live catalogue so new shelves and entries are checked automatically.
+async function checkParentNavigation(browser, viewport) {
+  const page = await browser.newPage({
+    viewport: { width: viewport.width, height: viewport.height },
+    reducedMotion: 'reduce',
+  });
+  const parentLink = page.locator('.page-head a.back-link');
+  const geometry = () => parentLink.evaluate(link => {
+    const { x, y, height } = link.getBoundingClientRect();
+    const { borderRadius, fontSize, padding } = getComputedStyle(link);
+    return { x, y, height, borderRadius, fontSize, padding };
+  });
+  const paths = selector => page.locator(selector).evaluateAll(links => links.map(link => link.pathname));
+  try {
+    await page.goto(baseURL + '/photography/topics.html');
+    // Exercise both language settings, including the different header wrap on a phone.
+    if (viewport.name !== 'desktop') await page.locator('.lang-switch').click();
+    const reference = await geometry();
+    const menu = await paths('.main-nav a');
+
+    async function checkReturn(parentPath, parentTitle) {
+      const path = new URL(page.url()).pathname;
+      await checkLayout(page);
+      assert.deepEqual(await paths('.main-nav a'), menu, path + ' section menu');
+      assert.deepEqual(await geometry(), reference, path + ' parent link placement and style');
+      assert.equal(await parentLink.locator('.back-label').innerText(), parentTitle, path + ' parent name');
+      assert.equal(await parentLink.getAttribute('href'), parentPath, path + ' parent route');
+      await parentLink.click();
+      await page.waitForURL(baseURL + parentPath);
+    }
+
+    const root = '/projects.html';
+    await page.goto(baseURL + root);
+    const rootTitle = await page.locator('h1').innerText();
+    const shelves = await paths('main a.collection-card');
+    assert.ok(shelves.length >= 3);
+    for (const shelf of shelves) {
+      await page.goto(baseURL + shelf);
+      const shelfTitle = await page.locator('h1').innerText();
+      const works = await paths('main a.play-card, main a.experiment-card');
+      assert.ok(works.length, 'No entries linked from ' + shelf);
+      await checkReturn(root, rootTitle);
+      for (const work of works) {
+        await page.goto(baseURL + work);
+        await checkReturn(shelf, shelfTitle);
+      }
+    }
+    if (viewport.name === 'desktop') {
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await page.goto(baseURL + '/projects/pond/orbits/');
+      for (const destination of ['/projects/pond/', root]) {
+        await parentLink.click();
+        await page.waitForURL(baseURL + destination);
+      }
+    }
+    console.log('PASS ' + viewport.name + ' parent navigation');
+  } finally {
+    await page.close();
+  }
+}
+
 async function switchDirectoryLanguage(page) {
   const originalViewport = page.viewportSize();
   const chineseHeading = await page.locator('h1').innerText();
@@ -281,6 +342,9 @@ async function makeInvention(page) {
 const browser = await chromium.launch({ headless: true });
 const results = [];
 try {
+  for (const viewport of [...viewports, { name: 'narrow', width: 320, height: 800 }]) {
+    await checkParentNavigation(browser, viewport);
+  }
   for (const viewport of viewports) {
     for (const spec of pages) {
       const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, reducedMotion: 'reduce', locale: 'zh-CN', acceptDownloads: true });

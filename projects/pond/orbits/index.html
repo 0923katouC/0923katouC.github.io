@@ -1,19 +1,47 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="ui-root">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090d12">
   <meta name="description" content="在 E–L 参数图中探索牛顿中心引力下的轨道族：圆、椭圆、抛物线与双曲线。联动轨道、有效势和径向相图。">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>轨道图谱 · 池沼仿真 | CMC</title>
-  <link rel="stylesheet" href="./style.css?v=20261029-1">
+  <link rel="stylesheet" href="./style.css?v=20261105-nav1">
   <script type="module" src="./app.mjs?v=20261029-1"></script>
+  <link rel="stylesheet" href="/assets/css/site-navigation.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-motion.css?v=20261006-spring2">
+  <link rel="stylesheet" href="/assets/css/project-navigation.css?v=20261105-nav2">
+  <script src="/assets/js/site-motion.js?v=20261105-nav1" defer blocking="render"></script>
+  <script src="/assets/js/main.js?v=20261006-motion1" defer></script>
+  <script src="/assets/js/site-ui.js?v=20261003-header-only1" defer></script>
+  <script src="/assets/js/liquid-glass.js?v=20261105-nav1" defer></script>
 </head>
-<body>
-  <a class="skip" href="#experiment">跳到实验</a>
-  <header class="site-bar"><a class="brand" href="/">CMC <span>/ 池沼仿真</span></a><nav><a href="/projects/pond/">← 实验目录</a><a href="#methods">模型与方法 ↗</a></nav></header>
+<body class="ui-page glass-ui project-app project-dark">
+  <a class="skip" href="#experiment" lang="zh-CN">跳到实验</a>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="site-title" href="/?v=20260911-glass1">CMC</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/?v=20260911-glass1" data-zh="Home page" data-en="Home page">Home page</a>
+        <a href="/photography.html?v=20260911-glass1" data-zh="摄影集" data-en="Photography">摄影集</a>
+        <a href="/academics.html?v=20260911-glass1" data-zh="学术集" data-en="Academics">学术集</a>
+        <a href="/writing.html?v=20260911-glass1" data-zh="码字集" data-en="Writing">码字集</a>
+        <a class="active" aria-current="location" href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
+        <button class="lang-switch" type="button" aria-label="Switch language">EN</button>
+      </nav>
+    </div>
+  </header>
   <main>
-    <header class="masthead"><div><p class="eyebrow">EXPERIMENT 002 <span>/</span> CELESTIAL MECHANICS</p><h1>轨道<span>图谱</span><span class="title-en">THE ORBIT ATLAS</span></h1><p class="intro">一个引力中心，两枚守恒量。改变能量与角动量，看轨道如何相遇、束缚与逃逸。</p></div><div class="formula-stamp"><span>NEWTONIAN GRAVITY</span><strong>Φ(r) = −1/r</strong><small>无量纲单位 · GM = 1</small></div></header>
+    <div class="container page-head project-heading">
+      <div class="project-heading-links">
+        <a class="back-link" href="/projects/pond/"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="池沼仿真" data-en="Pond Simulations">池沼仿真</span></a>
+        <a class="project-methods" href="#methods" data-zh="模型与方法 ↗" data-en="Model and methods ↗">模型与方法 ↗</a>
+      </div>
+      <header lang="zh-CN" class="masthead"><div><p class="eyebrow">EXPERIMENT 002 <span>/</span> CELESTIAL MECHANICS</p><h1>轨道<span>图谱</span><span class="title-en">THE ORBIT ATLAS</span></h1><p class="intro">一个引力中心，两枚守恒量。改变能量与角动量，看轨道如何相遇、束缚与逃逸。</p></div><div class="formula-stamp"><span>NEWTONIAN GRAVITY</span><strong>Φ(r) = −1/r</strong><small>无量纲单位 · GM = 1</small></div></header>
+    </div>
+    <div class="project-content" lang="zh-CN">
 
     <section class="workspace" id="experiment" aria-label="中心引力轨道实验">
       <div class="main-column">
@@ -52,8 +80,9 @@
       <article><span class="section-no">II / GEOMETRY</span><h3>从有效势读出轨道</h3><p>径向运动满足 ½vᵣ² + V<sub>eff</sub> = E。圆轨道处于有效势的最小值；其上 E &lt; 0 为椭圆，E = 0 为抛物线，E &gt; 0 为双曲线。中心位于圆锥曲线的焦点，图上统一将近心点朝向 +x，沿逆时针运动。</p><div class="equation">V<sub>eff</sub> = L²/(2r²) − 1/r<br>e² = 1 + 2EL² · r(θ) = L²/(1 + e cos θ)</div></article>
       <article><span class="section-no">III / SCOPE</span><h3>相图与展示边界</h3><p>E–L 图是守恒量参数空间，并非完整相空间；它不指定轨道取向和初始相位。动画用通用变量开普勒方程按物理时间求解，无耗散、进动或相对论修正。为避开点质量碰撞奇点，此页限定 L ≥ 0.25。</p><p>开放轨道及特别大的椭圆只播放有限半径内的一段，到边界暂停。保留轨道在同一时刻经过近心点；它们离开显示窗口后隐藏，闭合轨道继续运行。</p><a class="model-link" href="./MODEL.md">完整方程与数值验证 ↗</a></article>
     </div></section>
-    <footer><span>CMC / POND SIMULATIONS</span><span>万有引力，不尽相同的去处。</span><a href="/projects/pond/">返回实验目录 ↗</a></footer>
+    <footer><span>CMC / POND SIMULATIONS</span><span>万有引力，不尽相同的去处。</span><a class="back-link" href="/projects/pond/"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="池沼仿真" data-en="Pond Simulations">池沼仿真</span></a></footer>
+    </div>
   </main>
-  <noscript><p class="noscript">此实验需要 JavaScript。上方“模型与方法”仍可阅读。</p></noscript>
+  <noscript lang="zh-CN"><p class="noscript">此实验需要 JavaScript。上方“模型与方法”仍可阅读。</p></noscript>
 </body>
 </html>

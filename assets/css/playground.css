@@ -1,9 +1,8 @@
 /* Catalogue styles are scoped to the game and toy shelves. */
 .playground-page .collection-background::after { background: linear-gradient(110deg,rgba(247,248,250,.84),rgba(247,248,250,.62) 55%,rgba(247,248,250,.28)); }
 .playground-main { position: relative; z-index: 1; }
-.playground-heading { padding-top: 60px; }
 .playground-heading h1 { margin-bottom: 0; }
-.playground-heading .eyebrow { margin-top: 16px; letter-spacing: .12em; }
+.playground-heading .eyebrow { letter-spacing: .12em; }
 .playground-title-row { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
 .playground-heading > p { max-width: 660px; line-height: 1.8; margin: 24px 0 22px; }
 .playground-notes { display:flex; gap:18px; flex-wrap:wrap; color:#38444c; font-size:10px; letter-spacing:.10em; }
@@ -28,5 +27,5 @@
 .playground-footer p { margin:0 auto 0 0; }
 .playground-footer a { color:#233e50; }
 .playground-page :is(a,button):focus-visible { outline:3px solid #2c6589; outline-offset:5px; }
-@media(max-width:720px) { .playground-heading{padding-top:36px}.playground-title-row{align-items:center}.playground-title-row h1{font-size:45px}.pick-button{font-size:11px;padding:9px 13px}.play-grid{grid-template-columns:1fr;gap:21px;padding-bottom:40px}.play-copy{padding:22px 23px 18px}.play-copy h2{font-size:23px}.play-kicker{font-size:9px}.playground-heading > p{font-size:15px}.playground-notes{font-size:9px;gap:10px}.playground-footer p{width:100%} }
+@media(max-width:720px) { .playground-title-row{align-items:center}.playground-title-row h1{font-size:45px}.pick-button{font-size:11px;padding:9px 13px}.play-grid{grid-template-columns:1fr;gap:21px;padding-bottom:40px}.play-copy{padding:22px 23px 18px}.play-copy h2{font-size:23px}.play-kicker{font-size:9px}.playground-heading > p{font-size:15px}.playground-notes{font-size:9px;gap:10px}.playground-footer p{width:100%} }
 @media(prefers-reduced-motion:reduce) { .play-card,.play-cover img,.pick-button{transition:none}.play-card:hover,.play-card:hover .play-cover img,.pick-button:hover{transform:none} }

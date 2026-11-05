@@ -13,7 +13,7 @@ body.glass-ui{
   --glass-shadow:0 10px 28px rgba(12,34,54,.13),inset 0 1px 1px rgba(255,255,255,.70),inset 0 -1px 1px rgba(255,255,255,.24);
 }
 
-body.glass-ui.academic-cosmos{
+body.glass-ui:is(.academic-cosmos,.project-dark){
   --glass-fill:rgba(17,32,51,.54);
   --glass-top:rgba(225,240,255,.13);
   --glass-bottom:rgba(90,135,185,.05);
@@ -82,7 +82,7 @@ body.glass-ui .main-nav a{
   font-size:.93rem;
 }
 
-body.glass-ui.academic-cosmos .main-nav a{
+body.glass-ui:is(.academic-cosmos,.project-dark) .main-nav a{
   --glass-fill:rgba(17,32,51,.20);
 }
 
@@ -226,7 +226,7 @@ body.glass-ui.photography-topics a.topic-card:focus-visible{
   }
 }
 
-body.glass-ui :is(button,.lang-switch,.invite-row button):disabled{
+body.glass-ui:where(:not(.project-app)) :is(button,.lang-switch,.invite-row button):disabled{
   cursor:not-allowed;
   opacity:.55;
   transform:none;
