@@ -1,8 +1,10 @@
 import { makeOrbit, sampleAt, SECONDS, SOURCE_MASS } from './model.mjs';
-import { wavePlot, drawOrbit, drawSignal } from './plots.mjs';
+import { drawOrbit, drawSignal } from './plots.mjs?v=3d1';
+import { spatialPlot } from './scene.mjs';
 
 const byId = id => document.getElementById(id);
-const field = wavePlot(byId('field'));
+const fieldCanvas = byId('field');
+const field = spatialPlot(fieldCanvas);
 const orbitCanvas = byId('orbit'), signalCanvas = byId('signal');
 const eccentricity = byId('eccentricity'), ratio = byId('mass-ratio'), inclination = byId('inclination');
 const timeline = byId('time'), play = byId('play'), restart = byId('restart'), speed = byId('speed');
@@ -17,6 +19,9 @@ function controls() {
   byId('eccentricity-value').value = e.toFixed(2);
   byId('mass-ratio-value').value = q.toFixed(2);
   byId('inclination-value').value = inclination.value+'°';
+  inclination.setAttribute('aria-valuetext', inclination.value+'°');
+  byId('face-on').setAttribute('aria-pressed',String(inclination.value === '0'));
+  byId('edge-on').setAttribute('aria-pressed',String(inclination.value === '90'));
   byId('masses').textContent = (SOURCE_MASS/(1+q)).toFixed(1)+' + '+(SOURCE_MASS*q/(1+q)).toFixed(1);
   byId('circular').setAttribute('aria-pressed',String(e === 0));
   byId('eccentric').setAttribute('aria-pressed',String(e === 0.65));
@@ -35,9 +40,10 @@ function controls() {
 function draw() {
   if (!orbit || loading) return;
   const state = sampleAt(orbit,time), r = Math.hypot(state[0],state[1]);
-  field(orbit,time);
-  drawOrbit(orbitCanvas,orbit,time);
-  drawSignal(signalCanvas,orbit,time,Number(inclination.value),english());
+  const angle = Number(inclination.value), en = english();
+  field(orbit,time,angle,en);
+  drawOrbit(orbitCanvas,orbit,time,angle,en);
+  drawSignal(signalCanvas,orbit,time,angle,en);
   timeline.value = String(time/orbit.end);
   const clock = (time*SECONDS).toFixed(3)+' / '+(orbit.end*SECONDS).toFixed(3)+' s';
   byId('clock').value = clock;
@@ -96,7 +102,35 @@ for (const input of [eccentricity,ratio]) input.addEventListener('input',recalcu
 for (const [id,e] of [['circular',0],['eccentric',0.65]]) {
   byId(id).addEventListener('click',() => { eccentricity.value = e; recalculate(); });
 }
-inclination.addEventListener('input',() => { controls(); draw(); });
+function updateView() {
+  controls();
+  draw();
+}
+inclination.addEventListener('input',updateView);
+for (const [id, angle] of [['face-on',0],['edge-on',90]]) {
+  byId(id).addEventListener('click',() => { inclination.value = angle; updateView(); });
+}
+
+// Horizontal dragging turns the viewing direction in the same plane as the slider.
+// Vertical touch gestures are handled by the browser so the page can still scroll.
+let dragView = null;
+fieldCanvas.addEventListener('pointerdown', event => {
+  if (!event.isPrimary || event.button !== 0) return;
+  dragView = { id: event.pointerId, x: event.clientX, angle: Number(inclination.value) };
+  fieldCanvas.setPointerCapture(event.pointerId);
+});
+fieldCanvas.addEventListener('pointermove', event => {
+  if (event.pointerId !== dragView?.id) return;
+  const span = Math.min(360, fieldCanvas.clientWidth * .8);
+  const degrees = dragView.angle + (event.clientX - dragView.x) * 90 / span;
+  const angle = Math.max(0, Math.min(90, Math.round(degrees)));
+  if (angle === Number(inclination.value)) return;
+  inclination.value = angle;
+  updateView();
+});
+fieldCanvas.addEventListener('lostpointercapture', event => {
+  if (event.pointerId === dragView?.id) dragView = null;
+});
 play.addEventListener('click',() => {
   if (time >= orbit.end) time = 0;
   playing = !playing; stopFrames(); controls(); draw(); schedule();
