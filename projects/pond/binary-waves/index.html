@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1018">
-  <meta name="description" content="调节双黑洞的初始偏心率与质量比，观察 3.5 阶后牛顿轨道、引力波传播和两种偏振波形。">
+  <meta name="description" content="转动观测视角，对照双黑洞三维引力波场、轨道在天空中的投影和两种偏振波形。偏心率与质量比可调，相对轨道积分至 3.5 阶后牛顿近似。">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>双黑洞引力波 | CMC 池沼仿真</title>
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=3d1">
   <link rel="stylesheet" href="/assets/css/site-navigation.css?v=20261105-nav1">
   <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261105-nav1">
   <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261105-nav1">
@@ -17,7 +17,7 @@
   <script src="/assets/js/main.js?v=20261006-motion1" defer></script>
   <script src="/assets/js/site-ui.js?v=20261003-header-only1" defer></script>
   <script src="/assets/js/liquid-glass.js?v=20261105-nav1" defer></script>
-  <script type="module" src="./app.mjs"></script>
+  <script type="module" src="./app.mjs?v=3d1"></script>
 </head>
 <body class="ui-page glass-ui project-app project-dark">
   <a class="skip-link" href="#experiment"><span data-zh="跳到模拟" data-en="Skip to simulation">跳到模拟</span></a>
@@ -43,59 +43,71 @@
       <div class="wave-heading">
         <div><p class="eyebrow">POND SIMULATIONS / 004</p>
         <h1><span data-zh="双黑洞引力波" data-en="Binary black hole waves">双黑洞引力波</span></h1>
-        <p class="lede"><span data-zh="改变双星的偏心率，看每次近心点经过如何在远方的波形上留下印记。" data-en="Change the eccentricity and follow each close passage from the orbit to the distant waveform.">改变双星的偏心率，看每次近心点经过如何在远方的波形上留下印记。</span></p></div>
+        <p class="lede"><span data-zh="从轨道上方转到侧面，看双星在天空中的投影和远方收到的引力波如何一同变化。" data-en="Turn from face-on to edge-on and watch the projected orbit and the waves reaching the observer change together.">从轨道上方转到侧面，看双星在天空中的投影和远方收到的引力波如何一同变化。</span></p></div>
       </div>
     </div>
     <div class="workbench container" id="experiment">
       <div class="upper-grid">
-        <section class="panel wave-panel" aria-labelledby="field-title">
-          <div class="panel-head"><h2 id="field-title"><span data-zh="引力波传播" data-en="Wave propagation">引力波传播</span></h2>
-            <div class="legend field-legend"><span><i class="dot warm"></i><span data-zh="正应变" data-en="Positive">正应变</span></span><span><i class="dot cool"></i><span data-zh="负应变" data-en="Negative">负应变</span></span></div></div>
-          <div class="field-stage"><canvas id="field" role="img" aria-labelledby="field-title field-caption"></canvas></div>
-          <p id="field-caption" class="caption"><span data-zh="沿轨道平面向外看。颜色表示加号偏振的应变；越远的波纹，记录越早的绕转。中央小图单独放大双星轨道。" data-en="The orbital plane, colored by plus strain. More distant crests record earlier turns. The center magnifies the binary orbit on a separate scale.">沿轨道平面向外看。颜色表示加号偏振的应变；越远的波纹，记录越早的绕转。中央小图单独放大双星轨道。</span></p>
-        </section>
-        <aside class="panel controls" aria-labelledby="params-title">
-          <div class="panel-head"><h2 id="params-title"><span data-zh="双星参数" data-en="Binary parameters">双星参数</span></h2></div>
-          <div class="control-body">
-            <div class="control"><div class="range-head"><label for="eccentricity"><span data-zh="初始偏心率 e" data-en="Initial eccentricity e">初始偏心率 e</span></label><output id="eccentricity-value" for="eccentricity">0.40</output></div><input id="eccentricity" type="range" min="0" max="0.65" step="0.01" value="0.40">
-              <div class="limits"><span>0</span><span>0.65</span></div></div>
-            <div class="control"><div class="range-head"><label for="mass-ratio"><span data-zh="质量比 q = M₂/M₁" data-en="Mass ratio q = M₂/M₁">质量比 q = M₂/M₁</span></label><output id="mass-ratio-value" for="mass-ratio">0.65</output></div><input id="mass-ratio" type="range" min="0.10" max="1" step="0.01" value="0.65">
-              <div class="limits"><span>0.10</span><span>1.00</span></div></div>
-            <div class="control"><div class="range-head"><label for="inclination"><span data-zh="观测倾角 i" data-en="Viewing inclination i">观测倾角 i</span></label><output id="inclination-value" for="inclination">40°</output></div><input id="inclination" type="range" min="0" max="90" step="1" value="40">
-              <div class="limits"><span><span data-zh="0° 正视" data-en="0° face-on">0° 正视</span></span><span><span data-zh="90° 侧视" data-en="90° edge-on">90° 侧视</span></span></div></div>
-            <div class="presets"><button id="circular" type="button"><span data-zh="圆轨道" data-en="Circular">圆轨道</span></button><button id="eccentric" type="button"><span data-zh="强偏心轨道" data-en="High eccentricity">强偏心轨道</span></button></div>
-            <p class="mass-line"><span><span data-zh="两颗黑洞" data-en="Component masses">两颗黑洞</span></span><strong id="masses">36.4 + 23.6</strong> <span data-zh="个太阳质量" data-en="solar masses">个太阳质量</span></p>
+        <div class="scene-column">
+          <section class="panel wave-panel" aria-labelledby="field-title">
+            <div class="panel-head"><h2 id="field-title"><span data-zh="引力波的三维传播" data-en="Gravitational waves in 3D">引力波的三维传播</span></h2>
+              <div class="legend field-legend"><span><i class="dot warm"></i><span data-zh="h₊ &gt; 0" data-en="h₊ &gt; 0">h₊ &gt; 0</span></span><span><i class="dot cool"></i><span data-zh="h₊ &lt; 0" data-en="h₊ &lt; 0">h₊ &lt; 0</span></span></div></div>
+            <div class="field-stage"><canvas id="field" role="img" aria-labelledby="field-title field-caption"></canvas></div>
+            <p id="field-caption" class="caption"><span data-zh="颜色给出轨道面和经过 L 轴的竖直截面上的加号偏振应变。中央放大显示双星，L 指向轨道角动量方向。" data-en="Color shows plus strain on the orbital plane and a vertical slice through L. The center magnifies the binary. L points along the orbital angular momentum.">颜色给出轨道面和经过 L 轴的竖直截面上的加号偏振应变。中央放大显示双星，L 指向轨道角动量方向。</span></p>
+            <div class="view-control">
+              <div class="range-head">
+                <label for="inclination"><span data-zh="观测倾角 i" data-en="Viewing inclination i">观测倾角 i</span></label>
+                <output id="inclination-value" for="inclination">40°</output>
+              </div>
+              <div class="view-range">
+                <button id="face-on" type="button" aria-pressed="false"><span data-zh="正视 0°" data-en="Face-on 0°">正视 0°</span></button>
+                <input id="inclination" type="range" min="0" max="90" step="1" value="40" aria-describedby="view-help">
+                <button id="edge-on" type="button" aria-pressed="false"><span data-zh="侧视 90°" data-en="Edge-on 90°">侧视 90°</span></button>
+              </div>
+              <p id="view-help"><span data-zh="水平拖动图面也可转动视角。0° 从角动量 L 指向的一端看，90° 从轨道面内看。" data-en="Drag the scene horizontally to tilt it. At 0° you look along the angular momentum axis. At 90° you look along the orbital plane.">水平拖动图面也可转动视角。0° 从角动量 L 指向的一端看，90° 从轨道面内看。</span></p>
+            </div>
+          </section>
+          <div class="transport" aria-label="Playback">
+            <div class="play-actions"><button id="play" class="primary" type="button" aria-pressed="false" disabled><span data-zh="播放" data-en="Play">播放</span></button><button id="restart" type="button" disabled><span data-zh="回到起点" data-en="Restart">回到起点</span></button></div>
+            <div class="scrub"><label for="time"><span data-zh="源时间" data-en="Source time">源时间</span> <output id="clock" for="time" aria-live="off">0.000 s</output></label><input id="time" type="range" min="0" max="1" step="0.0001" value="0" disabled></div>
+            <label class="speed"><span data-zh="播放速度" data-en="Playback speed">播放速度</span><select id="speed"><option value="0.05">0.05×</option><option value="0.1" selected>0.1×</option><option value="0.25">0.25×</option><option value="1">1×</option></select></label>
           </div>
-        </aside>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+          <noscript>运行此模拟需要启用 JavaScript。 / Enable JavaScript to run the simulation.</noscript>
+        </div>
+        <div class="side-stack">
+          <aside class="panel controls" aria-labelledby="params-title">
+            <div class="panel-head"><h2 id="params-title"><span data-zh="双星参数" data-en="Binary parameters">双星参数</span></h2></div>
+            <div class="control-body">
+              <div class="control"><div class="range-head"><label for="eccentricity"><span data-zh="初始偏心率 e" data-en="Initial eccentricity e">初始偏心率 e</span></label><output id="eccentricity-value" for="eccentricity">0.40</output></div><input id="eccentricity" type="range" min="0" max="0.65" step="0.01" value="0.40">
+                <div class="limits"><span>0</span><span>0.65</span></div></div>
+              <div class="control"><div class="range-head"><label for="mass-ratio"><span data-zh="质量比 q = M₂/M₁" data-en="Mass ratio q = M₂/M₁">质量比 q = M₂/M₁</span></label><output id="mass-ratio-value" for="mass-ratio">0.65</output></div><input id="mass-ratio" type="range" min="0.10" max="1" step="0.01" value="0.65">
+                <div class="limits"><span>0.10</span><span>1.00</span></div></div>
+              <div class="presets"><button id="circular" type="button"><span data-zh="圆轨道" data-en="Circular">圆轨道</span></button><button id="eccentric" type="button"><span data-zh="强偏心轨道" data-en="High eccentricity">强偏心轨道</span></button></div>
+              <p class="mass-line"><span><span data-zh="两颗黑洞" data-en="Component masses">两颗黑洞</span></span><strong id="masses">36.4 + 23.6</strong> <span data-zh="个太阳质量" data-en="solar masses">个太阳质量</span></p>
+            </div>
+          </aside>
+          <section class="panel orbit-panel" aria-labelledby="orbit-title">
+            <div class="panel-head"><h2 id="orbit-title"><span data-zh="观测者所见的轨道" data-en="Projected orbit">观测者所见的轨道</span></h2><span class="legend"><span><i class="dot warm"></i>M₁</span><span><i class="dot cool"></i>M₂</span></span></div>
+            <canvas id="orbit" class="plot" role="img" aria-labelledby="orbit-title orbit-caption"></canvas>
+            <p id="orbit-caption" class="caption readout"><span data-zh="空间间距" data-en="Spatial separation">空间间距</span> <strong id="separation">—</strong><span>·</span><span data-zh="瞬时绕转频率" data-en="Orbital frequency">瞬时绕转频率</span> <strong id="frequency">—</strong></p>
+          </section>
+        </div>
       </div>
-      <div class="transport" aria-label="Playback">
-        <div class="play-actions"><button id="play" class="primary" type="button" aria-pressed="false" disabled><span data-zh="播放" data-en="Play">播放</span></button><button id="restart" type="button" disabled><span data-zh="回到起点" data-en="Restart">回到起点</span></button></div>
-        <div class="scrub"><label for="time"><span data-zh="源时间" data-en="Source time">源时间</span> <output id="clock" for="time" aria-live="off">0.000 s</output></label><input id="time" type="range" min="0" max="1" step="0.0001" value="0" disabled></div>
-        <label class="speed"><span data-zh="播放速度" data-en="Playback speed">播放速度</span><select id="speed"><option value="0.05">0.05×</option><option value="0.1" selected>0.1×</option><option value="0.25">0.25×</option><option value="1">1×</option></select></label>
-      </div>
-      <p id="status" class="status" role="status" aria-live="polite"></p>
-      <noscript>运行此模拟需要启用 JavaScript。 / Enable JavaScript to run the simulation.</noscript>
-      <div class="lower-grid">
-        <section class="panel" aria-labelledby="orbit-title">
-          <div class="panel-head"><h2 id="orbit-title"><span data-zh="双星轨道" data-en="Binary orbit">双星轨道</span></h2><span class="legend"><span><i class="dot warm"></i>M₁</span><span><i class="dot cool"></i>M₂</span></span></div>
-          <canvas id="orbit" class="plot" role="img" aria-labelledby="orbit-title orbit-caption"></canvas>
-          <p id="orbit-caption" class="caption readout"><span data-zh="当前间距" data-en="Separation">当前间距</span> <strong id="separation">—</strong><span>·</span><span data-zh="瞬时绕转频率" data-en="Orbital frequency">瞬时绕转频率</span> <strong id="frequency">—</strong></p>
-        </section>
-        <section class="panel" aria-labelledby="signal-title">
-          <div class="panel-head"><h2 id="signal-title"><span data-zh="远方的波形" data-en="Distant waveform">远方的波形</span></h2><span class="legend"><span><i class="line warm"></i>h₊</span><span><i class="line dashed cool"></i>h×</span></span></div>
-          <canvas id="signal" class="plot" role="img" aria-labelledby="signal-title signal-caption"></canvas>
-          <p id="signal-caption" class="caption"><span data-zh="距双星一亿秒差距。实线为加号偏振，虚线为交叉偏振；最右端对应当前源时间。" data-en="At 100 million parsecs. Solid is plus polarization, dashed is cross polarization. The right edge corresponds to the current source time.">距双星一亿秒差距。实线为加号偏振，虚线为交叉偏振；最右端对应当前源时间。</span></p>
-        </section>
-      </div>
+      <section class="panel signal-panel" aria-labelledby="signal-title">
+        <div class="panel-head"><h2 id="signal-title"><span data-zh="远方的波形" data-en="Distant waveform">远方的波形</span></h2><span class="legend"><span><i class="line warm"></i>h₊</span><span><i class="line dashed cool"></i>h×</span></span></div>
+        <canvas id="signal" class="plot" role="img" aria-labelledby="signal-title signal-caption"></canvas>
+        <p id="signal-caption" class="caption"><span data-zh="距双星一亿秒差距。实线为加号偏振，虚线为交叉偏振。侧视时，交叉偏振降为零。" data-en="At 100 million parsecs. The solid line shows plus polarization and the dashed line shows cross polarization. An edge-on observer measures zero cross strain.">距双星一亿秒差距。实线为加号偏振，虚线为交叉偏振。侧视时，交叉偏振降为零。</span></p>
+      </section>
       <details id="methods" class="methods"><summary><span data-zh="模型、单位与适用范围" data-en="Model, units and limits">模型、单位与适用范围</span></summary>
         <div class="method-body">
           <section><h3><span data-zh="轨道与初值" data-en="Orbit and initial data">轨道与初值</span></h3><p><span data-zh="总质量 M = M₁ + M₂ 固定为 60 个太阳质量，两颗黑洞均取零自旋。以 GM/c² 为长度单位、GM/c³ 为时间单位，G 为引力常数，c 为光速。相对位置和速度由标准谐和坐标下的运动方程逐步积分。相对于牛顿加速度，保留到 (v/c)⁷，即 3.5 阶后牛顿近似。1、2、3 阶项决定保守运动，2.5、3.5 阶项给出引力辐射反作用。" data-en="The two nonspinning black holes have total mass M = M₁ + M₂ = 60 solar masses. Length and time units are GM/c² and GM/c³, with G the gravitational constant and c the speed of light. The relative position and velocity are integrated in standard harmonic coordinates through post-Newtonian order 3.5, or (v/c)⁷ relative to Newtonian gravity. Orders 1, 2 and 3 are conservative. Orders 2.5 and 3.5 supply radiation reaction.">总质量 M = M₁ + M₂ 固定为 60 个太阳质量，两颗黑洞均取零自旋。以 GM/c² 为长度单位、GM/c³ 为时间单位，G 为引力常数，c 为光速。相对位置和速度由标准谐和坐标下的运动方程逐步积分。相对于牛顿加速度，保留到 (v/c)⁷，即 3.5 阶后牛顿近似。1、2、3 阶项决定保守运动，2.5、3.5 阶项给出引力辐射反作用。</span></p></section>
           <section><h3><span data-zh="偏心率如何设定" data-en="How eccentricity is set">偏心率如何设定</span></h3><p><span data-zh="取初始近心距 rₚ 与远心距 rₐ，使 (rₐ + rₚ)/2 = 36 GM/c²，e = (rₐ − rₚ)/(rₐ + rₚ)。先用保守方程求出连接这两个转折点的近心点速度，再开启辐射反作用。e = 0 时从准圆轨道开始，加入相应的缓慢向内速度。图中两颗黑洞的位置按 3 阶质心关系放置，两点之差是所积分的相对轨道。" data-en="The initial turning radii satisfy (rₐ + rₚ)/2 = 36 GM/c² and e = (rₐ − rₚ)/(rₐ + rₚ). The conservative equations set the pericenter speed connecting those turning radii. The evolution then includes radiation reaction. The circular case starts on a quasi-circular inspiral with the inward drift. Component positions use the order-3 center-of-mass relation and their separation is the integrated relative orbit.">取初始近心距 rₚ 与远心距 rₐ，使 (rₐ + rₚ)/2 = 36 GM/c²，e = (rₐ − rₚ)/(rₐ + rₚ)。先用保守方程求出连接这两个转折点的近心点速度，再开启辐射反作用。e = 0 时从准圆轨道开始，加入相应的缓慢向内速度。图中两颗黑洞的位置按 3 阶质心关系放置，两点之差是所积分的相对轨道。</span></p></section>
-          <section><h3><span data-zh="波与观测者" data-en="Waves and observer">波与观测者</span></h3><p><span data-zh="应变取最低阶质量四极矩辐射。源由两星相对位置、速度和约化质量 M₁M₂/M 决定。h₊ 和 h× 是垂直于视线、彼此旋转 45° 的两组伸缩。正 h₊ 使第一条偏振轴方向的自由距离增长 h₊/2，正交方向等量缩短。倾角 i 是视线与轨道法线的夹角。波形采用源的迟滞时间，已扣除到观测者的恒定光行时。" data-en="The strain uses leading mass-quadrupole radiation from the relative position, velocity and reduced mass M₁M₂/M. Plus and cross are transverse stretches with axes rotated by 45°. Positive plus strain stretches a free separation along the first axis by h₊/2 and shortens the perpendicular separation equally. Inclination i is measured from the orbital normal. Waveform times subtract the constant light-travel time to the observer.">应变取最低阶质量四极矩辐射。源由两星相对位置、速度和约化质量 M₁M₂/M 决定。h₊ 和 h× 是垂直于视线、彼此旋转 45° 的两组伸缩。正 h₊ 使第一条偏振轴方向的自由距离增长 h₊/2，正交方向等量缩短。倾角 i 是视线与轨道法线的夹角。波形采用源的迟滞时间，已扣除到观测者的恒定光行时。</span></p></section>
-          <section><h3><span data-zh="传播图与终点" data-en="Propagation map and endpoint">传播图与终点</span></h3><p><span data-zh="传播图在轨道平面取截面，各方位的第一条偏振轴沿圆周切向。取参考波长 λ₀ = 216π GM/c²。内缘位于 4λ₀，图中径向距离从此处起算，中央插图单独放大轨道。内缘对应当前源时间 t，其外距离 ΔR 处显示 t − ΔR/c 的辐射，振幅按 1/R 衰减。初始画面的波来自同一轨道向过去的积分。双星间距降到 12 GM/c² 或演化满 22 个参考轨道周期时暂停，适用范围为并合前的绕转。" data-en="The map samples the orbital plane with the first polarization axis tangent to each circle. The reference wavelength is λ₀ = 216π GM/c². The inner edge is at 4λ₀ and the displayed radial offset starts there. The center shows the orbit at a separate magnification. It shows source time t, while a point ΔR farther out shows t − ΔR/c, with amplitude falling as 1/R. Earlier samples come from backwards integration of the same orbit. The inspiral stops at separation 12 GM/c² or after 22 reference orbital periods.">传播图在轨道平面取截面，各方位的第一条偏振轴沿圆周切向。取参考波长 λ₀ = 216π GM/c²。内缘位于 4λ₀，图中径向距离从此处起算，中央插图单独放大轨道。内缘对应当前源时间 t，其外距离 ΔR 处显示 t − ΔR/c 的辐射，振幅按 1/R 衰减。初始画面的波来自同一轨道向过去的积分。双星间距降到 12 GM/c² 或演化满 22 个参考轨道周期时暂停，适用范围为并合前的绕转。</span></p></section>
+          <section><h3><span data-zh="波与观测者" data-en="Waves and observer">波与观测者</span></h3><p><span data-zh="应变取最低阶质量四极矩辐射。h₊ 和 h× 分别描述垂直于视线、彼此旋转 45° 的两组伸缩。单独取加号偏振时，沿第一条偏振轴的两点间距相对改变 h₊/2，沿垂直方向则相对改变 −h₊/2。观测倾角 i 是轨道角动量 L 与从质心指向观测者的方向之间的夹角。L 垂直于轨道面，正向由双星绕转的右手规则确定。波形横轴已扣除到观测者的恒定光行时，右端对应当前源时间。" data-en="The strain uses leading mass-quadrupole radiation. Plus and cross polarization describe transverse stretches along axes rotated by 45° relative to each other. For pure plus polarization the fractional change in separation is h₊/2 along the first axis and −h₊/2 along the perpendicular axis. The inclination i is the angle between the orbital angular momentum L and the direction from the binary to the observer. L is perpendicular to the orbital plane and points along the right-hand rule for the orbital motion. Waveform time subtracts the constant light-travel time so its right edge corresponds to the current source time.">应变取最低阶质量四极矩辐射。h₊ 和 h× 分别描述垂直于视线、彼此旋转 45° 的两组伸缩。单独取加号偏振时，沿第一条偏振轴的两点间距相对改变 h₊/2，沿垂直方向则相对改变 −h₊/2。观测倾角 i 是轨道角动量 L 与从质心指向观测者的方向之间的夹角。L 垂直于轨道面，正向由双星绕转的右手规则确定。波形横轴已扣除到观测者的恒定光行时，右端对应当前源时间。</span></p></section>
+          <section><h3><span data-zh="传播图与终点" data-en="Propagation map and endpoint">传播图与终点</span></h3><p><span data-zh="三维图对两个远区截面采样。一个截面沿完整的轨道面 xy。另一个截面穿过角动量轴 z，在轨道面上的交线从 x 轴朝 y 轴转过 50°。对每个传播方向，用球面上沿极角增大和方位角增大的两个切向作为偏振基，从源的质量四极矩求该处的 h₊。竖直截面留有扇形开口，便于看清后方波纹。截面从 4λ₀ 延伸到 7λ₀，其中参考波长 λ₀ = 216π GM/c²。内缘对应源时间 t，半径为 R 的位置显示 t − (R − 4λ₀)/c 时的辐射，振幅按 1/R 衰减。中央窗口单独放大双星轨迹。初始波来自同一轨道向过去的积分。双星间距降到 12 GM/c² 或演化满 22 个参考轨道周期时暂停。" data-en="The 3D view samples two far-field slices. One is the full xy orbital plane. The other contains the angular momentum axis z and intersects the orbital plane along a line turned 50° from x toward y. At each propagation direction the polarization axes point along increasing polar and azimuthal angle on the sphere. The source mass quadrupole sets the local plus strain. A cutaway in the vertical slice reveals the waves behind it. Each slice spans 4λ₀ to 7λ₀, with reference wavelength λ₀ = 216π GM/c². The inner edge shows source time t. At radius R the strain uses t − (R − 4λ₀)/c and falls as 1/R. The central window shows the orbits at a separate magnification. Earlier samples come from backwards integration of the same orbit. The inspiral stops at separation 12 GM/c² or after 22 reference orbital periods.">三维图对两个远区截面采样。一个截面沿完整的轨道面 xy。另一个截面穿过角动量轴 z，在轨道面上的交线从 x 轴朝 y 轴转过 50°。对每个传播方向，用球面上沿极角增大和方位角增大的两个切向作为偏振基，从源的质量四极矩求该处的 h₊。竖直截面留有扇形开口，便于看清后方波纹。截面从 4λ₀ 延伸到 7λ₀，其中参考波长 λ₀ = 216π GM/c²。内缘对应源时间 t，半径为 R 的位置显示 t − (R − 4λ₀)/c 时的辐射，振幅按 1/R 衰减。中央窗口单独放大双星轨迹。初始波来自同一轨道向过去的积分。双星间距降到 12 GM/c² 或演化满 22 个参考轨道周期时暂停。</span></p></section>
           <section class="wave-equations"><h3><span data-zh="从位置和速度算出两条曲线" data-en="From positions and velocities to strain">从位置和速度算出两条曲线</span></h3>
-            <p><span data-zh="取轨道为 xy 平面，视线在 xz 平面内。xᵢ 和 vᵢ 分别是相对位置、相对速度沿第 i 个坐标轴的分量，r 是两星间距，μ = M₁M₂/M，D 为观测距离。横向偏振基取 (cos i, 0, −sin i) 和 (0, 1, 0)。以下公式用有量纲的位置与速度。" data-en="The orbit lies in the xy plane and the line of sight in the xz plane. xᵢ and vᵢ are components of relative position and velocity, r is the separation, μ = M₁M₂/M, and D is the observer distance. The sky axes are (cos i, 0, −sin i) and (0, 1, 0). These expressions use dimensional position and velocity.">取轨道为 xy 平面，视线在 xz 平面内。xᵢ 和 vᵢ 分别是相对位置、相对速度沿第 i 个坐标轴的分量，r 是两星间距，μ = M₁M₂/M，D 为观测距离。横向偏振基取 (cos i, 0, −sin i) 和 (0, 1, 0)。以下公式用有量纲的位置与速度。</span></p>
-            <div class="equations"><div>Sᵢⱼ = vᵢvⱼ − GM xᵢxⱼ/r³</div><div>h₊ = 2Gμ (cos²i Sₓₓ − Sᵧᵧ)/(c⁴D)</div><div>h× = 4Gμ cos i Sₓᵧ/(c⁴D)</div></div>
+            <p><span data-zh="取轨道为 xy 平面。观测者的方位角固定为 0°，改变倾角 i 时，视线在 xz 平面内从 +z 转向 +x。xᵢ 和 vᵢ 分别是相对位置、相对速度沿第 i 个坐标轴的分量，r 是两星间距，μ = M₁M₂/M，D 为观测距离。横向偏振基取 (cos i, 0, −sin i) 和 (0, 1, 0)。以下公式用有量纲的位置与速度。" data-en="The orbit lies in the xy plane. The observer stays at azimuth 0° as inclination i turns the line of sight from +z toward +x in the xz plane. xᵢ and vᵢ are components of relative position and velocity, r is the separation, μ = M₁M₂/M, and D is the observer distance. The sky axes are (cos i, 0, −sin i) and (0, 1, 0). These expressions use dimensional position and velocity.">取轨道为 xy 平面。观测者的方位角固定为 0°，改变倾角 i 时，视线在 xz 平面内从 +z 转向 +x。xᵢ 和 vᵢ 分别是相对位置、相对速度沿第 i 个坐标轴的分量，r 是两星间距，μ = M₁M₂/M，D 为观测距离。横向偏振基取 (cos i, 0, −sin i) 和 (0, 1, 0)。以下公式用有量纲的位置与速度。</span></p>
+            <div class="equations"><div>S<sub>ij</sub> = v<sub>i</sub>v<sub>j</sub> − GM x<sub>i</sub>x<sub>j</sub>/r³</div><div>h₊ = 2Gμ (cos²i S<sub>xx</sub> − S<sub>yy</sub>)/(c⁴D)</div><div>h× = 4Gμ cos i S<sub>xy</sub>/(c⁴D)</div></div>
           </section>
           <p class="sources"><a href="https://doi.org/10.12942/lrr-2014-2" target="_blank" rel="noopener">Blanchet (2014) · <span data-zh="式 2–3、216–220、227" data-en="Eqs. 2–3, 216–220, 227">式 2–3、216–220、227</span> ↗</a><a href="https://arxiv.org/abs/gr-qc/0412018" target="_blank" rel="noopener">Nissanke &amp; Blanchet (2005) ↗</a></p>
         </div>

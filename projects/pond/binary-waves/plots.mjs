@@ -1,5 +1,5 @@
 import { componentPositions, polarizations, REF_PERIOD, sampleAt, SECONDS, SEMIMAJOR, symmetricRatio } from './model.mjs';
-import { mapGeometry, paintField } from './field.mjs';
+import { cameraFrame, projectPoint } from './geometry.mjs';
 
 const GOLD = '#ffc299', BLUE = '#82d4e8', GRID = '#273644', MUTED = '#a1b3c3';
 const MONO = '11px ui-monospace, Menlo, Consolas, monospace';
@@ -25,86 +25,63 @@ function disk(ctx, x, y, radius, color) {
   ctx.fillStyle = '#091019'; ctx.fill(); ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.stroke();
 }
 
-export function wavePlot(canvas) {
-  const raster = document.createElement('canvas');
-  const rasterContext = raster.getContext('2d');
-  let map, image;
-  return (orbit, time) => {
-    const {ctx, w, h} = surface(canvas);
-    if (!w || !h) return;
-    const bw = Math.min(640, Math.round(w)), bh = Math.max(1, Math.round(h*bw/w));
-    if (!map || bw !== map.width || bh !== map.height) {
-      raster.width = bw; raster.height = bh;
-      map = mapGeometry(bw, bh); image = rasterContext.createImageData(bw, bh);
-    }
-    paintField(map, orbit, time, image.data);
-    rasterContext.putImageData(image, 0, 0);
-    ctx.drawImage(raster, 0, 0, w, h);
-    const cx = w/2, cy = h/2, core = map.core*w/bw, extent = map.extent*w/bw;
-    ctx.save(); ctx.translate(cx,cy);
-    ctx.strokeStyle = 'rgba(233,239,244,.20)'; ctx.lineWidth = .65;
-    ctx.setLineDash([2,5]); line(ctx,-cx,0,cx,0); line(ctx,0,-cy,0,cy);
-    for (let i = 1; i <= 3; i++) {
-      ctx.beginPath(); ctx.arc(0,0,core+(extent-core)*i/3,0,2*Math.PI); ctx.stroke();
-    }
-    ctx.setLineDash([]); ctx.strokeStyle = '#8eaaa8'; ctx.beginPath(); ctx.arc(0,0,core,0,2*Math.PI); ctx.stroke();
-    const state = sampleAt(orbit,time), bodies = componentPositions(state,orbit.q);
-    const scale = core*.78/(SEMIMAJOR*(1+orbit.e)/(1+orbit.q));
-    for (const [k, color] of [GOLD, BLUE].entries()) {
-      ctx.beginPath();
-      for (let j = 0; j <= 64; j++) {
-        sampleAt(orbit,time-(1-j/64)*REF_PERIOD,state);
-        const previous = componentPositions(state,orbit.q);
-        const x = previous[2*k]*scale, y = -previous[2*k+1]*scale;
-        if (j === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-      }
-      ctx.globalAlpha = .5; ctx.lineWidth = 1; ctx.strokeStyle = color; ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = '#586675'; line(ctx,bodies[0]*scale,-bodies[1]*scale,bodies[2]*scale,-bodies[3]*scale);
-    disk(ctx,bodies[0]*scale,-bodies[1]*scale,3.8,GOLD);
-    disk(ctx,bodies[2]*scale,-bodies[3]*scale,2.3+1.5*orbit.q,BLUE);
-    ctx.restore();
-    const ruler = (extent-core)/3;
-    ctx.fillStyle = 'rgba(8,15,23,.78)'; ctx.fillRect(9,h-34,ruler+16,27);
-    ctx.fillStyle = '#dce8ec'; ctx.textAlign = 'center'; ctx.fillText('λ₀',17+ruler/2,h-20);
-    ctx.strokeStyle = '#c2d2d8'; ctx.lineWidth = 1; line(ctx,17,h-13,17+ruler,h-13);
-    line(ctx,17,h-16,17,h-11); line(ctx,17+ruler,h-16,17+ruler,h-11);
-  };
-}
-
-export function drawOrbit(canvas, orbit, time) {
-  const {ctx,w,h} = surface(canvas), cx = w/2, cy = h/2;
-  const scale = .40*Math.min(w,h)/(SEMIMAJOR*(1+orbit.e)/(1+orbit.q));
-  const state = new Float64Array(7), trails = [[],[]];
-  const span = 1.45*REF_PERIOD, samples = 220;
-  for (let i = 0; i <= samples; i++) {
-    sampleAt(orbit,time - span*(1-i/samples),state);
-    const body = componentPositions(state,orbit.q);
-    for (let k = 0; k < 2; k++) trails[k].push([cx+body[2*k]*scale, cy-body[2*k+1]*scale]);
+export function drawOrbit(canvas, orbit, time, inclination) {
+  const {ctx,w,h} = surface(canvas);
+  if (!w || !h) return;
+  const cx = w/2, cy = h/2, camera = cameraFrame(inclination);
+  const extent = SEMIMAJOR*(1+orbit.e)/(1+orbit.q);
+  const scale = .4*Math.min(w,h)/extent;
+  function project(x, y) {
+    const [horizontal, vertical, depth] = projectPoint(camera,x,y,0);
+    return [cx+horizontal*scale, cy-vertical*scale, depth];
   }
-  ctx.strokeStyle = GRID; ctx.lineWidth = 1;
-  line(ctx,15,cy,w-15,cy); line(ctx,cx,13,cx,h-13);
-  for (const [k,color] of [GOLD,BLUE].entries()) {
-    const points = trails[k]; ctx.strokeStyle = color; ctx.lineWidth = 1.6;
-    for (let part = 0; part < 5; part++) {
-      const start = part*samples/5, end = (part+1)*samples/5;
-      ctx.globalAlpha = .20 + .18*part; ctx.beginPath(); ctx.moveTo(...points[start]);
-      for (let j = start+1; j <= end; j++) ctx.lineTo(...points[j]);
+  // A circular coordinate grid in the orbital plane makes the foreshortening visible.
+  ctx.lineWidth = 1; ctx.strokeStyle = GRID;
+  for (let r=10; r<=extent*1.1; r+=10) {
+    ctx.beginPath();
+    for (let j=0; j<=96; j++) {
+      const phi = 2*Math.PI*j/96;
+      const [x,y] = project(r*Math.cos(phi),r*Math.sin(phi));
+      if (j===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+  const state = new Float64Array(7), trails = [[],[]], samples = 220;
+  for (let i=0; i<=samples; i++) {
+    sampleAt(orbit,time-1.45*REF_PERIOD*(1-i/samples),state);
+    const body = componentPositions(state,orbit.q);
+    trails[0].push(project(body[0],body[1]));
+    trails[1].push(project(body[2],body[3]));
+  }
+  const colors = [GOLD,BLUE];
+  for (const [k,points] of trails.entries()) {
+    ctx.strokeStyle = colors[k]; ctx.lineWidth = 1.7;
+    for (let part=0; part<5; part++) {
+      const first=part*samples/5, last=(part+1)*samples/5;
+      ctx.globalAlpha = .22+.19*part;
+      ctx.beginPath(); ctx.moveTo(points[first][0],points[first][1]);
+      for (let j=first+1; j<=last; j++) ctx.lineTo(points[j][0],points[j][1]);
       ctx.stroke();
     }
-    ctx.globalAlpha = 1; disk(ctx,...points[samples],k === 0 ? 5.8 : 3.5+2.3*orbit.q,color);
+  }
+  ctx.globalAlpha = 1;
+  const markers = trails.map((trail,k)=>({k, point:trail[samples]}));
+  markers.sort((a,b)=>a.point[2]-b.point[2]);
+  for (const {k,point:[x,y]} of markers) {
+    disk(ctx,x,y,k===0 ? 5.8 : 3.5+2.3*orbit.q,colors[k]);
   }
   ctx.strokeStyle = MUTED; ctx.lineWidth = 1.3;
-  const y = h-20; line(ctx,15,y,15+10*scale,y); line(ctx,15,y-3,15,y+3);line(ctx,15+10*scale,y-3,15+10*scale,y+3);
-  ctx.fillStyle = MUTED; ctx.fillText('10 GM/c²',15,y-6);
+  const y=h-20;
+  line(ctx,15,y,15+10*scale,y);
+  line(ctx,15,y-3,15,y+3); line(ctx,15+10*scale,y-3,15+10*scale,y+3);
+  ctx.fillStyle=MUTED; ctx.textAlign='left'; ctx.fillText('10 GM/c²',15,y-6);
 }
 
 export function drawSignal(canvas, orbit, time, inclination, english) {
   const {ctx,w,h} = surface(canvas);
   const left = 36, right = w-15, top = 23, bottom = h-32, middle = (top + bottom)/2;
   const span = 1.8*REF_PERIOD, n = symmetricRatio(orbit.q);
-  const cosI = inclination === 90 ? 0 : Math.cos(inclination*Math.PI/180);
+  const { cosI } = cameraFrame(inclination);
   const state = new Float64Array(7), count = Math.max(160,Math.round(right-left));
   // Constant +/-3 x 10^-21 across settings: relative changes in amplitude remain visible.
   const signalY = strain => middle - strain*1e21*(bottom-top)/6;

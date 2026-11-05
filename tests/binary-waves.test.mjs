@@ -5,7 +5,7 @@ import {
   REF_PERIOD, sampleAt, SEMIMAJOR, sourceTensor, STOP_RADIUS, STRAIN_UNIT, symmetricRatio
 } from '../projects/pond/binary-waves/model.mjs';
 
-import { mapGeometry, paintField } from '../projects/pond/binary-waves/field.mjs';
+import { shellSample } from '../projects/pond/binary-waves/scene.mjs';
 
 const close = (a,b,tol) => assert.ok(Math.abs(a-b) <= tol, `${a} differs from ${b} by more than ${tol}`);
 
@@ -99,11 +99,12 @@ test('halving the time step converges on an eccentric orbit and on its cutoff ti
 });
 
 test('outer wavefront repeats an earlier inner signal with inverse-distance attenuation', () => {
-  const orbit=makeOrbit(.4,.65), map=mapGeometry(32,24), pixel=new Uint8ClampedArray(32*24*4);
-  paintField(map,orbit,0,pixel);
-  const inner=map.sources.slice(0,3);
-  // The outer edge is 3 reference wavelengths beyond the inner edge, R = 7 lambda_0.
-  paintField(map,orbit,3*REF_PERIOD/2,pixel);
-  const outer=map.sources.slice(-3);
-  for (let i=0;i<3;i++) close(outer[i],4*inner[i]/7,1e-14);
+  const inner = shellSample(0,0);
+  const outer = shellSample(3*REF_PERIOD/2,1);
+  close(inner.emissionTime, outer.emissionTime, 1e-12);
+  close(inner.attenuation, 1, 1e-14);
+  close(outer.attenuation, 4/7, 1e-14);
+  const middle = shellSample(0,0.5);
+  close(middle.emissionTime, -.75*REF_PERIOD, 1e-12);
+  close(middle.attenuation, 4/5.5, 1e-14);
 });
