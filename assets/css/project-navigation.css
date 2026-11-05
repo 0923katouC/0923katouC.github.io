@@ -41,6 +41,11 @@ body.project-dark {
   text-shadow: var(--glass-text-shadow);
 }
 
+.project-dark .main-nav a.active {
+  color: var(--glass-ink);
+  background: var(--glass-surface);
+}
+
 .project-heading {
   padding-bottom: 0;
 }
