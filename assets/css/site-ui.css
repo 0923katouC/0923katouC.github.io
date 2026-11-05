@@ -3,19 +3,22 @@ html.ui-root{
 }
 
 body.ui-page{
+  padding-top:var(--ui-header-space,67px);
+  overscroll-behavior-y:none;
+  --ui-header-tint:rgba(247,248,250,.48);
+}
+
+body.ui-page:where(:not(.project-app)){
   position:relative;
   min-height:100vh;
   min-height:100svh;
   display:flex;
   flex-direction:column;
-  padding-top:var(--ui-header-space,67px);
-  overscroll-behavior-y:none;
-  --ui-header-tint:rgba(247,248,250,.48);
   isolation:isolate;
   background:#f7f8fa;
 }
 
-body.ui-page > main{
+body.ui-page:where(:not(.project-app)) > main{
   position:relative;
   z-index:1;
   flex:1 0 auto;

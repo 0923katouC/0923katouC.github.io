@@ -1,0 +1,100 @@
+/* Only the navigation and title use the site's column. The workbench below
+   keeps its own colors, type, and available drawing area. */
+.project-app .site-header,
+.project-app .project-heading {
+  --max: 1120px;
+}
+
+.project-app .site-header,
+.project-app a.back-link,
+.project-app .project-heading-links {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.project-app .site-header {
+  font-size: 1rem;
+  line-height: 1.65;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+}
+
+.project-app .site-title {
+  text-decoration: none;
+}
+
+.project-app .site-header .lang-switch {
+  font-family: inherit;
+  font-size: .85rem;
+  letter-spacing: normal;
+}
+
+body.project-dark {
+  --ui-header-tint: rgba(3,8,15,.56);
+}
+
+.project-dark .site-header {
+  border-bottom-color: rgba(218,232,248,.16);
+}
+
+.project-dark .site-title {
+  color: var(--glass-ink);
+  text-shadow: var(--glass-text-shadow);
+}
+
+.project-heading {
+  padding-bottom: 0;
+}
+
+.project-heading-links {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.project-edition,
+.project-methods {
+  color: inherit;
+  font-size: .75rem;
+}
+
+.project-edition {
+  letter-spacing: .08em;
+  opacity: .75;
+}
+
+.project-heading > :is(.hero, .intro, .masthead) {
+  padding-top: 0;
+  padding-inline: 0;
+}
+
+.project-app .project-content:is(.lab-main, .index-main) {
+  padding-top: 0;
+}
+
+.project-app :is(.skip, .skip-link):focus {
+  z-index: 30;
+}
+
+.project-app [id] {
+  scroll-margin-top: calc(var(--ui-header-space, 67px) + 12px);
+}
+
+.project-app footer a.back-link {
+  min-height: 44px;
+  margin-block: 0;
+}
+
+@media print {
+  body.project-app {
+    padding-top: 0;
+  }
+  .project-app .site-header,
+  .project-heading-links,
+  .project-heading > .back-link {
+    display: none;
+  }
+  .project-heading {
+    padding-top: 0;
+  }
+}

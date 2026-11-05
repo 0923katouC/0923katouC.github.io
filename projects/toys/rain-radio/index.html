@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="ui-root">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,14 +7,42 @@
   <meta name="description" content="一台只收到虚构地点的收音机。八个频率，二十四段夜间广播，还有可以安静听一会儿的合成环境声。">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>不存在电台 · CMC</title>
-  <link rel="stylesheet" href="./style.css?v=20261029-1">
+  <link rel="stylesheet" href="./style.css?v=20261105-nav1">
   <script type="module" src="./app.mjs?v=20261029-1"></script>
+  <link rel="stylesheet" href="/assets/css/site-navigation.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-motion.css?v=20261006-spring2">
+  <link rel="stylesheet" href="/assets/css/project-navigation.css?v=20261105-nav1">
+  <script src="/assets/js/site-motion.js?v=20261105-nav1" defer blocking="render"></script>
+  <script src="/assets/js/main.js?v=20261006-motion1" defer></script>
+  <script src="/assets/js/site-ui.js?v=20261003-header-only1" defer></script>
+  <script src="/assets/js/liquid-glass.js?v=20261105-nav1" defer></script>
 </head>
-<body data-station="store">
-  <a class="skip-link" href="#radio">跳到收音机</a>
-  <header class="site-bar"><a class="brand" href="/">CMC<span> / 奇怪项目</span></a><a class="back" href="/projects/toys/">← 返回小玩具</a><span class="edition">夜间收藏 / N° 01</span></header>
-  <main class="shell">
-    <header class="masthead"><div><p class="eyebrow">TUNE IN TO NOWHERE</p><h1>不存在<span>电台</span><i aria-hidden="true">✳</i></h1><p class="lede">把频率转到别处。那里刚好有人，替你把夜晚慢下来。</p></div><p class="masthead-note">八个不在地图上的地方<br>不接收新闻，只接收一点安静。</p></header>
+<body data-station="store" class="ui-page glass-ui project-app">
+  <a class="skip-link" href="#radio" lang="zh-CN">跳到收音机</a>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="site-title" href="/?v=20260911-glass1">CMC</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/?v=20260911-glass1" data-zh="Home page" data-en="Home page">Home page</a>
+        <a href="/photography.html?v=20260911-glass1" data-zh="摄影集" data-en="Photography">摄影集</a>
+        <a href="/academics.html?v=20260911-glass1" data-zh="学术集" data-en="Academics">学术集</a>
+        <a href="/writing.html?v=20260911-glass1" data-zh="码字集" data-en="Writing">码字集</a>
+        <a class="active" aria-current="location" href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
+        <button class="lang-switch" type="button" aria-label="Switch language">EN</button>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <div class="container page-head project-heading">
+      <div class="project-heading-links">
+        <a class="back-link" href="/projects/toys/"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="小玩具" data-en="Little Toys">小玩具</span></a>
+        <span class="project-edition" lang="zh-CN">夜间收藏 / N° 01</span>
+      </div>
+      <header lang="zh-CN" class="masthead"><div><p class="eyebrow">TUNE IN TO NOWHERE</p><h1>不存在<span>电台</span><i aria-hidden="true">✳</i></h1><p class="lede">把频率转到别处。那里刚好有人，替你把夜晚慢下来。</p></div><p class="masthead-note">八个不在地图上的地方<br>不接收新闻，只接收一点安静。</p></header>
+    </div>
+    <div class="project-content shell" lang="zh-CN">
 
     <section class="radio" id="radio" aria-label="不存在电台收音机">
       <span class="screw screw-tl" aria-hidden="true"></span><span class="screw screw-tr" aria-hidden="true"></span><span class="screw screw-bl" aria-hidden="true"></span><span class="screw screw-br" aria-hidden="true"></span>
@@ -34,7 +62,8 @@
     <section class="station-directory" aria-labelledby="directory-title"><div class="section-heading"><div><p class="eyebrow">ON THIS FREQUENCY</p><h2 id="directory-title">还有一些地方，亮着灯。</h2></div><span id="discovered">已找到 1 / 8 个频率</span></div><div class="station-grid" id="stations"></div></section>
     <section class="favorites" aria-labelledby="favorites-title"><p class="eyebrow" id="favorites-title">留给下次的频率</p><div id="favorite-list"><p class="empty-favorites">按一下收音机上的星星，把喜欢的地方留在这里。</p></div></section>
     <footer><span>CMC · 无用而安静的东西</span><p>所有地点与广播均属虚构。进度只保存在当前浏览器。<span id="storage-note"></span></p></footer>
+    </div>
   </main>
-  <noscript><p class="shell">开启 JavaScript 后可以调台和播放环境声。上面的这段广播，仍然是给你的。</p></noscript>
+  <noscript lang="zh-CN"><p class="shell">开启 JavaScript 后可以调台和播放环境声。上面的这段广播，仍然是给你的。</p></noscript>
 </body>
 </html>

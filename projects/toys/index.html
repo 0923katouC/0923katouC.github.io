@@ -7,15 +7,16 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
   <meta name="description" content="CMC 的奇怪项目：不赶时间的小游戏，与没什么用的小玩具。">
   <title>小玩具 | CMC</title>
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261003-header-only1">
-  <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261003-header-only1">
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261105-nav1">
   <link rel="stylesheet" href="/assets/css/collection-backgrounds.css?v=20261004-collections-bg1">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261105-nav1">
   <link rel="stylesheet" href="/assets/css/site-motion.css?v=20261006-spring2">
-  <link rel="stylesheet" href="/assets/css/playground.css?v=20261029-1">
-  <script src="/assets/js/site-motion.js?v=20261006-spring2" defer blocking="render"></script>
+  <link rel="stylesheet" href="/assets/css/playground.css?v=20261105-nav1">
+  <script src="/assets/js/site-motion.js?v=20261105-nav1" defer blocking="render"></script>
   <script src="/assets/js/playground.js?v=20261029-1" defer></script>
 </head>
-<body class="ui-page collection-page projects-page playground-page">
+<body class="ui-page collection-page projects-page playground-page glass-ui">
   <picture class="collection-background" aria-hidden="true">
     <source media="(max-width: 640px)" srcset="/assets/images/home-entries/projects-960.webp" type="image/webp">
     <img src="/assets/images/collection-backgrounds/projects-personal-v2.webp" width="1280" height="720" alt="" decoding="async" fetchpriority="high">
@@ -28,14 +29,14 @@
         <a href="/photography.html?v=20260911-glass1" data-zh="摄影集" data-en="Photography">摄影集</a>
         <a href="/academics.html?v=20260911-glass1" data-zh="学术集" data-en="Academics">学术集</a>
         <a href="/writing.html?v=20260911-glass1" data-zh="码字集" data-en="Writing">码字集</a>
-        <a class="active" href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
+        <a class="active" aria-current="location" href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
         <button class="lang-switch" type="button" aria-label="Switch language">EN</button>
       </nav>
     </div>
   </header>
   <main class="playground-main">
     <section class="container page-head compact-head playground-heading">
-      <a class="back-link" href="/projects.html" data-zh="← 奇怪项目" data-en="← Odd Projects">← 奇怪项目</a>
+      <a class="back-link" href="/projects.html"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</span></a>
       <span class="eyebrow" data-zh="没什么用，也很好" data-en="CMC / AFTER HOURS">没什么用，也很好</span>
       <div class="playground-title-row"><h1  data-zh="小玩具" data-en="Little Toys">小玩具</h1><button class="pick-button" id="pick-something" type="button" hidden><span  data-zh="替我挑一个 ↗" data-en="Pick one for me ↗">替我挑一个 ↗</span></button></div>
       <p  data-zh="有的东西负责解决问题，有的东西负责让今天变得有点不同。" data-en="Some things solve problems. These are here to make today a little different.">有的东西负责解决问题，有的东西负责让今天变得有点不同。</p>
@@ -64,6 +65,7 @@
     </footer>
   </main>
   <script src="/assets/js/main.js?v=20261006-motion1"></script>
+  <script src="/assets/js/liquid-glass.js?v=20261105-nav1" defer></script>
   <script src="/assets/js/site-ui.js?v=20261003-header-only1" defer></script>
 </body>
 </html>

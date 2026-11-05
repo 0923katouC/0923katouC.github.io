@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="ui-root">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="交互式 Kerr 黑洞吸积盘模拟：零测地线追踪、相对论红移、一维黏性吸积盘与参数化磁应力。">
@@ -7,18 +7,42 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
   <meta name="theme-color" content="#090b0e">
   <title>黑洞吸积盘 | 池沼仿真 · CMC</title>
-  <link rel="stylesheet" href="/assets/css/pond.css?v=20261024-camera2">
-  <script src="/assets/js/main.js?v=20261006-motion1" defer></script>
+  <link rel="stylesheet" href="/assets/css/pond.css?v=20261105-nav1">
   <script src="/assets/js/pond-physics.js?v=20261024-1" defer></script>
   <script src="/assets/js/pond-black-hole-renderer.js?v=20261024-camera2" defer></script>
   <script src="/assets/js/pond-camera.js?v=20261024-camera2" defer></script>
   <script src="/assets/js/pond-app.js?v=20261024-camera2" defer></script>
+  <link rel="stylesheet" href="/assets/css/site-navigation.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-motion.css?v=20261006-spring2">
+  <link rel="stylesheet" href="/assets/css/project-navigation.css?v=20261105-nav1">
+  <script src="/assets/js/site-motion.js?v=20261105-nav1" defer blocking="render"></script>
+  <script src="/assets/js/main.js?v=20261006-motion1" defer></script>
+  <script src="/assets/js/site-ui.js?v=20261003-header-only1" defer></script>
+  <script src="/assets/js/liquid-glass.js?v=20261105-nav1" defer></script>
 </head>
-<body class="pond-experiment">
+<body class="pond-experiment ui-page glass-ui project-app project-dark">
   <a class="skip-link" href="#main" data-zh="跳到实验" data-en="Skip to experiment">跳到实验</a>
-  <header class="lab-header"><a class="lab-brand" href="/">CMC<span>/</span><span data-zh="池沼仿真" data-en="POND SIMULATIONS">池沼仿真</span></a><nav aria-label="Navigation"><a href="/projects/pond/" data-zh="← 实验目录" data-en="← Experiments">← 实验目录</a><button class="lang-switch" type="button" aria-label="Switch language">EN</button></nav></header>
-  <main id="main" class="lab-main">
-    <div class="experiment-heading"><div><p class="eyebrow">EXPERIMENT 001 <span> / </span> RELATIVISTIC ACCRETION</p><h1><span data-zh="黑洞" data-en="Black hole">黑洞</span><span class="heading-dot">·</span><span class="heading-secondary" data-zh="吸积盘" data-en="Accretion disk">吸积盘</span></h1></div><a class="method-anchor" href="#methods" data-zh="模型与论文 ↘" data-en="Model & papers ↘">模型与论文 ↘</a></div>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="site-title" href="/?v=20260911-glass1">CMC</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/?v=20260911-glass1" data-zh="Home page" data-en="Home page">Home page</a>
+        <a href="/photography.html?v=20260911-glass1" data-zh="摄影集" data-en="Photography">摄影集</a>
+        <a href="/academics.html?v=20260911-glass1" data-zh="学术集" data-en="Academics">学术集</a>
+        <a href="/writing.html?v=20260911-glass1" data-zh="码字集" data-en="Writing">码字集</a>
+        <a class="active" aria-current="location" href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
+        <button class="lang-switch" type="button" aria-label="Switch language">EN</button>
+      </nav>
+    </div>
+  </header>
+  <main id="main">
+    <div class="container page-head project-heading">
+      <a class="back-link" href="/projects/pond/"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="池沼仿真" data-en="Pond Simulations">池沼仿真</span></a>
+      <div class="experiment-heading"><div><p class="eyebrow">EXPERIMENT 001 <span> / </span> RELATIVISTIC ACCRETION</p><h1><span data-zh="黑洞" data-en="Black hole">黑洞</span><span class="heading-dot">·</span><span class="heading-secondary" data-zh="吸积盘" data-en="Accretion disk">吸积盘</span></h1></div><a class="method-anchor" href="#methods" data-zh="模型与论文 ↘" data-en="Model & papers ↘">模型与论文 ↘</a></div>
+    </div>
+    <div class="project-content lab-main">
     <div class="observatory">
       <section class="viewer-panel" aria-label="Black hole simulation">
         <div class="viewer-topline"><span class="viewer-label">KERR OBSERVATORY <span>01</span></span><span id="render-status" class="render-status" role="status" aria-live="polite" data-zh="初始化…" data-en="Initializing…">初始化…</span></div>
@@ -45,8 +69,9 @@
     <section class="evolution-panel" aria-labelledby="evolution-title"><div class="evolution-intro"><p class="eyebrow">WATCH THE DISK EVOLVE</p><h2 id="evolution-title" data-zh="给黑洞一圈气体。" data-en="Give the black hole a ring of gas.">给黑洞一圈气体。</h2><p data-zh="注入一圈物质，调快时间，观察黏性输运如何让它向内吸积、向外扩散。" data-en="Inject a ring, speed up time, and watch viscosity move material inward and spread it outward.">注入一圈物质，调快时间，观察黏性输运如何让它向内吸积、向外扩散。</p><button id="inject-ring" class="primary-button" type="button" data-zh="＋ 注入气体环" data-en="＋ Inject gas ring">＋ 注入气体环</button><span id="injection-status" class="injection-status" role="status" aria-live="polite"></span></div><div class="profile-panel"><div class="profile-header"><span data-zh="径向面密度 Σ / Σ₀,max" data-en="Radial surface density Σ / Σ₀,max">径向面密度 Σ / Σ₀,max</span><span id="alpha-effective">α<sub>eff</sub> = 0.11</span></div><canvas id="density-profile" role="img" aria-label="Radial surface density profile"></canvas><div class="profile-footer"><span>r / r<sub>g</sub><span class="profile-legend" data-zh=" · 虚线为初始状态" data-en=" · Dashed: initial"> · 虚线为初始状态</span></span><span id="mass-ledger" data-zh="质量守恒检查…" data-en="Checking mass conservation…">质量守恒检查…</span></div><div class="time-control"><label for="time-scale" data-zh="时间流速" data-en="Time scale">时间流速</label><input id="time-scale" type="range" min="-0.3" max="3" value="0.90309" step="0.05"><output id="time-scale-value" for="time-scale">8 t<sub>g</sub>/s</output></div></div></section>
     <div class="model-caption"><span class="caption-mark">∴</span><p data-zh="数值追踪 Kerr 时空中的光线；流体使用一维 α 黏性盘，磁场使用参数化应力。色彩经过映射，呈现的是模型预测，不是可见光实拍，也不是完整三维 GRMHD。" data-en="Light is traced numerically through Kerr spacetime. The fluid is a 1D α-viscous disk with prescribed magnetic stress. Colors are mapped for display: this is a model visualization, not a visible-light photograph or a full 3D GRMHD simulation.">数值追踪 Kerr 时空中的光线；流体使用一维 α 黏性盘，磁场使用参数化应力。色彩经过映射，呈现的是模型预测，不是可见光实拍，也不是完整三维 GRMHD。</p></div>
     <section id="methods" class="methods-section"><details><summary><span data-zh="模型、近似与参考论文" data-en="Model, approximations & primary papers">模型、近似与参考论文</span><span class="summary-plus" aria-hidden="true">＋</span></summary><div class="methods-content"><div class="method-grid"><article><span class="method-number">01 / SPACETIME</span><h3 data-zh="弯曲的光路" data-en="Curved light paths">弯曲的光路</h3><p data-zh="在固定的 Kerr 度规中数值积分零测地线，寻找光线与有限厚度盘面的交点。计入自旋拖曳、引力透镜和相对论频移；事件视界、ISCO 与长度以 r_g = GM/c² 表示。" data-en="Null geodesics are integrated in a fixed Kerr metric to find intersections with a finite-height disk photosphere, including frame dragging, lensing and relativistic frequency shifts. The horizon, ISCO and radii are expressed in r_g = GM/c².">在固定的 Kerr 度规中数值积分零测地线，寻找光线与有限厚度盘面的交点。计入自旋拖曳、引力透镜和相对论频移；事件视界、ISCO 与长度以 r_g = GM/c² 表示。</p></article><article><span class="method-number">02 / ACCRETION</span><h3 data-zh="向内流动的盘" data-en="An evolving disk">向内流动的盘</h3><p data-zh="Page–Thorne 零内边界力矩薄盘给出平衡发射率；一维牛顿黏性扩散方程演化径向面密度。β 与给定 Maxwell 应力通过有效 α 调节输运。注入气体环可直接观察非稳态扩散。" data-en="A Page–Thorne zero-inner-torque thin disk supplies the equilibrium emissivity. A 1D Newtonian viscous diffusion equation evolves radial surface density. Plasma β and prescribed Maxwell stress modify the effective α; an injected gas ring reveals transient spreading.">Page–Thorne 零内边界力矩薄盘给出平衡发射率；一维牛顿黏性扩散方程演化径向面密度。β 与给定 Maxwell 应力通过有效 α 调节输运。注入气体环可直接观察非稳态扩散。</p></article><article><span class="method-number">03 / LIMITATIONS</span><h3 data-zh="真实到哪里？" data-en="Where the model stops">真实到哪里？</h3><p data-zh="未求解三维 GRMHD、磁场感应方程、MRI、喷流及辐射反馈。盘纹理是参数化扰动；给定圆锥盘面遮挡后方发射；圆周速度从赤道解延拓，未做垂直结构或体辐射转移。显示颜色与曝光不代表观测波段或绝对光度。" data-en="No 3D GRMHD, induction equation, MRI, jet or radiation feedback is solved. Disk textures are parameterized perturbations. A prescribed conical photosphere occludes emission behind it. Circular kinematics are extended off the equator; vertical structure and volumetric radiative transfer are omitted. Color and exposure do not define an observing band or absolute luminosity.">未求解三维 GRMHD、磁场感应方程、MRI、喷流及辐射反馈。盘纹理是参数化扰动；给定圆锥盘面遮挡后方发射；圆周速度从赤道解延拓，未做垂直结构或体辐射转移。显示颜色与曝光不代表观测波段或绝对光度。</p></article></div><p class="source-links"><a href="/projects/pond/MODEL.md" data-zh="完整模型说明与方程 ↗" data-en="Full model notes & equations ↗">完整模型说明与方程 ↗</a><a href="/assets/vendor/npgs/README.md" data-zh="NPGS 度规代码归属" data-en="NPGS metric attribution">NPGS 度规代码归属</a><a href="/assets/vendor/npgs/LICENSE">GPL-3.0</a><a href="https://github.com/0923katouC/0923katouC.github.io/tree/main/projects/pond" target="_blank" rel="noopener noreferrer" data-zh="源代码 ↗" data-en="Source ↗">源代码 ↗</a></p><div class="references"><h3 data-zh="一手文献" data-en="Primary literature">一手文献</h3><ol><li><a href="https://arxiv.org/abs/1910.12881" target="_blank" rel="noopener noreferrer">Gralla & Lupsasca (2020) · Null geodesics of the Kerr exterior ↗</a><span data-zh="Kerr 光路的理论基础" data-en="The geometry of Kerr light paths">Kerr 光路的理论基础</span></li><li><a href="https://doi.org/10.1086/152990" target="_blank" rel="noopener noreferrer">Page & Thorne (1974) · Disk-Accretion onto a Black Hole ↗</a><span data-zh="相对论薄盘的发射率" data-en="Relativistic thin-disk emission">相对论薄盘的发射率</span></li><li><a href="https://ui.adsabs.harvard.edu/abs/1973A%26A....24..337S/abstract" target="_blank" rel="noopener noreferrer">Shakura & Sunyaev (1973) · Black holes in binary systems ↗</a><span data-zh="α 黏性参数化" data-en="The α-viscosity prescription">α 黏性参数化</span></li><li><a href="https://doi.org/10.1146/annurev.aa.19.090181.001033" target="_blank" rel="noopener noreferrer">Pringle (1981) · Accretion discs in astrophysics ↗</a><span data-zh="盘的径向黏性扩散" data-en="Radial viscous disk evolution">盘的径向黏性扩散</span></li><li><a href="https://doi.org/10.1086/170270" target="_blank" rel="noopener noreferrer">Balbus & Hawley (1991) · A powerful local shear instability ↗</a><span data-zh="磁旋转不稳定性；本模型未显式求解" data-en="Magnetorotational instability; not explicitly solved here">磁旋转不稳定性；本模型未显式求解</span></li><li><a href="https://arxiv.org/abs/astro-ph/0301509" target="_blank" rel="noopener noreferrer">Gammie, McKinney & Tóth (2003) · HARM ↗</a><span data-zh="完整 GRMHD 求解器的参考路线" data-en="A reference route toward full GRMHD">完整 GRMHD 求解器的参考路线</span></li><li><a href="https://arxiv.org/abs/1611.09720" target="_blank" rel="noopener noreferrer">Porth et al. (2017) · The Black Hole Accretion Code ↗</a><span data-zh="GRMHD 与自适应网格；本页面未运行 BHAC" data-en="GRMHD with adaptive meshes; BHAC is not run here">GRMHD 与自适应网格；本页面未运行 BHAC</span></li></ol></div></div></details></section>
+    </div>
   </main>
-  <footer class="lab-footer"><a href="/projects/pond/" data-zh="← 池沼仿真" data-en="← Pond simulations">← 池沼仿真</a><span>CMC / EXPERIMENT 001 / 2026</span></footer>
+  <footer class="lab-footer"><a class="back-link" href="/projects/pond/"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="池沼仿真" data-en="Pond Simulations">池沼仿真</span></a><span>CMC / EXPERIMENT 001 / 2026</span></footer>
   <noscript><p class="noscript-message">这个实验需要 JavaScript 和 WebGL 2。This experiment requires JavaScript and WebGL 2.</p></noscript>
 </body>
 </html>
