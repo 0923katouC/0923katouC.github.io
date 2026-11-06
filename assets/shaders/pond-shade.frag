@@ -80,8 +80,7 @@ vec3 sky(vec3 d) {
     vec3 cell=floor(p),f=fract(p)-0.5;
     float seed=hash31(cell);
     float star=(1.0-smoothstep(0.0,0.18,length(f)))*step(0.9985,seed);
-    float halo=0.0012+0.0012*pow(max(0.0,1.0-abs(d.y)),4.0);
-    return vec3(0.42,0.54,0.75)*halo+star*mix(vec3(0.7,0.8,1),vec3(1,0.8,0.6),seed)*0.6;
+    return star*mix(vec3(0.7,0.8,1),vec3(1,0.8,0.6),seed)*0.6;
 }
 void main() {
     ivec2 pixel=ivec2(gl_FragCoord.xy);
@@ -103,6 +102,11 @@ void main() {
         fragColor=vec4(escaped.w>0.0?sky(escaped.xyz):vec3(0.0),1.0);return;
     }
     vec4 profile=radialProfile(hit.x);
+    // The emission window is applied only to displayed radiance. The viscous
+    // cells and their mass ledger still extend to the true outer boundary.
+    float innerJoin=min(1.5*uInner,uInner+0.18*(uOuter-uInner));
+    float outerJoin=uOuter-0.24*(uOuter-uInner);
+    float edge=smoothstep(uInner,innerJoin,hit.x)*(1.0-smoothstep(outerJoin,uOuter,hit.x));
     float flux=max(profile.r,0.0)*turbulence;
     float g=clamp(hit.w,0.015,8.0);
     float received=flux*pow(g,4.0)*uAccretionScale;
@@ -115,13 +119,13 @@ void main() {
         // Legend convention: blue = blueshift (>1), orange = redshift (<1).
         float scale=g<1.0?0.5+(1.0-g)/1.4:0.5-(g-1.0)/1.2;
         colour=diagnostic(clamp(scale,0.0,1.0));
-        fragColor=vec4(colour*(0.48+0.22*sqrt(max(flux,0.0))),1.0);return;
+        fragColor=vec4(edge*colour*(0.48+0.22*sqrt(max(flux,0.0))),1.0);return;
     }
     if(uMode==2) {
         float density=clamp(profile.g/1.5,0.0,1.0);
         colour=mix(vec3(0.055,0.13,0.22),vec3(0.33,0.96,0.79),sqrt(density));
-        fragColor=vec4(colour*(0.28+0.65*sqrt(density))*turbulence,1.0);return;
+        fragColor=vec4(edge*colour*(0.28+0.65*sqrt(density))*turbulence,1.0);return;
     }
     if(uMode==3)colour=vec3(0.83,0.89,1.0);
-    fragColor=vec4(colour*received*1.7,1.0);
+    fragColor=vec4(edge*colour*received*1.7,1.0);
 }

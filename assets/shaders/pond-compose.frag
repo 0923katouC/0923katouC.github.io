@@ -4,6 +4,7 @@
  */
 uniform sampler2D uRadiance;
 uniform vec2 uResolution;
+uniform float uCenterSpacing;
 uniform float uExposure;
 uniform int uDiagnostic;
 out vec4 fragColor;
@@ -48,20 +49,39 @@ vec3 reconstructEdge(vec2 uv) {
     float lb=edgeLuminance(b);
     return (lb<low||lb>high)?a:b;
 }
+// Invert grid*(a+(1-a)*abs(grid)) without cancellation near the origin.
+vec2 cacheUV(vec2 screenUV) {
+    vec2 p=2.0*screenUV-1.0;
+    return 0.5+p/(uCenterSpacing+sqrt(uCenterSpacing*uCenterSpacing+4.0*(1.0-uCenterSpacing)*abs(p)));
+}
 void main() {
-    vec2 uv=gl_FragCoord.xy/uResolution;
-    vec3 value=reconstructEdge(uv);
+    vec2 uv=gl_FragCoord.xy/uResolution, coord=cacheUV(uv);
+    vec2 footprint=fwidth(coord);
+    vec2 cells=footprint*vec2(textureSize(uRadiance,0));
+    float resolve=smoothstep(1.05,1.60,max(cells.x,cells.y));
+    vec3 value=reconstructEdge(coord);
+    if(resolve>0.0) {
+        // Average the traced radiance over a display pixel. No interpolation
+        // of hit radius, angle, frequency shift or hit type across the shadow.
+        vec3 total=vec3(0.0);
+        for(int y=-1;y<=1;++y)for(int x=-1;x<=1;++x)
+            total+=fetchLinear(coord+vec2(x,y)*footprint/3.0);
+        value=mix(value,total/9.0,resolve);
+    }
     if(uDiagnostic==0) {
         vec3 bloom=vec3(0.0);
         vec2 stepSize=1.0/vec2(textureSize(uRadiance,0));
         for(int i=0;i<8;++i) {
             float a=float(i)*0.78539816339;
             vec2 offset=vec2(cos(a),sin(a))*stepSize;
-            bloom+=max(fetchLinear(uv+offset*3.0)-0.5,0.0)*0.018;
-            bloom+=max(fetchLinear(uv+offset*9.0)-0.7,0.0)*0.008;
+            bloom+=max(fetchLinear(cacheUV(uv+offset*3.0))-0.5,0.0)*0.018;
+            bloom+=max(fetchLinear(cacheUV(uv+offset*9.0))-0.7,0.0)*0.008;
         }
         value+=bloom;
     }
     value=aces(value*uExposure);
-    fragColor=vec4(pow(value,vec3(1.0/2.2)),1.0);
+    // Zero disk radiance and an unlit patch of sky share one display black.
+    // A tapered, opaque surface still blocks stars behind it.
+    vec3 displayBlack=vec3(0.008,0.012,0.018);
+    fragColor=vec4(mix(displayBlack,vec3(1.0),pow(value,vec3(1.0/2.2))),1.0);
 }
