@@ -1,6 +1,41 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><title>Default physical frame</title>
-<style>body{margin:0;background:#030407}canvas{display:block;width:896px;height:538px}body[data-mobile] canvas{width:360px;height:390px}p{color:#ddd;font:14px monospace}</style>
-<canvas id="frame"></canvas><p id="state">Rendering default t=0 frame…</p>
-<script src="/assets/js/pond-physics.js"></script><script src="/assets/js/pond-black-hole-renderer.js?v=20261024-camera2"></script><script>
-(async()=>{if(new URLSearchParams(location.search).has('mobile'))document.body.dataset.mobile='true';const canvas=document.getElementById('frame');const model=PondPhysics.createModel();const r=new PondRenderer(canvas,()=>{});r.setParameters({quality:document.body.hasAttribute('data-mobile')?560:960});await r.init();function step(){r.render(0,model.getProfile());if(!r.ready&&!r.failed)requestAnimationFrame(step);else document.getElementById('state').textContent=r.ready?'Default t=0 frame ready':'Failed';}step();})();
-</script></html>
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pond disk reference frame</title>
+<style>
+  body { margin: 0; background: #030407; }
+  canvas { display: block; width: 896px; height: 538px; }
+  body[data-mobile] canvas { width: 360px; height: 390px; }
+  p { color: #ddd; font: 14px monospace; }
+</style>
+<canvas id="frame"></canvas>
+<p id="state">Rendering the physical frame at t=0…</p>
+<script src="/assets/js/pond-physics.js?v=20261106-thin-rim1"></script>
+<script src="/assets/js/pond-black-hole-renderer.js?v=20261106-thin-rim1"></script>
+<script>
+(async () => {
+  const query = new URLSearchParams(location.search);
+  const mobile = query.has('mobile');
+  if (mobile) document.body.dataset.mobile = 'true';
+  const canvas = document.getElementById('frame');
+  const status = document.getElementById('state');
+  try {
+    const renderer = new PondRenderer(canvas);
+    const params = { quality: mobile ? 560 : 960 };
+    if (query.has('i')) params.inclination = Number(query.get('i'));
+    renderer.setParameters(params);
+    const profile = PondPhysics.createModel().getProfile();
+    await renderer.init();
+    const step = () => {
+      renderer.render(0, profile);
+      const d = renderer.getDiagnostics();
+      if (renderer.failed) status.textContent = 'Failed to render';
+      else if (d.state === 'ready' && !d.preview) status.textContent = 'Default t=0 frame ready';
+      else requestAnimationFrame(step);
+    };
+    step();
+  } catch (error) { status.textContent = 'Failed to render: ' + error.message; }
+})();
+</script>
+</html>

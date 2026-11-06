@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const defaults = Object.freeze({ spin:.7, inclination:65, azimuth:0, accretionRate:.25,
-    mass:4e6, thickness:.06, alpha:.1, magneticBeta:30, exposure:1.15,
+    mass:4e6, thickness:.025, alpha:.1, magneticBeta:30, exposure:1.15,
     quality:'balanced', mode:'temperature', timeScale:8, zoom:1 });
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let parameters={...defaults}, paused=motion.matches, renderer=null, model=null;
@@ -32,7 +32,7 @@
     {id:'accretion-rate',key:'accretionRate',read:v=>10**v,write:v=>Math.log10(v),format:v=>`${v.toFixed(2)} ṀEdd`},
     {id:'mass',key:'mass',read:v=>10**v,write:v=>Math.log10(v),format:v=>`${scientific(v)} M☉`},
     {id:'exposure',key:'exposure',read:v=>v,write:v=>v,format:v=>`${v.toFixed(2)}×`},
-    {id:'thickness',key:'thickness',read:v=>v,write:v=>v,format:v=>v.toFixed(2)},
+    {id:'thickness',key:'thickness',read:v=>v,write:v=>v,format:v=>v.toFixed(3)},
     {id:'alpha',key:'alpha',read:v=>v,write:v=>v,format:v=>v.toFixed(2)},
     {id:'magnetic-beta',key:'magneticBeta',read:v=>10**v,write:v=>Math.log10(v),format:v=>v.toFixed(0)},
     {id:'time-scale',key:'timeScale',read:v=>10**v,write:v=>Math.log10(v),format:v=>`${v<10?v.toFixed(1):v.toFixed(0)} tg/s`}

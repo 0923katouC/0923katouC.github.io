@@ -8,7 +8,8 @@
   'use strict';
   const script = document.currentScript;
   const shaderBase = new URL('../shaders/', script ? script.src : document.baseURI);
-  const SHADER_VERSION='20261024-camera2';
+  const SHADER_VERSION='20261106-thin-rim1';
+  const CENTER_SPACING=0.34; // Center ray spacing as a fraction of the uniform grid.
   const HEADER = '#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\n';
   const VERTEX = `${HEADER}
     void main() {
@@ -17,7 +18,7 @@
     }`;
   const DEFAULTS = Object.freeze({ spin:0.7, inclination:65, exposure:1.15,
     quality:'balanced', mode:'temperature', mass:4e6, accretionRate:0.25,
-    thickness:0.06, alpha:0.1, zoom:1, azimuth:0 });
+    thickness:0.025, alpha:0.1, zoom:1, azimuth:0 });
   const clamp = (x, min, max) => Math.min(max, Math.max(min, x));
   const finite = (x, fallback) => Number.isFinite(Number(x)) ? Number(x) : fallback;
   function isco(spin) {
@@ -283,14 +284,20 @@
       gl.drawBuffers([gl.COLOR_ATTACHMENT0,gl.COLOR_ATTACHMENT1]);
       gl.useProgram(program.handle);gl.bindVertexArray(this._vao);
       this._uniform(program,'uMapSize','uniform2f',cache.width,cache.height);
+      this._uniform(program,'uCenterSpacing','uniform1f',CENTER_SPACING);
       this._uniform(program,'uSpin','uniform1f',p.spin);
       this._uniform(program,'uInclination','uniform1f',p.inclination);
       this._uniform(program,'uInner','uniform1f',cache.profile.inner*0.5);
       this._uniform(program,'uOuter','uniform1f',cache.profile.outer*0.5);
       this._uniform(program,'uThickness','uniform1f',p.thickness);
-      // Constant vertical framing preserves the hole as the viewport changes.
-      // On narrow screens widen vertically until the bright disk also fits.
-      this._uniform(program,'uSpan','uniform1f',Math.max(28,40*cache.height/cache.width)/p.zoom);
+      // Keep the established oblique framing, but reserve space for the
+      // full disk in face-on views and for the horizontal diameter on phones.
+      const aspect=cache.width/cache.height,outerRadius=cache.profile.outer*0.5;
+      const tilt=p.inclination*Math.PI/180, sine=Math.sin(tilt);
+      const widthSpan=outerRadius*(2.2+0.28*clamp(2-aspect,0,1));
+      const projectedHeight=2.2*outerRadius*(Math.abs(Math.cos(tilt))+p.thickness*sine)
+        /(1-0.82*outerRadius/48*sine);
+      this._uniform(program,'uSpan','uniform1f',Math.max(28,widthSpan/aspect,projectedHeight)/p.zoom);
       const rows=Math.min(completeFrame?cache.height:this._mobile?8:12,cache.height-cache.row);
       gl.enable(gl.SCISSOR_TEST);gl.scissor(0,cache.row,cache.width,rows);
       gl.drawArrays(gl.TRIANGLES,0,3);gl.disable(gl.SCISSOR_TEST);
@@ -348,6 +355,7 @@
         const compose=this._compose;gl.useProgram(compose.handle);
         this._bind(compose,'uRadiance',cache.radiance,0);
         this._uniform(compose,'uResolution','uniform2f',this.canvas.width,this.canvas.height);
+        this._uniform(compose,'uCenterSpacing','uniform1f',CENTER_SPACING);
         this._uniform(compose,'uExposure','uniform1f',this.parameters.exposure);
         this._uniform(compose,'uDiagnostic','uniform1i',mode===1 || mode===2?1:0);
         gl.drawArrays(gl.TRIANGLES,0,3);

@@ -48,7 +48,7 @@
     return {spin:clamp(finite(p.spin,.7),-.95,.98),
       mass:clamp(finite(p.mass,4e6),3,1e10),
       accretionRate:clamp(finite(p.accretionRate,.25),.001,1),
-      thickness:clamp(finite(p.thickness,.06),.015,.15),
+      thickness:clamp(finite(p.thickness,.025),.015,.15),
       alpha:clamp(finite(p.alpha,.1),.005,.3),
       magneticBeta:clamp(finite(p.magneticBeta,30),1,1000),
       outerSupply:p.outerSupply===false?false:true};
