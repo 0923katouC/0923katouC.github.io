@@ -94,8 +94,34 @@ try {
   assert.deepEqual(await page.locator('.stage').evaluate(stage => stage.getBoundingClientRect().toJSON()), layout.stage, 'Panel scrolling leaves the canvas in place');
 
   assert.equal(await page.locator('#play').getAttribute('aria-pressed'), 'false');
-  const connect = () => page.locator('#system').click();
-  const running = () => page.waitForFunction(() => document.querySelector('#status').textContent === '运行中 · 电脑声音');
+  let nativeRunning = false, nativeStops = 0;
+  await page.route('http://127.0.0.1:49321/**', async route => {
+    const request = route.request(), path = new URL(request.url()).pathname;
+    const headers = { 'Access-Control-Allow-Origin':new URL(baseURL).origin, 'Access-Control-Allow-Methods':'GET, POST, OPTIONS', 'Access-Control-Allow-Headers':'X-Reactor-Token, X-Reactor-Session' };
+    if (request.method() === 'OPTIONS') { await route.fulfill({status:204, headers}); return; }
+    let json;
+    if (path === '/status') json = {app:'CMC Reactor Audio',protocol:1,token:'browser-test'};
+    if (path === '/start') { nativeRunning = true; json = {session:'native-test'}; }
+    if (path === '/stop') { nativeRunning = false; nativeStops++; json = {stopped:true}; }
+    if (path === '/frame') {
+      const bins = Array(1024).fill(0); bins[19] = 200;
+      json = {running:nativeRunning,starting:false,error:'',bins,energy:.1,sampleRate:48000};
+    }
+    await route.fulfill({status:200,headers,contentType:'application/json',body:JSON.stringify(json)});
+  });
+  await page.locator('#desktop').click();
+  await page.waitForFunction(() => document.querySelector('#status').textContent === '运行中 · 整机声音' && parseFloat(document.querySelector('#freq').textContent) > 410);
+  assert.equal(await page.evaluate(() => window.captureTest.calls), 0, 'Native capture never opens a source picker');
+  const nativeStopped = page.waitForResponse(response => response.url() === 'http://127.0.0.1:49321/stop');
+  await page.locator('#desktop').click();
+  await nativeStopped;
+  await page.waitForFunction(() => document.querySelector('#play').getAttribute('aria-pressed') === 'false');
+  assert.ok(nativeStops > 0, 'The native helper receives a stop request');
+  const connect = async () => {
+    if (!await page.locator('#system').isVisible()) await page.locator('.capture-help summary').click();
+    await page.locator('#system').click();
+  };
+  const running = () => page.waitForFunction(() => document.querySelector('#status').textContent === '运行中 · 浏览器共享');
   const idle = () => page.waitForFunction(() => document.querySelector('#play').getAttribute('aria-pressed') === 'false');
   const allStopped = () => page.evaluate(() => window.captureTest.streams.every(s => s.getTracks().every(t => t.readyState === 'ended')));
 
@@ -148,7 +174,7 @@ try {
 
   await page.evaluate(() => { window.captureTest.kind = 'pending'; });
   await connect();
-  await page.waitForFunction(() => document.querySelector('#system').textContent === '取消连接');
+  await page.waitForFunction(() => document.querySelector('#system').textContent === '取消共享');
   await page.locator('#demo').click();
   await page.waitForFunction(() => document.querySelector('#status').textContent === '运行中 · 演示信号');
   await page.evaluate(async () => window.captureTest.resolve(await window.captureTest.makeStream(true)));

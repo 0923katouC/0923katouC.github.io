@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN" class="ui-root">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="description" content="声场反应堆的 Mac 整机声音接入说明。">
+  <title>整机声音接入 | CMC</title>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/collection-backgrounds.css?v=20261004-collections-bg1">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-motion.css?v=20261006-spring2">
+  <link rel="stylesheet" href="/assets/css/project-navigation.css?v=20261107-shell2">
+  <link rel="stylesheet" href="/assets/css/playground.css?v=20261105-nav1">
+  <script src="/assets/js/site-motion.js?v=20261105-nav1" defer blocking="render"></script>
+  <link rel="stylesheet" href="./setup.css?v=1">
+</head>
+<body class="ui-page collection-page projects-page playground-page glass-ui project-shell">
+  <picture class="collection-background" aria-hidden="true">
+    <source media="(max-width: 640px)" srcset="/assets/images/home-entries/projects-960.webp" type="image/webp">
+    <img src="/assets/images/collection-backgrounds/projects-personal-v2.webp" width="1280" height="720" alt="" decoding="async" fetchpriority="high">
+  </picture>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <div class="nav-brand"><a class="site-title" href="/?v=20260911-glass1">CMC</a><a class="back-link project-back" href="/projects/ai/reactor/"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="声场反应堆" data-en="Reactor">声场反应堆</span></a></div>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/?v=20260911-glass1" data-zh="Home page" data-en="Home page">Home page</a>
+        <a href="/photography.html?v=20260911-glass1" data-zh="摄影集" data-en="Photography">摄影集</a>
+        <a href="/academics.html?v=20260911-glass1" data-zh="学术集" data-en="Academics">学术集</a>
+        <a href="/writing.html?v=20260911-glass1" data-zh="码字集" data-en="Writing">码字集</a>
+        <a class="active" aria-current="location" href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
+        <button class="lang-switch" type="button" aria-label="Switch language">EN</button>
+      </nav>
+    </div>
+  </header>
+  <main class="playground-main">
+    <section class="container page-head compact-head playground-heading">
+      <span class="eyebrow">REACTOR / MAC</span>
+      <h1 data-zh="整机声音接入" data-en="Mac audio connection">整机声音接入</h1>
+      <p>让整台 Mac 正在播放的声音进入反应堆。音乐播放器、视频、游戏和其他应用都可以，不必逐个选择来源。</p>
+    </section>
+    <section class="container setup-copy" lang="zh-CN">
+      <h2>第一次使用</h2>
+      <ol>
+        <li><a href="./ReactorAudio-macOS.zip" download>下载 Mac 接入器</a>，解压后打开「声场反应堆接入器」。适用于 Apple 芯片的 Mac，系统版本需为 macOS 14.2 或更新。</li>
+        <li>打开<a href="/projects/ai/reactor/">声场反应堆网页</a>，点击「接入整机声音」。浏览器若询问是否允许连接本机，选择允许。</li>
+        <li>在 macOS 的提示中允许接入器访问系统音频，然后在任意应用播放声音。无需选择标签页、窗口或应用。</li>
+      </ol>
+      <h2>之后怎么用</h2>
+      <p>先打开接入器，再打开网页并点击「接入整机声音」。菜单栏中的「◈」可以打开网页、停止接收或退出工具。</p>
+      <p>声音只在本机分析。网页收到的是频率和强弱，不接收录音文件。关闭页面后，接收会在连接结束后停止；异常断线最迟十二秒内停止。</p>
+      <h2>无法连接时</h2>
+      <p>确认菜单栏已有「◈」，并检查系统设置 → 隐私与安全性 → 屏幕与系统音频录制中是否允许本接入器。网页建议使用桌面版 Chrome 或 Edge。</p>
+      <p>此工具为个人项目的本机编译版本。也可以查看<a href="https://github.com/0923katouC/0923katouC.github.io/tree/main/projects/ai/reactor/desktop">源码与编译说明</a>。其他设备仍可使用网页中的音频文件或浏览器共享入口。</p>
+    </section>
+  </main>
+  <script src="/assets/js/main.js?v=20261006-motion1"></script>
+  <script src="/assets/js/liquid-glass.js?v=20261105-nav1" defer></script>
+  <script src="/assets/js/site-ui.js?v=20261107-shell2" defer></script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import { DesktopAudioInput } from './desktop-audio.mjs?v=20261107-1';
 import { SystemAudioCapture, captureErrorMessage } from './capture.mjs?v=20261107-1';
 
 function initReactor() {
@@ -14,7 +15,7 @@ const sg = spec.getContext('2d');
  *  提前定义的一些玩意
  * ============================================================ */
 let ctx, analyser, bins, wave, master, stream, source, buffer;
-let started = 0, offset = 0, mode = 'system', playing = false, loading = false;
+let started = 0, offset = 0, mode = 'desktop', playing = false, loading = false;
 let session = 0, rafTime = 0;
 let angle = -0.32, tilt = 0.58, zoom = 1, drag = null;
 let demoNodes = [];
@@ -642,7 +643,7 @@ function frame(t) {
   }
 
   // ---- 音频分析 ----
-  if (analyser && playing) analyser.getByteFrequencyData(bins);
+  if (analyser && playing && mode !== 'desktop') analyser.getByteFrequencyData(bins);
   let peak = 0, peakIndex = 0;
   let fundPeak = 0, fundIndex = 0;
   
@@ -654,7 +655,7 @@ function frame(t) {
     smoothPeakIndex = smoothPeakIndex * smooth + fundIndex * (1.0 - smooth);
 
     // 峰值频率（300Hz 以上找最大值）
-    const sampleRate = ctx ? ctx.sampleRate : 44100;
+    const sampleRate = mode === 'desktop' ? desktop.sampleRate : ctx ? ctx.sampleRate : 44100;
     const binHz = sampleRate / FFTSize;
     const startHigh = Math.floor(300 / binHz);
     for (let i = startHigh; i < bins.length - 2; i++) {
@@ -664,8 +665,8 @@ function frame(t) {
     
   }
   
-  energy = 0;
-  if (playing && wave) {
+  energy = mode === 'desktop' && playing ? desktop.energy : 0;
+  if (playing && wave && mode !== 'desktop') {
     analyser.getFloatTimeDomainData(wave);
     for (let i = 0; i < wave.length; i++) energy += wave[i] * wave[i];
     energy = Math.sqrt(energy / wave.length);
@@ -681,7 +682,7 @@ function frame(t) {
   });
 
   // ---- 更新柱子高度 ----
-  const sampleRate = ctx ? ctx.sampleRate : 44100;
+  const sampleRate = mode === 'desktop' ? desktop.sampleRate : ctx ? ctx.sampleRate : 44100;
   const binHz = sampleRate / FFTSize;
 
   for (let i = 0; i < N; i++) {
@@ -862,7 +863,7 @@ function frame(t) {
     $('fund').innerHTML = (playing && fundPeak > 0) ? Math.round(smoothPeakIndex * binHz) + '<small>赫兹</small>' : '—<small>赫兹</small>';
     $('freq').innerHTML = (playing && peak > 0) ? Math.round(smoothfundPeakIndex * binHz) + '<small>赫兹</small>' : '—<small>赫兹</small>';
     
-    if (playing && !seeking) {
+    if (playing && mode === 'file' && !seeking) {
       let seconds;
       if (buffer && mode === 'file') {
         const elapsed = ctx.currentTime - playStartCtxTime;
@@ -885,6 +886,12 @@ function format(s) {
          Math.floor(s % 60).toString().padStart(2, '0');
 }
     
+const desktop = new DesktopAudioInput({ onEnded(message) {
+  if (mode !== 'desktop') return;
+  stop();
+  $('message').textContent = message;
+} });
+
 const capture = new SystemAudioCapture({ onEnded() {
   if (mode !== 'system') return;
   stop();
@@ -902,6 +909,8 @@ async function audio() {
     master = ctx.createGain();
     master.connect(ctx.destination);
   }
+  bins = new Uint8Array(analyser.frequencyBinCount);
+  wave = new Float32Array(analyser.fftSize);
   await ctx.resume();
 }
 
@@ -909,6 +918,7 @@ function stop() {
   session++;
   loading = false;
   capture.stop();
+  desktop.stop();
   stream = null;
   if (source) {
     source.onended = null;
@@ -924,20 +934,22 @@ function stop() {
 }
 
 function update() {
-  const live = mode === 'system';
-  const label = loading ? (mode === 'file' ? '取消读取' : '取消连接') : playing ? (live ? '停止接收' : '暂停') : (live ? '接入电脑声音' : '播放');
+  const live = mode === 'system' || mode === 'desktop';
+  const label = loading ? (mode === 'file' ? '取消读取' : '取消连接') : playing ? (live ? '停止接收' : '暂停') : (live ? (mode === 'desktop' ? '接入整机声音' : '浏览器共享声音') : '播放');
   $('play').textContent = loading ? '×' : playing ? (live ? '■' : 'Ⅱ') : '▶';
   $('play').setAttribute('aria-label', label);
   $('play').setAttribute('aria-pressed', String(playing));
-  $('system').textContent = live && loading ? '取消连接' : live && playing ? '停止接收声音' : '接入电脑声音';
-  $('system').classList.toggle('selected', live);
-  $('system').setAttribute('aria-pressed', String(live && playing));
+  $('desktop').textContent = mode === 'desktop' && loading ? '取消连接' : mode === 'desktop' && playing ? '停止接收声音' : '接入整机声音';
+  $('desktop').setAttribute('aria-pressed', String(mode === 'desktop' && playing));
+  $('system').textContent = mode === 'system' && loading ? '取消共享' : mode === 'system' && playing ? '停止共享声音' : '浏览器共享声音（需选择）';
+  $('system').classList.toggle('selected', mode === 'system');
+  $('system').setAttribute('aria-pressed', String(mode === 'system' && playing));
   $('demo').classList.toggle('selected', mode === 'demo');
   $('demo').setAttribute('aria-pressed', String(mode === 'demo'));
-  $('status').textContent = loading ? '等待选择声音来源' : playing
-    ? '运行中 · ' + (live ? '电脑声音' : mode === 'demo' ? '演示信号' : '音频文件')
-    : live ? '待机 · 等待电脑声音' : '已暂停';
-  $('tracksub').textContent = playing ? '柱阵随声音实时起伏' : loading ? '在弹窗中勾选共享音频' : live ? '选择声音来源，启动声场' : '点击播放，启动声场';
+  $('status').textContent = loading ? (mode === 'desktop' ? '正在连接本机接入器' : '等待选择声音来源') : playing
+    ? '运行中 · ' + (live ? (mode === 'desktop' ? '整机声音' : '浏览器共享') : mode === 'demo' ? '演示信号' : '音频文件')
+    : live ? '待机 · 等待整机声音' : '已暂停';
+  $('tracksub').textContent = playing ? '柱阵随声音实时起伏' : loading ? (mode === 'desktop' ? '首次接入请允许系统音频访问' : '在弹窗中勾选共享音频') : live ? '整机声音，直接进入声场' : '点击播放，启动声场';
   $('seek').disabled = mode !== 'file';
   $('timeline').hidden = mode !== 'file';
   $('volume-control').hidden = live;
@@ -952,7 +964,16 @@ async function start() {
   const attempt = ++session;
   update();
   try {
-    if (mode === 'system') {
+    if (mode === 'desktop') {
+      $('message').textContent = '正在连接接入器。首次使用请允许系统音频访问；不需要选择应用或窗口。';
+      const connected = await desktop.start();
+      if (attempt !== session || !connected) return;
+      analyser?.disconnect();
+      bins = desktop.bins;
+      wave = null;
+      $('trackname').textContent = '整台 Mac / 所有应用的输出';
+      $('message').textContent = '正在接收整机声音。频率与强弱仅在本机传递，不录音、不上传。';
+    } else if (mode === 'system') {
       $('message').textContent = '请选择播放中的标签页或屏幕，并勾选“共享音频”。';
       // Open the picker immediately, before resuming an audio context.
       const s = await capture.start();
@@ -1004,15 +1025,15 @@ async function start() {
       }
       $('message').textContent = '音频仅在本机处理，不会上传。';
     }
-    started = ctx.currentTime;
+    started = ctx?.currentTime || 0;
     playing = true;
     loading = false;
     update();
   } catch (error) {
     if (attempt !== session) return;
-    const live = mode === 'system';
+    const input = mode;
     stop();
-    $('message').textContent = live ? captureErrorMessage(error) : '无法播放此音频，请尝试其他文件。';
+    $('message').textContent = input === 'desktop' ? error.message : input === 'system' ? captureErrorMessage(error) : '无法播放此音频，请尝试其他文件。';
   } finally {
     if (attempt === session) { loading = false; update(); }
   }
@@ -1030,20 +1051,28 @@ $('play').onclick = () => {
   if (loading) {
     stop();
     if (mode === 'file') {
-      mode = 'system';
-      resetTrack('电脑声音 / 实时输入');
+      mode = 'desktop';
+      resetTrack('整台 Mac / 所有应用的输出');
       update();
       $('message').textContent = '已取消读取音频文件。';
     } else {
-      $('message').textContent = '已取消连接。可关闭仍然打开的共享弹窗。';
+      $('message').textContent = mode === 'desktop' ? '已取消整机声音连接。' : '已取消连接。可关闭仍然打开的共享弹窗。';
     }
   } else if (playing) {
     if (mode === 'file' && buffer) {
       offset = (playStartOffset + ctx.currentTime - playStartCtxTime) % buffer.duration;
     }
     stop();
-    $('message').textContent = mode === 'system' ? '已停止接收电脑声音。' : '已暂停。';
+    $('message').textContent = (mode === 'system' || mode === 'desktop') ? '已停止接收电脑声音。' : '已暂停。';
   } else start();
+};
+
+$('desktop').onclick = () => {
+  if (mode === 'desktop' && (playing || loading)) { $('play').click(); return; }
+  stop();
+  mode = 'desktop';
+  resetTrack('整台 Mac / 所有应用的输出');
+  start();
 };
 
 $('system').onclick = () => {
@@ -1084,8 +1113,8 @@ $('file').onchange = async e => {
   } catch {
     if (id !== session) return;
     stop();
-    mode = 'system';
-    resetTrack('电脑声音 / 实时输入');
+    mode = 'desktop';
+    resetTrack('整台 Mac / 所有应用的输出');
     update();
     $('message').textContent = '无法读取该文件，请选择其他音频文件。';
   } finally {
@@ -1177,7 +1206,7 @@ $('smooth').oninput = e => {
 
 $('volume').oninput = e => {
   $('volumeval').textContent = e.target.value + '%';
-  if (master && mode !== 'system')
+  if (master && mode !== 'system' && mode !== 'desktop')
     master.gain.setTargetAtTime(+e.target.value / 100, ctx.currentTime, 0.03);
 };
 

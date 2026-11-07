@@ -9,7 +9,7 @@
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121614'/%3E%3Cpath d='M7 23V15h4v8m3 0V6h4v17m3 0V11h4v12' stroke='%23dded84' stroke-width='3'/%3E%3C/svg%3E">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src http://127.0.0.1:49321; object-src 'none'; base-uri 'self'; form-action 'self'">
   <link rel="stylesheet" href="./style.css?v=20261107-shell2">
   <link rel="stylesheet" href="/assets/css/site-navigation.css?v=20261105-nav1">
   <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261105-nav1">
@@ -22,7 +22,7 @@
   <script src="/assets/js/liquid-glass.js?v=20261105-nav1" defer></script>
 </head>
 <body class="ui-page glass-ui project-app project-dark project-shell reactor-page">
-  <a class="skip-link" href="#system">跳到声音控制</a>
+  <a class="skip-link" href="#desktop">跳到声音控制</a>
   <header class="site-header">
     <div class="container nav-wrap">
       <div class="nav-brand"><a class="site-title" href="/?v=20260911-glass1">CMC</a><a class="back-link project-back" href="/projects/ai/"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="AI 工具" data-en="AI Tools">AI 工具</span></a></div>
@@ -50,7 +50,7 @@
 
       <div class="live" role="status">
         <i></i>
-        <span id="status">待机 · 等待电脑声音</span>
+        <span id="status">待机 · 等待整机声音</span>
       </div>
 
       <p id="renderer-error" class="renderer-error" role="alert" hidden></p>
@@ -84,8 +84,8 @@
       <section class="source">
         <h2 class="caption">01 / 音频输入</h2>
 
-        <button id="system" class="capture-button selected" type="button" aria-pressed="false" aria-describedby="capture-hint">接入电脑声音</button>
-        <p id="capture-hint" class="capture-hint">选择播放中的标签页或屏幕<br>在弹窗中勾选「共享音频」</p>
+        <button id="desktop" class="capture-button selected" type="button" aria-pressed="false" aria-describedby="capture-hint">接入整机声音</button>
+        <p id="capture-hint" class="capture-hint">先打开 Mac 上的「声场反应堆接入器」<br>直接接收所有应用的声音，无需选择来源<br><a href="./desktop/">本机接入说明 ↗</a></p>
         <div class="source-tabs">
           <button id="demo" type="button" aria-pressed="false">播放演示</button>
           <button id="upload" type="button">选择音频文件</button>
@@ -95,10 +95,10 @@
         <div class="track">
           <span class="track-icon">≋</span>
           <div>
-            <strong id="trackname">电脑声音 / 实时输入</strong>
-            <small id="tracksub">选择声音来源，启动声场</small>
+            <strong id="trackname">整台 Mac / 所有应用的输出</strong>
+            <small id="tracksub">整机声音，直接进入声场</small>
           </div>
-          <button id="play" type="button" aria-label="接入电脑声音" aria-pressed="false">▶</button>
+          <button id="play" type="button" aria-label="接入整机声音" aria-pressed="false">▶</button>
         </div>
 
         <div id="timeline" class="timeline" hidden>
@@ -168,11 +168,10 @@
 
       <p id="message" role="status">等待接入。音频仅在本机处理，不会上传。</p>
       <details class="capture-help">
-        <summary>怎样接入电脑里的声音？</summary>
-        <p>先在音乐网站、视频页面或其他应用中播放声音，再点击“接入电脑声音”。</p>
-        <p>网页声音：选择对应标签页并勾选“共享标签页音频”。其他应用：选择“整个屏幕”，勾选共享系统声音（是否提供由浏览器与系统决定）。</p>
-        <p>推荐桌面版 Chrome 或 Edge。如果 Mac 上没有系统声音选项，可把音乐放在浏览器标签页中播放，或直接选择本机音频文件。</p>
-        <p>浏览器会同时申请画面与声音共享。本页只分析声音，不显示、保存或上传共享画面，也不重复播放接收到的声音。</p>
+        <summary>使用浏览器共享或其他设备</summary>
+        <button id="system" class="browser-capture plain" type="button" aria-pressed="false">浏览器共享声音（需选择）</button>
+        <p>未使用 Mac 接入器时，可以在桌面浏览器选择播放中的标签页或整个屏幕，并勾选共享声音。这种方式由浏览器弹出来源选择器。</p>
+        <p>也可以直接选择音频文件。以上音频都只在本机处理。</p>
       </details>
     </aside>
     </div>
@@ -185,6 +184,6 @@
   </footer>
 
   <noscript><p class="renderer-error">请开启浏览器的脚本功能，再接入声音。</p></noscript>
-  <script type="module" src="./app.js?v=20261107-1"></script>
+  <script type="module" src="./app.js?v=20261107-desktop1"></script>
 </body>
 </html>

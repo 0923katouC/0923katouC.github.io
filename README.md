@@ -184,13 +184,14 @@ also runs `tests/orbits-browser.mjs` with desktop/mobile screenshots.
 ## AI tool 001: Reactor
 
 [Open Reactor](https://0923katouC.github.io/projects/ai/reactor/) from
-Odd Projects → AI Tools. Click **接入电脑声音**, select a playing browser tab
-or a screen, and enable audio sharing in the browser picker. Tab audio is the
-portable desktop option; whole-system/window audio depends on the browser and
-operating system. On a Mac without a system-audio option, play the sound in a
-browser tab or use the local audio-file input. Desktop Chrome or Edge is
-recommended. The browser requires a fresh user gesture and permission for
-each connection; this page does not request microphone access.
+Odd Projects → AI Tools. The default **接入整机声音** input connects to the
+Mac menu-bar helper in `projects/ai/reactor/desktop/`, capturing the mixed
+output of all applications without a source chooser. First use requires
+macOS system-audio permission and may require browser local-network permission.
+The native helper exchanges only frequency bins and signal level over an
+authenticated loopback connection. Setup and build instructions are in the
+helper directory. Browser sharing and local audio files remain available as
+explicit fallback inputs.
 
 The original renderer, rod array, camera controls and bloom are adapted from
 [tol127/reactor-webgl](https://github.com/tol127/reactor-webgl), revision
@@ -206,7 +207,7 @@ The browser also supplies a video track; the page does not display, record or
 transmit its frames. Stopping, changing inputs, ending browser sharing or
 leaving the page releases every capture track. Captures that resolve after
 cancellation are released immediately. All processing stays in the browser;
-there is no upload, service dependency or build step.
+there is no upload. The static website needs no build step; the optional Mac helper is built locally.
 
 Run `node --test tests/reactor-capture.test.mjs` for stream lifecycle checks.
 `tests/reactor-browser.mjs` runs in the existing browser-check workflow. It
