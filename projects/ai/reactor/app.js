@@ -630,6 +630,7 @@ new ResizeObserver(size).observe(spec);
  *  主循环
  * ============================================================ */
 function frame(t) {
+  if (gl.isContextLost()) return;
   const dt = Math.min((t - rafTime) / 16.67, 3) || 1;
   rafTime = t;
   if (!fpsLast) fpsLast = t;
@@ -924,7 +925,7 @@ function stop() {
 
 function update() {
   const live = mode === 'system';
-  const label = loading ? '取消连接' : playing ? (live ? '停止接收' : '暂停') : (live ? '接入电脑声音' : '播放');
+  const label = loading ? (mode === 'file' ? '取消读取' : '取消连接') : playing ? (live ? '停止接收' : '暂停') : (live ? '接入电脑声音' : '播放');
   $('play').textContent = loading ? '×' : playing ? (live ? '■' : 'Ⅱ') : '▶';
   $('play').setAttribute('aria-label', label);
   $('play').setAttribute('aria-pressed', String(playing));
@@ -946,6 +947,7 @@ function update() {
 
 async function start() {
   if (loading || playing) return;
+  if (mode === 'file' && !buffer) { $('message').textContent = '请先选择音频文件。'; return; }
   loading = true;
   const attempt = ++session;
   update();
@@ -1027,7 +1029,14 @@ function resetTrack(name) {
 $('play').onclick = () => {
   if (loading) {
     stop();
-    $('message').textContent = '已取消连接。可关闭仍然打开的共享弹窗。';
+    if (mode === 'file') {
+      mode = 'system';
+      resetTrack('电脑声音 / 实时输入');
+      update();
+      $('message').textContent = '已取消读取音频文件。';
+    } else {
+      $('message').textContent = '已取消连接。可关闭仍然打开的共享弹窗。';
+    }
   } else if (playing) {
     if (mode === 'file' && buffer) {
       offset = (playStartOffset + ctx.currentTime - playStartCtxTime) % buffer.duration;

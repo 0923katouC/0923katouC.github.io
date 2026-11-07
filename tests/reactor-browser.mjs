@@ -8,6 +8,7 @@ const artifacts = new URL('../artifacts/odd-projects/', import.meta.url);
 await mkdir(artifacts, { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader'] });
 const errors = [];
+let page;
 
 function toneFile() {
   const rate = 44100, samples = rate * 2;
@@ -22,11 +23,11 @@ function toneFile() {
 }
 
 try {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   await page.addInitScript(() => {
-    const state = window.captureTest = { calls: 0, kind: 'audio', streams: [], connections: new Map(), sources: [] };
+    const state = window.captureTest = { calls: 0, kind: 'audio', streams: [], connections: new Map(), sources: [], contexts: [] };
     const connect = AudioNode.prototype.connect, disconnect = AudioNode.prototype.disconnect;
     AudioNode.prototype.connect = function (target, ...args) {
       if (!state.connections.has(this)) state.connections.set(this, new Set());
@@ -54,7 +55,11 @@ try {
         const oscillator = ctx.createOscillator();
         oscillator.frequency.value = 440;
         const destination = ctx.createMediaStreamDestination();
-        oscillator.connect(destination);
+        const gain = ctx.createGain();
+        gain.gain.value = 0.025; // Keep the tone below the analyser's saturation threshold.
+        oscillator.connect(gain);
+        gain.connect(destination);
+        state.contexts.push(ctx);
         oscillator.start();
         await ctx.resume();
         stream.addTrack(destination.stream.getAudioTracks()[0]);
@@ -172,6 +177,18 @@ try {
   assert.deepEqual(errors, [], 'No browser or policy errors');
   await writeFile(new URL('reactor-results.json', artifacts), JSON.stringify({ status: 'passed', widths: [1440, 390, 320], checks: ['real tone analysis', 'no captured sound playback', 'stop', 'external end', 'missing audio', 'permission denial', 'retry', 'source switch', 'late capture', 'cancel', 'audio file', 'page exit', 'unsupported browser', 'responsive layout'] }, null, 2));
   console.log('PASS Reactor: audio analysis, capture lifecycle, local files and responsive layout');
+} catch (error) {
+  console.error('REACTOR_DIAGNOSTICS', await page?.evaluate(() => ({
+    status: document.querySelector('#status')?.textContent,
+    level: document.querySelector('#level')?.textContent,
+    frequency: document.querySelector('#freq')?.textContent,
+    message: document.querySelector('#message')?.textContent,
+    contexts: window.captureTest?.contexts.map(ctx => ({ state: ctx.state, time: ctx.currentTime })),
+    sources: window.captureTest?.sources.map(source => ({ state: source.context.state, time: source.context.currentTime })),
+  })));
+  console.error('BROWSER_ERRORS', errors);
+  await page?.screenshot({ path: new URL('reactor-failure.png', artifacts).pathname, fullPage: true });
+  throw error;
 } finally {
   await browser.close();
 }
