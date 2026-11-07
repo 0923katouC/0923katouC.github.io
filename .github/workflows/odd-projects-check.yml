@@ -6,6 +6,7 @@ on:
       - 'projects.html'
       - 'projects/games/**'
       - 'projects/toys/**'
+      - 'projects/ai/**'
       - 'projects/pond/**'
       - 'assets/css/pond.css'
       - 'assets/css/*navigation.css'
@@ -16,6 +17,7 @@ on:
       - 'assets/js/site-motion.js'
       - 'assets/js/liquid-glass.js'
       - 'tests/orbits-browser.mjs'
+      - 'tests/reactor-browser.mjs'
       - 'assets/css/playground.css'
       - 'assets/js/playground.js'
       - 'tests/odd-projects-browser.mjs'
@@ -75,6 +77,12 @@ jobs:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/odd-browser/node_modules/playwright/index.mjs
           ODD_SITE_URL: http://127.0.0.1:8765
         run: node tests/orbits-browser.mjs
+
+      - name: Exercise Reactor audio capture
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/odd-browser/node_modules/playwright/index.mjs
+          ODD_SITE_URL: http://127.0.0.1:8765
+        run: node tests/reactor-browser.mjs
 
       - name: Upload screenshots and results
         if: always()

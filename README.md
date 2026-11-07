@@ -15,6 +15,7 @@ Personal website hosted with GitHub Pages.
   - `writing/fiction.html` — fiction
   - `writing/essays.html` — redirect to server-authenticated private essays and the protected collection list
 - `projects.html` — games, AI tools, pond simulations and little toys
+- `projects/ai/` — sound visualizer and personal tools
 - `projects/games/` — detective, railway and card-strategy games
 - `projects/toys/` — imaginary radio and absurd inventions
 - `assets/css/style.css` — site-wide styles
@@ -178,3 +179,38 @@ See [definitions, equations and display limits](projects/pond/orbits/MODEL.md).
 Run `node --test tests/orbits.test.mjs`; the existing odd-projects workflow
 also runs `tests/orbits-browser.mjs` with desktop/mobile screenshots.
 
+
+
+## AI tool 001: Reactor
+
+[Open Reactor](https://0923katouC.github.io/projects/ai/reactor/) from
+Odd Projects → AI Tools. Click **接入电脑声音**, select a playing browser tab
+or a screen, and enable audio sharing in the browser picker. Tab audio is the
+portable desktop option; whole-system/window audio depends on the browser and
+operating system. On a Mac without a system-audio option, play the sound in a
+browser tab or use the local audio-file input. Desktop Chrome or Edge is
+recommended. The browser requires a fresh user gesture and permission for
+each connection; this page does not request microphone access.
+
+The original renderer, rod array, camera controls and bloom are adapted from
+[tol127/reactor-webgl](https://github.com/tol127/reactor-webgl), revision
+`58ca8bf53a32042fa247185c384537ed1ec82b8a`, itself based on
+`wzk112/reactor-audio-visualizer`. The original copyright and license are kept
+in `projects/ai/reactor/LICENSE`. The adaptation adds display-audio capture,
+site navigation, a collection entry, cancellation and end-of-sharing cleanup,
+mobile layout fixes, and Chinese labels. Rendering uses a 1.5× intermediate
+resolution instead of the upstream 2× to reduce graphics memory use.
+
+Captured audio feeds only the frequency analyser, never the speaker output.
+The browser also supplies a video track; the page does not display, record or
+transmit its frames. Stopping, changing inputs, ending browser sharing or
+leaving the page releases every capture track. Captures that resolve after
+cancellation are released immediately. All processing stays in the browser;
+there is no upload, service dependency or build step.
+
+Run `node --test tests/reactor-capture.test.mjs` for stream lifecycle checks.
+`tests/reactor-browser.mjs` runs in the existing browser-check workflow. It
+uses a generated tone as a shared stream to check real frequency analysis,
+no playback of captured sound, stop/retry/cancellation, file fallback and
+responsive layout. Native browser/operating-system picker availability still
+depends on the visitor's device.

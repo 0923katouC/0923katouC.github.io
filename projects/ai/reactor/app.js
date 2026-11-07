@@ -1,0 +1,1246 @@
+import { SystemAudioCapture, captureErrorMessage } from './capture.mjs?v=20261107-1';
+
+function initReactor() {
+
+/* ============================================================
+ *  DOM
+ * ============================================================ */
+const $ = id => document.getElementById(id);
+const canvas = $('core');
+const spec = $('spectrum');
+const sg = spec.getContext('2d');
+
+/* ============================================================
+ *  提前定义的一些玩意
+ * ============================================================ */
+let ctx, analyser, bins, wave, master, stream, source, buffer;
+let started = 0, offset = 0, mode = 'system', playing = false, loading = false;
+let session = 0, rafTime = 0;
+let angle = -0.32, tilt = 0.58, zoom = 1, drag = null;
+let demoNodes = [];
+let gain = 1.4, smoothing = 0.75, energy = 0;
+let smoothPeakIndex = 0,  smoothfundPeakIndex = 0, smooth = 0.8;
+let seeking = false;
+let fpsLast = 0, fpsFrames = 0;
+let playStartCtxTime = 0;   // 新增：本次播放的 ctx 起点
+let playStartOffset = 0;    // 新增：本次播放的 buffer 起点
+const FFTSize = 2048;
+const FBO_Bloom = 1;    //Bloom泛光 1-4
+const FBO_SS = 1.5;   //SSAA 1.0-2.0
+let LOOP = true;  //循环播放
+
+/* ============================================================
+ *  控制棒数据
+ * ============================================================ */
+const rods = [];
+for (let x = -15; x <= 15; x++)
+  for (let z = -15; z <= 15; z++) {
+    const r = Math.hypot(x, z);
+    if (r <= 15) rods.push({
+      x, z, r,
+      h: 0,
+      seed: Math.abs(Math.sin(x * 127.1 + z * 311.7))
+    });
+  }
+$('count').textContent = rods.length;
+const N = rods.length;
+
+/* ============================================================
+ *  WebGL 初始化
+ * ============================================================ */
+const gl = canvas.getContext('webgl2', {
+  antialias: true,
+  alpha: true,
+  premultipliedAlpha: true,
+  powerPreference: 'high-performance'
+});
+if (!gl) {
+  showRendererError();
+  return;
+}
+
+/* ---------- 主场景 Shader ---------- */
+const VS = `#version 300 es
+in vec3 aPos;
+in vec3 aColor;
+out vec3 vColor;
+void main(){
+  vColor = aColor;
+  gl_Position = vec4(aPos, 1.0);
+}`;
+
+const FS = `#version 300 es
+precision mediump float;
+in vec3 vColor;
+out vec4 fragColor;
+void main(){
+  fragColor = vec4(vColor, 1.0);
+}`;
+
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+    throw new Error('Shader compile error: ' + gl.getShaderInfoLog(s));
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+  throw new Error('Program link error: ' + gl.getProgramInfoLog(prog));
+
+const A = {
+  pos:   gl.getAttribLocation(prog, 'aPos'),
+  color: gl.getAttribLocation(prog, 'aColor')
+};
+
+
+/* ============================================================
+ *  Bloom 后处理模块（仅 SSAA）
+ *  FBO_Bloom: 1=单级, 2~4=多级（层数=数值）
+ * ============================================================ */
+const Bloom = (function () {
+
+  let gl = null;
+  let width = 1, height = 1;
+
+  // ★★★ 开关：1 = 单级，2~4 = 多级层数 ★★★
+  const MULTI_LEVEL = FBO_Bloom > 1;
+  const LEVELS = MULTI_LEVEL ? Math.min(Math.max(FBO_Bloom, 2), 4) : 0;
+
+  let bloomFBOs = [];
+  let blurFBOs = [];
+  let fboBright = null, fboBlur = null;
+  let fboScene = null;
+
+  let progBright = null, progBlur = null;
+  let progCompositeMulti = null;
+  let progCompositeSingle = null;
+  let quadBuf = null;
+
+  let threshold = 0.25;
+  let intensity = 1.8;
+  let radius = 2.5;
+  let singleRadius = 2.5;
+  let sceneHasAlpha = true;
+
+  /* ---------- Shader ---------- */
+
+  const VS_QUAD = `#version 300 es
+    in vec2 aPos;
+    out vec2 vUV;
+    void main(){
+      vUV = aPos * 0.5 + 0.5;
+      gl_Position = vec4(aPos, 0.0, 1.0);
+    }`;
+
+  const FS_BRIGHT = `#version 300 es
+    precision mediump float;
+    in vec2 vUV;
+    uniform sampler2D uScene;
+    uniform float uThreshold;
+    out vec4 fragColor;
+    void main(){
+      vec4 s = texture(uScene, vUV);
+      vec3 c = s.rgb;
+      float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+      float d = max(lum, 0.0001);
+      float f = max(lum - uThreshold, 0.0) / d;
+      fragColor = vec4(c * f, 1.0);
+    }`;
+
+  const FS_BLUR = `#version 300 es
+    precision mediump float;
+    in vec2 vUV;
+    uniform sampler2D uTexture;
+    uniform vec2 uDirection;
+    out vec4 fragColor;
+    void main(){
+      float w0 = 0.227027, w1 = 0.1945946, w2 = 0.1216216, w3 = 0.054054, w4 = 0.016216;
+      vec3 result = texture(uTexture, vUV).rgb * w0;
+      vec2 o1 = uDirection * 1.0;
+      vec2 o2 = uDirection * 2.0;
+      vec2 o3 = uDirection * 3.0;
+      vec2 o4 = uDirection * 4.0;
+      result += texture(uTexture, vUV + o1).rgb * w1;
+      result += texture(uTexture, vUV - o1).rgb * w1;
+      result += texture(uTexture, vUV + o2).rgb * w2;
+      result += texture(uTexture, vUV - o2).rgb * w2;
+      result += texture(uTexture, vUV + o3).rgb * w3;
+      result += texture(uTexture, vUV - o3).rgb * w3;
+      result += texture(uTexture, vUV + o4).rgb * w4;
+      result += texture(uTexture, vUV - o4).rgb * w4;
+      fragColor = vec4(result, 1.0);
+    }`;
+
+  // 多级合成（固定 4 个 sampler，用权重 uniform 控制实际层数）
+  const FS_COMPOSITE_MULTI = `#version 300 es
+    precision mediump float;
+    in vec2 vUV;
+    uniform sampler2D uScene;
+    uniform sampler2D uBloom0;
+    uniform sampler2D uBloom1;
+    uniform sampler2D uBloom2;
+    uniform sampler2D uBloom3;
+    uniform float uW0, uW1, uW2, uW3;
+    uniform float uIntensity;
+    out vec4 fragColor;
+    void main(){
+      vec4 scene = texture(uScene, vUV);
+      vec3 b = texture(uBloom0, vUV).rgb * uW0
+             + texture(uBloom1, vUV).rgb * uW1
+             + texture(uBloom2, vUV).rgb * uW2
+             + texture(uBloom3, vUV).rgb * uW3;
+      b *= scene.a;
+      vec3 color = scene.rgb + b * uIntensity;
+      float maxC = max(max(color.r, color.g), color.b);
+      color *= (1.0 - smoothstep(1.0, 1.6, maxC) * 0.4);
+      fragColor = vec4(color, scene.a);
+    }`;
+
+  const FS_COMPOSITE_SINGLE = `#version 300 es
+    precision mediump float;
+    in vec2 vUV;
+    uniform sampler2D uScene;
+    uniform sampler2D uBloom;
+    uniform float uIntensity;
+    out vec4 fragColor;
+    void main(){
+      vec4 scene = texture(uScene, vUV);
+      vec3 bloom = texture(uBloom, vUV).rgb;
+      bloom *= scene.a;
+      vec3 color = scene.rgb + bloom * uIntensity;
+      float maxC = max(max(color.r, color.g), color.b);
+      color *= (1.0 - smoothstep(1.0, 1.6, maxC) * 0.4);
+      fragColor = vec4(color, scene.a);
+    }`;
+
+  /* ---------- 工具函数 ---------- */
+
+  function compile2(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+      throw new Error('Bloom shader error: ' + gl.getShaderInfoLog(s));
+    return s;
+  }
+
+  function link(vsSrc, fsSrc) {
+    const p = gl.createProgram();
+    gl.attachShader(p, compile2(gl.VERTEX_SHADER, vsSrc));
+    gl.attachShader(p, compile2(gl.FRAGMENT_SHADER, fsSrc));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS))
+      throw new Error('Bloom link error: ' + gl.getProgramInfoLog(p));
+    return p;
+  }
+
+  function createFBO(w, h) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status !== gl.FRAMEBUFFER_COMPLETE)
+      throw new Error('FBO incomplete: 0x' + status.toString(16));
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { fbo, tex, w, h };
+  }
+
+  function destroyFBO(f) {
+    if (!f) return;
+    gl.deleteFramebuffer(f.fbo);
+    gl.deleteTexture(f.tex);
+  }
+
+  function bindTexture(tex, unit) {
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+  }
+
+  function drawQuad(p) {
+    const loc = gl.getAttribLocation(p, 'aPos');
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.disableVertexAttribArray(loc);
+  }
+
+  function blurLevel(i, r) {
+    const src = bloomFBOs[i];
+    const tmp = blurFBOs[i];
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, tmp.fbo);
+    gl.viewport(0, 0, tmp.w, tmp.h);
+    gl.useProgram(progBlur);
+    bindTexture(src.tex, 0);
+    gl.uniform1i(gl.getUniformLocation(progBlur, 'uTexture'), 0);
+    gl.uniform2f(gl.getUniformLocation(progBlur, 'uDirection'), r / tmp.w, 0);
+    drawQuad(progBlur);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, src.fbo);
+    gl.viewport(0, 0, src.w, src.h);
+    bindTexture(tmp.tex, 0);
+    gl.uniform1i(gl.getUniformLocation(progBlur, 'uTexture'), 0);
+    gl.uniform2f(gl.getUniformLocation(progBlur, 'uDirection'), 0, r / src.h);
+    drawQuad(progBlur);
+  }
+
+  /* ---------- 公开 API ---------- */
+
+  function init(glCtx, w, h, opts) {
+    gl = glCtx;
+    if (opts && opts.sceneHasAlpha !== undefined) sceneHasAlpha = opts.sceneHasAlpha;
+
+    progBright = link(VS_QUAD, FS_BRIGHT);
+    progBlur = link(VS_QUAD, FS_BLUR);
+    progCompositeMulti = link(VS_QUAD, FS_COMPOSITE_MULTI);
+    progCompositeSingle = link(VS_QUAD, FS_COMPOSITE_SINGLE);
+
+    quadBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      -1, -1,  1, -1, -1,  1,
+      -1,  1,  1, -1,  1,  1,
+    ]), gl.STATIC_DRAW);
+
+    resize(w, h);
+  }
+
+  function resize(w, h) {
+    width = w; height = h;
+
+    destroyFBO(fboScene);
+    destroyFBO(fboBright);
+    destroyFBO(fboBlur);
+    bloomFBOs.forEach(destroyFBO);
+    blurFBOs.forEach(destroyFBO);
+    bloomFBOs = [];
+    blurFBOs = [];
+
+    const SS = FBO_SS;
+    const sw = Math.max(1, Math.round(width * SS));
+    const sh = Math.max(1, Math.round(height * SS));
+    fboScene = createFBO(sw, sh);
+
+    if (MULTI_LEVEL) {
+      for (let i = 0; i < LEVELS; i++) {
+        const div = Math.pow(2, i + 1);
+        const bw = Math.max(1, Math.floor(width / div));
+        const bh = Math.max(1, Math.floor(height / div));
+        bloomFBOs.push(createFBO(bw, bh));
+        blurFBOs.push(createFBO(bw, bh));
+      }
+    } else {
+      const bw = Math.max(1, Math.floor(width / 2));
+      const bh = Math.max(1, Math.floor(height / 2));
+      fboBright = createFBO(bw, bh);
+      fboBlur = createFBO(bw, bh);
+    }
+  }
+
+  function beginScene() {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fboScene.fbo);
+    gl.viewport(0, 0, fboScene.w, fboScene.h);
+    if (sceneHasAlpha) {
+      gl.clearColor(0, 0, 0, 0);
+    } else {
+      gl.clearColor(0.071, 0.086, 0.078, 1);
+    }
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+
+  function endScene() {
+    if (MULTI_LEVEL) endSceneMulti();
+    else endSceneSingle();
+  }
+
+  function endSceneMulti() {
+    // Pass 1: 亮度提取 → bloom0
+    const b0 = bloomFBOs[0];
+    gl.bindFramebuffer(gl.FRAMEBUFFER, b0.fbo);
+    gl.viewport(0, 0, b0.w, b0.h);
+    gl.useProgram(progBright);
+    bindTexture(fboScene.tex, 0);
+    gl.uniform1i(gl.getUniformLocation(progBright, 'uScene'), 0);
+    gl.uniform1f(gl.getUniformLocation(progBright, 'uThreshold'), threshold);
+    drawQuad(progBright);
+
+    // Pass 2: 逐级
+    for (let i = 0; i < LEVELS; i++) {
+      if (i > 0) {
+        const cur = bloomFBOs[i];
+        const prev = bloomFBOs[i - 1];
+        gl.bindFramebuffer(gl.FRAMEBUFFER, cur.fbo);
+        gl.viewport(0, 0, cur.w, cur.h);
+        gl.useProgram(progBlur);
+        bindTexture(prev.tex, 0);
+        gl.uniform1i(gl.getUniformLocation(progBlur, 'uTexture'), 0);
+        gl.uniform2f(gl.getUniformLocation(progBlur, 'uDirection'), 0, 0);
+        drawQuad(progBlur);
+      }
+      blurLevel(i, radius);
+    }
+
+    // Pass 3: 合成（按 LEVELS 设置权重，多余层权重 0）
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, width, height);
+    gl.useProgram(progCompositeMulti);
+
+    bindTexture(fboScene.tex, 0);
+    gl.uniform1i(gl.getUniformLocation(progCompositeMulti, 'uScene'), 0);
+
+    const weights = [0.9, 0.5, 0.3, 0.15];
+    for (let i = 0; i < 4; i++) {
+      // 层数不足时绑到 bloom0，并把权重设为 0
+      const tex = i < LEVELS ? bloomFBOs[i].tex : bloomFBOs[0].tex;
+      bindTexture(tex, i + 1);
+      gl.uniform1i(gl.getUniformLocation(progCompositeMulti, 'uBloom' + i), i + 1);
+      gl.uniform1f(gl.getUniformLocation(progCompositeMulti, 'uW' + i),
+                   i < LEVELS ? weights[i] : 0);
+    }
+    gl.uniform1f(gl.getUniformLocation(progCompositeMulti, 'uIntensity'), intensity);
+    drawQuad(progCompositeMulti);
+  }
+
+  function endSceneSingle() {
+    const bw = fboBright.w, bh = fboBright.h;
+    
+    // ---- Pass 1: 亮度提取 ----
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fboBright.fbo);
+    gl.viewport(0, 0, bw, bh);
+    gl.useProgram(progBright);
+    bindTexture(fboScene.tex, 0);
+    gl.uniform1i(gl.getUniformLocation(progBright, 'uScene'), 0);
+    gl.uniform1f(gl.getUniformLocation(progBright, 'uThreshold'), threshold);
+    drawQuad(progBright);
+
+    // ---- N 遍 H+V ----
+    const BLUR_PASSES = 4;
+    gl.useProgram(progBlur);
+    for (let p = 0; p < BLUR_PASSES; p++) {
+      // 水平：fboBright → fboBlur
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fboBlur.fbo);
+      gl.viewport(0, 0, bw, bh);
+      bindTexture(fboBright.tex, 0);
+      gl.uniform1i(gl.getUniformLocation(progBlur, 'uTexture'), 0);
+      gl.uniform2f(gl.getUniformLocation(progBlur, 'uDirection'), singleRadius / bw, 0);
+      drawQuad(progBlur);
+
+      // 垂直：fboBlur → fboBright
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fboBright.fbo);
+      gl.viewport(0, 0, bw, bh);
+      bindTexture(fboBlur.tex, 0);
+      gl.uniform1i(gl.getUniformLocation(progBlur, 'uTexture'), 0);
+      gl.uniform2f(gl.getUniformLocation(progBlur, 'uDirection'), 0, singleRadius / bh);
+      drawQuad(progBlur);
+    }
+
+    // ---- 合成（原逻辑不变）----
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, width, height);
+    gl.useProgram(progCompositeSingle);
+    bindTexture(fboScene.tex, 0);
+    bindTexture(fboBright.tex, 1);
+    gl.uniform1i(gl.getUniformLocation(progCompositeSingle, 'uScene'), 0);
+    gl.uniform1i(gl.getUniformLocation(progCompositeSingle, 'uBloom'), 1);
+    gl.uniform1f(gl.getUniformLocation(progCompositeSingle, 'uIntensity'), intensity);
+    drawQuad(progCompositeSingle);
+  }
+
+  function setParams(p) {
+    if (p.threshold !== undefined) threshold = p.threshold;
+    if (p.intensity !== undefined) intensity = p.intensity;
+    if (p.radius !== undefined) radius = p.radius;
+  }
+
+  return {
+    init, resize, beginScene, endScene, setParams,
+    get levels(){ return MULTI_LEVEL ? LEVELS : 1; },
+    get ssaa()  { return FBO_SS; }
+  };
+
+})();
+
+/* ============================================================
+ *  顶点缓冲
+ * ============================================================ */
+const MAX_VERTS = 160000;
+const vertexData = new Float32Array(MAX_VERTS * 6);
+let vertexCount = 0;
+
+const vbo = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+gl.bufferData(gl.ARRAY_BUFFER, vertexData.byteLength, gl.DYNAMIC_DRAW);
+
+/* ============================================================
+ *  等距投影
+ * ============================================================ */
+let canvasW = 1, canvasH = 1;
+
+function project(x, z, h) {
+  const scale = Math.min(canvasW / 45, canvasH / 37) * zoom;
+  const ca = Math.cos(angle), sa = Math.sin(angle);
+  const rx = x * ca - z * sa;
+  const rz = x * sa + z * ca;
+  return [
+    canvasW / 2 + rx * scale,
+    canvasH * 0.55 + rz * scale * tilt - h * scale
+  ];
+}
+
+function toClip(px, py) {
+  return [
+    (px / canvasW) * 2 - 1,
+    1 - (py / canvasH) * 2
+  ];
+}
+
+/* ============================================================
+ *  颜色工具
+ * ============================================================ */
+const hexCache = new Map();
+function rgb(r, g, b) {
+  return [r / 255, g / 255, b / 255];
+}
+function hex2rgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
+const COL_HEX = {
+  ringOuterDark: '#060b07',
+  ringMain:      '#505948',
+  ringInner:     '#878969',
+  ringOuter:     '#303a2d',
+  tickA:         '#484d31',
+  tickB:         '#adac64',
+  side1:         '#424838',
+  side3:         '#333c2b',
+  side4:         '#39432f',
+  sideEdge:      '#111910',
+  topEdge:       '#232d20',
+  rodDot:        '#404735',
+  edge:          '#0d1409'
+}
+
+// 运行时数组镜像，使用处仍写 COL.xxx
+const COL = Object.fromEntries(
+  Object.entries(COL_HEX).map(([k, v]) => [k, hex2rgb(v)])
+);
+
+/* ============================================================
+ *  几何生成
+ * ============================================================ */
+let vp = 0;
+
+function pushVertex(px, py, col) {
+  const clip = toClip(px, py);
+  vertexData[vp++] = clip[0];
+  vertexData[vp++] = clip[1];
+  vertexData[vp++] = 0;
+  vertexData[vp++] = col[0];
+  vertexData[vp++] = col[1];
+  vertexData[vp++] = col[2];
+}
+
+function pushEdge(p1, p2, color, edgeWidth) {
+  const deltaX = p2[0] - p1[0];
+  const deltaY = p2[1] - p1[1];
+  const length = Math.hypot(deltaX, deltaY) || 1;
+  const nX = -deltaY / length * edgeWidth * 0.5;
+  const nY =  deltaX / length * edgeWidth * 0.5;
+
+  const A = [p1[0] + nX, p1[1] + nY];
+  const B = [p2[0] + nX, p2[1] + nY];
+  const C = [p2[0] - nX, p2[1] - nY];
+  const D = [p1[0] - nX, p1[1] - nY];
+
+  pushVertex(A[0], A[1], color);
+  pushVertex(B[0], B[1], color);
+  pushVertex(C[0], C[1], color);
+  pushVertex(A[0], A[1], color);
+  pushVertex(C[0], C[1], color);
+  pushVertex(D[0], D[1], color);
+}
+
+function pushQuad(p1, p2, p3, p4, col) {
+  pushVertex(p1[0], p1[1], col);
+  pushVertex(p2[0], p2[1], col);
+  pushVertex(p3[0], p3[1], col);
+  pushVertex(p1[0], p1[1], col);
+  pushVertex(p3[0], p3[1], col);
+  pushVertex(p4[0], p4[1], col);
+}
+
+// 圆盘近似（用三角扇形），用于精细圆点
+function pushDisc(cx, cy, rx, ry, col, SEG) {
+  SEG = SEG || 24;
+  for (let i = 0; i < SEG; i++) {
+    const a0 = i / SEG * Math.PI * 2;
+    const a1 = (i + 1) / SEG * Math.PI * 2;
+    pushVertex(cx, cy, col);
+    pushVertex(cx + Math.cos(a0) * rx, cy + Math.sin(a0) * ry, col);
+    pushVertex(cx + Math.cos(a1) * rx, cy + Math.sin(a1) * ry, col);
+  }
+}
+
+/* ============================================================
+ *  尺寸 & Bloom 初始化
+ * ============================================================ */
+function size() {
+  const rect = canvas.getBoundingClientRect();
+  const d = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = Math.max(1, Math.round(rect.width * d));
+  canvas.height = Math.max(1, Math.round(rect.height * d));
+  canvasW = canvas.clientWidth;
+  canvasH = canvas.clientHeight;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+
+  // Bloom 尺寸同步
+  Bloom.resize(canvas.width, canvas.height);
+
+  const srect = spec.getBoundingClientRect();
+  spec.width = Math.max(1, Math.round(srect.width * d));
+  spec.height = Math.max(1, Math.round(srect.height * d));
+  sg.setTransform(d, 0, 0, d, 0, 0);
+}
+
+// 先设初始尺寸，再初始化 Bloom（Bloom.init 内部会调 resize）
+canvasW = canvas.clientWidth || 800;
+canvasH = canvas.clientHeight || 600;
+Bloom.init(gl, Math.max(1, canvas.width || 800), Math.max(1, canvas.height || 600), { sceneHasAlpha: true });
+
+new ResizeObserver(size).observe(canvas);
+new ResizeObserver(size).observe(spec);
+
+/* ============================================================
+ *  主循环
+ * ============================================================ */
+function frame(t) {
+  const dt = Math.min((t - rafTime) / 16.67, 3) || 1;
+  rafTime = t;
+  if (!fpsLast) fpsLast = t;
+  fpsFrames++;
+  if (t - fpsLast >= 500) {
+    $('fps').textContent = Math.round(fpsFrames * 1000 / (t - fpsLast));
+    fpsFrames = 0;
+    fpsLast = t;
+  }
+
+  // ---- 音频分析 ----
+  if (analyser && playing) analyser.getByteFrequencyData(bins);
+  let peak = 0, peakIndex = 0;
+  let fundPeak = 0, fundIndex = 0;
+  
+  if (playing && bins) {
+    // 基础频率
+    for (let i = 2; i < bins.length - 2; i++) {
+      if (bins[i] > fundPeak) { fundPeak = bins[i]; fundIndex = i; }
+    }
+    smoothPeakIndex = smoothPeakIndex * smooth + fundIndex * (1.0 - smooth);
+
+    // 峰值频率（300Hz 以上找最大值）
+    const sampleRate = ctx ? ctx.sampleRate : 44100;
+    const binHz = sampleRate / FFTSize;
+    const startHigh = Math.floor(300 / binHz);
+    for (let i = startHigh; i < bins.length - 2; i++) {
+      if (bins[i] > peak) { peak = bins[i]; peakIndex = i; }
+    }
+    smoothfundPeakIndex = smoothfundPeakIndex * smooth + peakIndex * (1.0 - smooth);
+    
+  }
+  
+  energy = 0;
+  if (playing && wave) {
+    analyser.getFloatTimeDomainData(wave);
+    for (let i = 0; i < wave.length; i++) energy += wave[i] * wave[i];
+    energy = Math.sqrt(energy / wave.length);
+  }
+
+  // ---- Bloom 动态参数（和音频能量联动） ----
+  const bloomIntensity = Math.min(3.00,1.35 + energy * 0.75);
+  const bloomThreshold = Math.max(0.15,0.40 - energy * 0.25);
+  Bloom.setParams({
+    intensity: bloomIntensity,
+    threshold: bloomThreshold,
+    radius: 1.5
+  });
+
+  // ---- 更新柱子高度 ----
+  const sampleRate = ctx ? ctx.sampleRate : 44100;
+  const binHz = sampleRate / FFTSize;
+
+  for (let i = 0; i < N; i++) {
+    const rod = rods[i];
+    let amp = 0;
+    if (playing && bins) {
+      const hz = 45 * Math.pow(320, rod.r / 15);
+      const idx = Math.max(1, Math.min(bins.length - 2, Math.round(hz / binHz)));
+      amp = (bins[idx] + bins[idx - 1] + bins[idx + 1]) / 765;
+      amp = Math.pow(amp, 1.7) * gain;
+    } else if (!playing && mode === 'demo' && !ctx) {
+      amp = 0.10 + 0.20 * (0.5 + 0.5 * Math.sin(rod.r * 0.6 - t * 0.0007 + rod.x * 0.1));
+    }
+    rod._amp = amp;
+    const target = 0.07 + amp * 4.8;
+    rod.h += (target - rod.h) * (1 - Math.pow(0.45 + smoothing * 0.53, dt));
+  }
+
+  // ---- 写顶点 ----
+  vp = 0;
+
+  // 1. 外圈环
+  function drawRing(radius, colorHex, widthPx) {
+    const ringColor = hex2rgb(colorHex);
+    const scale = Math.min(canvasW / 45, canvasH / 37) * zoom;
+    const halfWidth = (widthPx * 0.5) / scale;
+    const step = 96;
+    for (let i = 0; i < step; i++) {
+      const a0 = i / step * Math.PI * 2;
+      const a1 = (i + 1) / step * Math.PI * 2;
+      const c0 = Math.cos(a0), s0 = Math.sin(a0);
+      const c1 = Math.cos(a1), s1 = Math.sin(a1);
+      const radInner = radius - halfWidth;
+      const radOuter = radius + halfWidth;
+      const p0i = project(c0 * radInner, s0 * radInner, 0);
+      const p1i = project(c1 * radInner, s1 * radInner, 0);
+      const p0o = project(c0 * radOuter, s0 * radOuter, 0);
+      const p1o = project(c1 * radOuter, s1 * radOuter, 0);
+      pushQuad(p0i, p1i, p1o, p0o, ringColor);
+    }
+  }
+
+  drawRing(16.4, '#060b07', 60 * (Math.min(canvasW / 45, canvasH / 37) * zoom) * 0.02);
+  drawRing(16.5, '#505948',  6 * (Math.min(canvasW / 45, canvasH / 37) * zoom) * 0.02);
+  drawRing(16.0, '#878969',  3 * (Math.min(canvasW / 45, canvasH / 37) * zoom) * 0.02);
+  drawRing(17.3, '#303a2d',  3 * (Math.min(canvasW / 45, canvasH / 37) * zoom) * 0.02);
+
+  // 2. 80 刻度块
+  for (let i = 0; i < 80; i++) {
+    const a = i / 80 * Math.PI * 2;
+    const a2 = a + 0.034;
+    const r0 = 15.7, r1 = 16.15;
+    const p1 = project(Math.cos(a) * r0, Math.sin(a) * r0, 0);
+    const p2 = project(Math.cos(a2) * r0, Math.sin(a2) * r0, 0);
+    const p3 = project(Math.cos(a2) * r1, Math.sin(a2) * r1, 0);
+    const p4 = project(Math.cos(a) * r1, Math.sin(a) * r1, 0);
+    const col = (i % 2 === 1) ? COL.tickA : COL.tickB;
+    pushQuad(p1, p2, p3, p4, col);
+  }
+
+  // 3. 柱子（深度排序）
+  const sorted = [...rods].sort((a, b) =>
+    (a.x * Math.sin(angle) + a.z * Math.cos(angle)) -
+    (b.x * Math.sin(angle) + b.z * Math.cos(angle))
+  );
+
+  const halfSize = 0.44;
+  const dotSize = Math.min(canvasW / 45, canvasH / 37) * zoom * 0.12;
+
+  for (const rod of sorted) {
+    const amp = rod._amp || 0;
+    const h = rod.h;
+    const x = rod.x, z = rod.z;
+
+    const a0 = project(x - halfSize, z - halfSize, 0);
+    const b0 = project(x + halfSize, z - halfSize, 0);
+    const c0 = project(x + halfSize, z + halfSize, 0);
+    const d0 = project(x - halfSize, z + halfSize, 0);
+    const a  = project(x - halfSize, z - halfSize, h);
+    const b  = project(x + halfSize, z - halfSize, h);
+    const c  = project(x + halfSize, z + halfSize, h);
+    const d  = project(x - halfSize, z + halfSize, h);
+
+    pushQuad(a, b, b0, a0, COL.side1);
+    pushQuad(b, c, c0, b0, rgb(55 + amp * 30, 62 + amp * 30, 44 + amp * 20));
+    pushQuad(c, d, d0, c0, COL.side3);
+    pushQuad(d, a, a0, d0, COL.side4);
+
+    const seed = rod.seed;
+    let base;
+    if (seed > 0.92) base = [143, 109, 81];
+    else if (seed > 0.85) base = [97, 118, 104];
+    else base = [139 + seed * 29, 148 + seed * 22, 119 + seed * 21];
+    pushQuad(a, b, c, d, rgb(
+      base[0] + amp * 43,
+      base[1] + amp * 40,
+      base[2] + amp * 24
+    ));
+
+    // 顶面 4 边
+    const edgeWidth = Math.max(0.8 * zoom, 1);
+    const edgeColor = COL.edge;
+    pushEdge(a, b, edgeColor, edgeWidth);
+    pushEdge(b, c, edgeColor, edgeWidth);
+    pushEdge(c, d, edgeColor, edgeWidth);
+    pushEdge(d, a, edgeColor, edgeWidth);
+
+    // 朝镜头的两根竖棱
+    const sa = Math.sin(angle), ca = Math.cos(angle);
+    const depthA = -sa - ca, depthB = sa - ca, depthC = sa + ca, depthD = -sa + ca;
+
+    // 每个侧面由两个角和它们对应的底角组成
+    // 面法线的深度分量：面 (p,q) 的外法线深度 ∝ (depthP - depthQ) 的某种组合
+    // 对等距投影，面 a-b 朝镜头 ⇔ depthA + depthB > depthC + depthD（即该面比对面更靠前）
+    const faces = [
+      { front: (depthA + depthB) > (depthC + depthD), edge1: [a, a0], edge2: [b, b0] }, // 面 a-b
+      { front: (depthB + depthC) > (depthD + depthA), edge1: [b, b0], edge2: [c, c0] }, // 面 b-c
+      { front: (depthC + depthD) > (depthA + depthB), edge1: [c, c0], edge2: [d, d0] }, // 面 c-d
+      { front: (depthD + depthA) > (depthB + depthC), edge1: [d, d0], edge2: [a, a0] }, // 面 d-a
+    ];
+    
+    // 收集朝镜头面的竖边，去重
+    const seen = new Set();
+    for (const f of faces) {
+      if (!f.front) continue;
+      for (const e of [f.edge1, f.edge2]) {
+        const key = e[0] === a ? 'a' : e[0] === b ? 'b' : e[0] === c ? 'c' : 'd';
+        if (seen.has(key)) continue;
+        seen.add(key);
+        pushEdge(e[0], e[1], edgeColor, edgeWidth);
+      }
+    }
+
+    // 圆点（精细圆盘）
+    const dotPos = project(x, z, h + 0.01);
+    pushDisc(dotPos[0], dotPos[1], dotSize, dotSize * tilt, COL.rodDot, 24);
+  }
+
+  vertexCount = vp / 6;
+
+  /* ==========================================================
+   *  渲染：Bloom 包裹
+   * ========================================================== */
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertexData.subarray(0, vp));
+
+  gl.disable(gl.DEPTH_TEST);
+
+  Bloom.beginScene();
+
+  // 场景绘制
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  gl.enableVertexAttribArray(A.pos);
+  gl.vertexAttribPointer(A.pos, 3, gl.FLOAT, false, 24, 0);
+  gl.enableVertexAttribArray(A.color);
+  gl.vertexAttribPointer(A.color, 3, gl.FLOAT, false, 24, 12);
+  gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
+
+  Bloom.endScene();
+
+  /* ==========================================================
+   *  频谱小图（Canvas 2D，独立于 WebGL）
+   * ========================================================== */
+  const sw = spec.clientWidth, sh = spec.clientHeight;
+  sg.clearRect(0, 0, sw, sh);
+  for (let i = 0; i < 48; i++) {
+    const v = playing && bins
+      ? bins[Math.min(bins.length - 1, Math.floor(Math.pow(i / 47, 2) * 700))] / 255
+      : 0;
+    sg.fillStyle = i < 12 ? '#d8b975' : i < 30 ? '#c3cf87' : '#95b1a1';
+    sg.fillRect(i * sw / 48, sh - Math.max(2, v * sh), sw / 48 - 3, Math.max(2, v * sh));
+  }
+
+  // ---- 读数 ----
+  if (t % 100 < 25) {
+    $('level').innerHTML = (playing ? Math.round(20 * Math.log10(Math.max(energy, 0.001))) : '—') + '<small>分贝</small>';
+    $('fund').innerHTML = (playing && fundPeak > 0) ? Math.round(smoothPeakIndex * binHz) + '<small>赫兹</small>' : '—<small>赫兹</small>';
+    $('freq').innerHTML = (playing && peak > 0) ? Math.round(smoothfundPeakIndex * binHz) + '<small>赫兹</small>' : '—<small>赫兹</small>';
+    
+    if (playing && !seeking) {
+      let seconds;
+      if (buffer && mode === 'file') {
+        const elapsed = ctx.currentTime - playStartCtxTime;
+        seconds = (playStartOffset + elapsed) % buffer.duration;
+        $('seek').value = seconds / buffer.duration * 100;
+      } else {
+            seconds = offset + (ctx.currentTime - started);
+      }
+      $('elapsed').textContent = format(seconds);
+    }    
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ============================================================
+ *  音频系统
+ * ============================================================ */
+function format(s) {
+  return Math.floor(s / 60).toString().padStart(2, '0') + ':' +
+         Math.floor(s % 60).toString().padStart(2, '0');
+}
+    
+const capture = new SystemAudioCapture({ onEnded() {
+  if (mode !== 'system') return;
+  stop();
+  $('message').textContent = '声音共享已结束。点击“接入电脑声音”可以再次连接。';
+} });
+
+async function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = FFTSize;
+    analyser.smoothingTimeConstant = 0.75;
+    bins = new Uint8Array(analyser.frequencyBinCount);
+    wave = new Float32Array(analyser.fftSize);
+    master = ctx.createGain();
+    master.connect(ctx.destination);
+  }
+  await ctx.resume();
+}
+
+function stop() {
+  session++;
+  loading = false;
+  capture.stop();
+  stream = null;
+  if (source) {
+    source.onended = null;
+    try { source.stop?.(); } catch {}
+    source.disconnect();
+    source = null;
+  }
+  demoNodes.forEach(n => { try { n.stop?.(); n.disconnect(); } catch {} });
+  demoNodes = [];
+  analyser?.disconnect();
+  playing = false;
+  update();
+}
+
+function update() {
+  const live = mode === 'system';
+  const label = loading ? '取消连接' : playing ? (live ? '停止接收' : '暂停') : (live ? '接入电脑声音' : '播放');
+  $('play').textContent = loading ? '×' : playing ? (live ? '■' : 'Ⅱ') : '▶';
+  $('play').setAttribute('aria-label', label);
+  $('play').setAttribute('aria-pressed', String(playing));
+  $('system').textContent = live && loading ? '取消连接' : live && playing ? '停止接收声音' : '接入电脑声音';
+  $('system').classList.toggle('selected', live);
+  $('system').setAttribute('aria-pressed', String(live && playing));
+  $('demo').classList.toggle('selected', mode === 'demo');
+  $('demo').setAttribute('aria-pressed', String(mode === 'demo'));
+  $('status').textContent = loading ? '等待选择声音来源' : playing
+    ? '运行中 · ' + (live ? '电脑声音' : mode === 'demo' ? '演示信号' : '音频文件')
+    : live ? '待机 · 等待电脑声音' : '已暂停';
+  $('tracksub').textContent = playing ? '柱阵随声音实时起伏' : loading ? '在弹窗中勾选共享音频' : live ? '选择声音来源，启动声场' : '点击播放，启动声场';
+  $('seek').disabled = mode !== 'file';
+  $('timeline').hidden = mode !== 'file';
+  $('volume-control').hidden = live;
+  $('volume').disabled = live;
+  $('upload').disabled = loading && mode === 'file';
+}
+
+async function start() {
+  if (loading || playing) return;
+  loading = true;
+  const attempt = ++session;
+  update();
+  try {
+    if (mode === 'system') {
+      $('message').textContent = '请选择播放中的标签页或屏幕，并勾选“共享音频”。';
+      // Open the picker immediately, before resuming an audio context.
+      const s = await capture.start();
+      if (attempt !== session || !s) return;
+      stream = s;
+      await audio();
+      if (attempt !== session) return;
+      // Live sound goes only into the analyser. It is never sent back to speakers.
+      analyser.disconnect();
+      source = ctx.createMediaStreamSource(s);
+      source.connect(analyser);
+      $('trackname').textContent = s.getAudioTracks()[0].label || '电脑声音 / 实时输入';
+      $('message').textContent = '正在接收电脑声音。音频仅在本机分析；停止接收或离开页面即可断开。';
+    } else {
+      await audio();
+      if (attempt !== session) return;
+      analyser.disconnect();
+      analyser.connect(master);
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.value = +$('volume').value / 100;
+      if (mode === 'file' && buffer) {
+        source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = LOOP;
+        source.connect(analyser);
+        offset %= buffer.duration;
+        source.start(0, offset);
+        playStartCtxTime = ctx.currentTime;
+        playStartOffset = offset;
+      } else {
+        [55, 82.41, 110, 164.81, 220, 329.63, 440, 659.25].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const v = ctx.createGain();
+          const lfo = ctx.createOscillator();
+          const lg = ctx.createGain();
+          osc.type = i < 3 ? 'triangle' : 'sine';
+          osc.frequency.value = freq;
+          v.gain.value = 0.025;
+          lfo.frequency.value = 0.22 + i * 0.087;
+          lg.gain.value = 0.023;
+          lfo.connect(lg);
+          lg.connect(v.gain);
+          osc.connect(v);
+          v.connect(analyser);
+          osc.start();
+          lfo.start();
+          demoNodes.push(osc, lfo, v, lg);
+        });
+      }
+      $('message').textContent = '音频仅在本机处理，不会上传。';
+    }
+    started = ctx.currentTime;
+    playing = true;
+    loading = false;
+    update();
+  } catch (error) {
+    if (attempt !== session) return;
+    const live = mode === 'system';
+    stop();
+    $('message').textContent = live ? captureErrorMessage(error) : '无法播放此音频，请尝试其他文件。';
+  } finally {
+    if (attempt === session) { loading = false; update(); }
+  }
+}
+
+function resetTrack(name) {
+  offset = 0;
+  buffer = null;
+  $('trackname').textContent = name;
+  $('elapsed').textContent = '00:00';
+  $('seek').value = 0;
+}
+
+$('play').onclick = () => {
+  if (loading) {
+    stop();
+    $('message').textContent = '已取消连接。可关闭仍然打开的共享弹窗。';
+  } else if (playing) {
+    if (mode === 'file' && buffer) {
+      offset = (playStartOffset + ctx.currentTime - playStartCtxTime) % buffer.duration;
+    }
+    stop();
+    $('message').textContent = mode === 'system' ? '已停止接收电脑声音。' : '已暂停。';
+  } else start();
+};
+
+$('system').onclick = () => {
+  if (mode === 'system' && (playing || loading)) { $('play').click(); return; }
+  stop();
+  mode = 'system';
+  resetTrack('电脑声音 / 实时输入');
+  start();
+};
+
+$('demo').onclick = () => {
+  stop();
+  mode = 'demo';
+  resetTrack('内置演示信号');
+  start();
+};
+
+$('upload').onclick = () => $('file').click();
+$('file').onchange = async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  stop();
+  mode = 'file';
+  resetTrack(f.name);
+  const id = session;
+  loading = true;
+  update();
+  $('message').textContent = '正在读取音频…';
+  try {
+    await audio();
+    if (id !== session) return;
+    const decoded = await ctx.decodeAudioData(await f.arrayBuffer());
+    if (id !== session) return;
+    buffer = decoded;
+    $('duration').textContent = format(buffer.duration);
+    loading = false;
+    await start();
+  } catch {
+    if (id !== session) return;
+    stop();
+    mode = 'system';
+    resetTrack('电脑声音 / 实时输入');
+    update();
+    $('message').textContent = '无法读取该文件，请选择其他音频文件。';
+  } finally {
+    if (id === session) { loading = false; update(); }
+    e.target.value = '';
+  }
+};
+
+document.addEventListener('keydown', e => {
+  // ★ 按住重复触发直接忽略
+  if (e.repeat) return;
+
+  const el = document.activeElement;
+  const tag = el?.tagName;
+  const isTextInput =
+    el && el !== document.body && el !== document.documentElement &&
+    (
+      tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY' ||
+      el.isContentEditable
+    );
+
+  if (isTextInput) return;
+
+  // ---- 空格：播放/暂停 ----
+  if (e.code === 'Space') {
+    e.preventDefault();
+    // ★ 额外保险：阻止事件继续传播，避免其他监听重复处理
+    e.stopPropagation();
+    $('play').click();
+    return;
+  }
+
+  // ---- 左右键：进度跳转 ----
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  if (mode !== 'file' || !buffer) return;
+
+  e.preventDefault();
+
+  const STEP = 5;
+  const dir = e.key === 'ArrowRight' ? 1 : -1;
+  const cur = +$('seek').value / 100 * buffer.duration;
+  const next = Math.max(0, Math.min(buffer.duration, cur + dir * STEP));
+
+  $('seek').value = next / buffer.duration * 100;
+  $('seek').dispatchEvent(new Event('input'));
+  $('seek').dispatchEvent(new Event('change'));
+});
+
+
+
+$('seek').onkeydown = e => {
+  if (mode !== 'file' || !buffer) return;
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  e.preventDefault();
+  const STEP = 5;
+  const dir = e.key === 'ArrowRight' ? 1 : -1;
+  const cur = +$('seek').value / 100 * buffer.duration;
+  const next = Math.max(0, Math.min(buffer.duration, cur + dir * STEP));
+  $('seek').value = next / buffer.duration * 100;
+  $('seek').dispatchEvent(new Event('input'));
+  $('seek').dispatchEvent(new Event('change'));
+};
+
+$('seek').oninput = () => {
+  if (mode !== 'file' || !buffer) return;
+  seeking = true;
+  $('elapsed').textContent = format(+$('seek').value / 100 * buffer.duration);
+};
+
+$('seek').onchange = () => {
+  if (mode !== 'file' || !buffer) return;
+  const was = playing;
+  stop();
+  offset = +$('seek').value / 100 * buffer.duration;
+  $('elapsed').textContent = format(offset);
+  seeking = false;
+  if (was) start();
+};
+
+$('gain').oninput = e => {
+  gain = +e.target.value;
+  $('gainval').textContent = gain.toFixed(1) + '×';
+};
+
+$('smooth').oninput = e => {
+  smoothing = +e.target.value / 100;
+  $('smoothval').textContent = e.target.value + '%';
+};
+
+$('volume').oninput = e => {
+  $('volumeval').textContent = e.target.value + '%';
+  if (master && mode !== 'system')
+    master.gain.setTargetAtTime(+e.target.value / 100, ctx.currentTime, 0.03);
+};
+
+/* 拖拽旋转 */
+canvas.addEventListener('pointerdown', e => {
+  drag = { x: e.clientX, y: e.clientY };
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  angle -= (e.clientX - drag.x) * 0.006;
+  tilt = Math.max(0.3, Math.min(0.8, tilt + (e.clientY - drag.y) * 0.005));
+  drag = { x: e.clientX, y: e.clientY };
+});
+canvas.addEventListener('pointerup', () => drag = null);
+canvas.addEventListener('pointercancel', () => drag = null);
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoom = Math.max(0.5, Math.min(2.2, zoom - e.deltaY * 0.001));
+}, { passive: false });
+
+$('reset').onclick = () => {
+  angle = -0.32;
+  tilt = 0.58;
+  zoom = 1;
+};
+
+$('fullscreen').onclick = async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch (e) {
+    $('message').textContent = '当前浏览器不支持全屏。';
+  }
+};
+
+document.addEventListener('fullscreenchange', () => {
+  $('fullscreen').textContent = document.fullscreenElement ? '退出全屏 ↙' : '全屏 ↗';
+});
+
+window.addEventListener('pagehide', stop);
+
+/* ============================================================
+ *  启动
+ * ============================================================ */
+size();
+requestAnimationFrame(frame);
+
+
+//$('msaa').textContent = Bloom.msaa + 'x';
+//$('bloomMode').textContent   = Bloom.mode;
+
+//$('fftSize').textContent = FFTSize
+update();
+
+
+canvas.addEventListener('webglcontextlost', event => {
+  event.preventDefault();
+  stop();
+  showRendererError('画面连接已中断。请刷新页面后重新接入声音。');
+});
+}
+
+function showRendererError(message = '当前浏览器无法绘制三维画面。请开启浏览器图形加速，或使用新版桌面浏览器。') {
+  document.getElementById('renderer-error').hidden = false;
+  document.getElementById('renderer-error').textContent = message;
+  document.getElementById('status').textContent = '画面暂不可用';
+  document.querySelectorAll('.reactor-workbench button, .reactor-workbench input').forEach(control => { control.disabled = true; });
+}
+
+try { initReactor(); } catch (error) {
+  showRendererError();
+  console.error('Reactor initialization failed:', error);
+}

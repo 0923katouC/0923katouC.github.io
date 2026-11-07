@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN" class="ui-root">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="description" content="CMC 的 AI 工具与实验：接入电脑声音的声场反应堆。">
+  <title>AI 工具 | CMC</title>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/collection-backgrounds.css?v=20261004-collections-bg1">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261105-nav1">
+  <link rel="stylesheet" href="/assets/css/site-motion.css?v=20261006-spring2">
+  <link rel="stylesheet" href="/assets/css/project-navigation.css?v=20261105-nav2">
+  <link rel="stylesheet" href="/assets/css/playground.css?v=20261105-nav1">
+  <script src="/assets/js/site-motion.js?v=20261105-nav1" defer blocking="render"></script>
+  <script src="/assets/js/playground.js?v=20261029-1" defer></script>
+</head>
+<body class="ui-page collection-page projects-page playground-page glass-ui">
+  <picture class="collection-background" aria-hidden="true">
+    <source media="(max-width: 640px)" srcset="/assets/images/home-entries/projects-960.webp" type="image/webp">
+    <img src="/assets/images/collection-backgrounds/projects-personal-v2.webp" width="1280" height="720" alt="" decoding="async" fetchpriority="high">
+  </picture>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="site-title" href="/?v=20260911-glass1">CMC</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/?v=20260911-glass1" data-zh="Home page" data-en="Home page">Home page</a>
+        <a href="/photography.html?v=20260911-glass1" data-zh="摄影集" data-en="Photography">摄影集</a>
+        <a href="/academics.html?v=20260911-glass1" data-zh="学术集" data-en="Academics">学术集</a>
+        <a href="/writing.html?v=20260911-glass1" data-zh="码字集" data-en="Writing">码字集</a>
+        <a class="active" aria-current="location" href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
+        <button class="lang-switch" type="button" aria-label="Switch language">EN</button>
+      </nav>
+    </div>
+  </header>
+  <main class="playground-main">
+    <section class="container page-head compact-head playground-heading">
+      <a class="back-link" href="/projects.html"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</span></a>
+      <span class="eyebrow" data-zh="把想法做成工具" data-en="CMC / TOOLS & EXPERIMENTS">把想法做成工具</span>
+      <div class="playground-title-row"><h1  data-zh="AI 工具" data-en="AI Tools">AI 工具</h1><button class="pick-button" id="pick-something" type="button" hidden><span  data-zh="替我挑一个 ↗" data-en="Pick one for me ↗">替我挑一个 ↗</span></button></div>
+      <p  data-zh="一些自用工具与实验。先从让声音变成看得见的起伏开始。" data-en="Personal tools and experiments. Starting with sound you can see.">一些自用工具与实验。先从让声音变成看得见的起伏开始。</p>
+      <div class="playground-notes"><span  data-zh="不用登录" data-en="NO SIGN-IN">不用登录</span><span  data-zh="没有广告" data-en="NO ADS">没有广告</span><span  data-zh="声音留在本机" data-en="LOCAL AUDIO">声音留在本机</span></div>
+    </section>
+    <section class="container play-grid" aria-label="AI Tools">
+      <a class="play-card" href="/projects/ai/reactor/" data-play-card>
+        <div class="play-cover"><img src="/projects/ai/reactor/cover.svg" alt="" width="1200" height="630" decoding="async"><span class="play-number">01</span></div>
+        <div class="play-copy">
+          <div class="play-kicker"><span data-zh="声音可视化" data-en="SOUND VISUALIZER">声音可视化</span><span data-zh="跟着正在播放的声音" data-en="FOLLOW YOUR SOUND">跟着正在播放的声音</span></div>
+          <h2 data-zh="声场反应堆" data-en="Reactor">声场反应堆</h2>
+          <p class="play-description" data-zh="接入电脑里的音乐、视频或其他声音，让圆形柱阵随频谱起伏。拖动视角，看看声音的形状。" data-en="Connect music, video or other sounds playing on your computer. Watch a circular field of rods rise and fall, and drag to find your angle.">接入电脑里的音乐、视频或其他声音，让圆形柱阵随频谱起伏。拖动视角，看看声音的形状。</p>
+          <div class="play-foot"><span data-zh="共享声音 · 本机处理 · 支持音频文件" data-en="Share audio · Local processing · Audio files">共享声音 · 本机处理 · 支持音频文件</span><span class="play-arrow" aria-hidden="true">↗</span></div>
+        </div>
+      </a>
+    </section>
+    <footer class="container playground-footer">
+      <p  data-zh="还想逛逛？" data-en="Wander a little more?">还想逛逛？</p><a href="/projects/games/" data-zh="游戏" data-en="Games">游戏</a><a href="/projects/toys/" data-zh="小玩具" data-en="Little Toys">小玩具</a><a href="/projects.html" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
+    </footer>
+  </main>
+  <script src="/assets/js/main.js?v=20261006-motion1"></script>
+  <script src="/assets/js/liquid-glass.js?v=20261105-nav1" defer></script>
+  <script src="/assets/js/site-ui.js?v=20261003-header-only1" defer></script>
+</body>
+</html>

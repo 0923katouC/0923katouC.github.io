@@ -14,7 +14,8 @@ const viewports = [
   { name: 'mobile', width: 390, height: 844 },
 ];
 const pages = [
-  { name: 'projects', path: '/projects.html', links: ['/projects/games/', '/projects/toys/'], interact: switchDirectoryLanguage },
+  { name: 'projects', path: '/projects.html', links: ['/projects/games/', '/projects/toys/', '/projects/ai/'], interact: switchDirectoryLanguage },
+  { name: 'ai', path: '/projects/ai/', links: ['/projects/ai/reactor/'], interact: switchDirectoryLanguage },
   { name: 'games', path: '/projects/games/', links: ['rain-reel', 'night-train', 'quota-arcade'].map(name => `/projects/games/${name}/`), interact: switchDirectoryLanguage },
   { name: 'toys', path: '/projects/toys/', links: ['rain-radio', 'odd-inventions'].map(name => `/projects/toys/${name}/`), interact: switchDirectoryLanguage },
   { name: 'rain-reel', path: '/projects/games/rain-reel/', interact: investigate },
