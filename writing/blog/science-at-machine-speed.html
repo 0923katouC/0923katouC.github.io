@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN" class="ui-root">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="从硅基计算的物理约束出发，思考模型能力、科研协作，以及一种可以验证和复用的研究成果。">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://pub-aaf94121331648f0a0658c3db52a35eb.r2.dev data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <link rel="canonical" href="https://0923katouC.github.io/writing/blog/science-at-machine-speed.html">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="当科研的生产速度超过理解速度 | 博客">
+  <meta property="og:description" content="从硅基计算的物理约束出发，思考模型能力、科研协作，以及一种可以验证和复用的研究成果。">
+  <meta property="og:url" content="https://0923katouC.github.io/writing/blog/science-at-machine-speed.html">
+  <meta property="og:locale" content="zh_CN">
+  <meta name="author" content="CMC">
+  <meta property="article:published_time" content="2026-11-08T00:00:00+08:00">
+  <title>当科研的生产速度超过理解速度 | 博客 | CMC</title>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261003-header-only1">
+  <link rel="stylesheet" href="/assets/css/site-ui.css?v=20261003-header-only1">
+  <link rel="stylesheet" href="/assets/css/collection-backgrounds.css?v=20261004-collections-bg1">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261003-project-motion1">
+  <link rel="stylesheet" href="/assets/css/blog.css?v=20261108-blog1">
+  <link rel="stylesheet" href="/assets/css/site-motion.css?v=20261006-spring2">
+  <script src="/assets/js/site-motion.js?v=20261006-spring2" defer blocking="render"></script>
+</head>
+<body class="ui-page collection-page writing-page blog-page glass-ui">
+  <picture class="collection-background" aria-hidden="true">
+    <source media="(max-width: 640px)" srcset="/assets/images/collection-backgrounds/writing-mobile-v1.webp" type="image/webp">
+    <img src="/assets/images/collection-backgrounds/writing-desktop-v1.webp" width="1920" height="1280" alt="" decoding="async" fetchpriority="high">
+  </picture>
+  <a class="blog-skip" href="#main-content">跳到正文</a>
+  <header class="site-header"><div class="container nav-wrap"><a class="site-title" href="/?v=20260911-glass1">CMC</a><nav class="main-nav" aria-label="Main navigation"><a href="/?v=20260911-glass1" data-zh="Home page" data-en="Home page">Home page</a><a href="/photography.html?v=20260911-glass1" data-zh="摄影集" data-en="Photography">摄影集</a><a href="/academics.html?v=20260911-glass1" data-zh="学术集" data-en="Academics">学术集</a><a class="active" href="/writing.html?v=20260911-glass1" data-zh="码字集" data-en="Writing">码字集</a><a href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a><button class="lang-switch" type="button" aria-label="Switch language">EN</button></nav></div></header>
+  <main id="main-content">
+    <div class="container page-head compact-head"><a class="back-link" href="/writing/blog/"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="博客" data-en="Blog">博客</span></a></div>
+    <div class="container blog-frame">
+      <article class="blog-paper" lang="zh-CN" aria-labelledby="article-title">
+<!-- BLOG_DOCUMENT_START -->
+<header class="blog-paper-header">
+  <span class="blog-kicker">思想记录 · 001</span>
+  <h1 id="article-title">当科研的生产速度<br>超过理解速度</h1>
+  <p class="blog-deck">从硅基计算的物理约束出发，思考模型能力、科研协作，以及一种可以验证和复用的研究成果。</p>
+  <div class="blog-meta"><span>CMC</span><time datetime="2026-11-08">2026 年 11 月 8 日</time><span>科研 · 人工智能 · 未来</span></div>
+</header>
+<details class="blog-toc-mobile">
+  <summary>本文目录</summary>
+  <nav aria-label="文章目录"><ol><li><a href="#hardware">一、硬件与模型能力</a></li><li><a href="#research">二、科研效率与协作</a></li><li><a href="#verification">三、验证、复用与理解</a></li><li><a href="#future">四、对未来的判断</a></li><li><a href="#sources">资料与延伸阅读</a></li></ol></nav>
+</details>
+<div class="blog-prose">
+  <p>这次讨论里，最让我停下来想的，是一个很大的数字：如果未来硅基计算继续逼近物理允许的效率，我们能不能运行一个拥有百万万亿参数的模型，并且让它以人可以实时交互的速度工作？</p>
+  <p>继续追问下去，问题很快离开了芯片。假如推导、编程、数值计算和文字整理都大幅加快，一个研究者一天能提出和检验的想法越来越多，那么依靠逐篇阅读、逐轮修改、逐个同行确认的科研组织，还能以相近的速度运转吗？</p>
+  <p>我倾向于认为，未来科研的一项核心矛盾，会是<strong>研究结果的生产速度，超过共同体验证、理解并使用它们的速度</strong>。这个变化会同时影响模型设计、导师与学生的关系、论文的形态，以及我们如何判断一项工作值得相信。</p>
+  <p>想让人类真正获得这些新增的知识，需要同时建设两种能力：更快地产生研究结果，以及更快地把结果变成可以共同使用的知识。</p>
+
+  <section aria-labelledby="hardware">
+    <h2 id="hardware">一、物理硬件还能把模型推到多远？</h2>
+    <h3>先把“能装下”与“能及时算完”分别算清楚</h3>
+    <p>这里的一个参数，是模型在训练中调整、在计算中使用的一个数值。沿用讨论中的记法，<var>P</var><sub>total</sub> 表示模型保存的全部参数数量，<var>P</var><sub>act</sub> 表示生成一个文本片段时实际参与计算的参数数量。一个文本片段是模型每次输出的基本单位，可能是一个字、一个词，或者词的一部分。</p>
+    <p>密集模型在一次生成中使用几乎全部参数；按输入选择部分子网络工作的模型，可以保存很多参数而只调用其中一部分。总参数数量决定存储负担，实际调用的参数数量更直接地影响每一步的运算和传输负担。</p>
+    <p>假设我们要求单路连续生成速度 <var>r</var> 等于每秒 100 个文本片段，那么在常规逐片段生成的方式下，平均每一步只有 0.01 秒，也就是 10 毫秒。这里讨论的是一条连续输出，不能用许多用户同时生成的总吞吐量代替。</p>
+    <p>因此，至少要同时检查三件事：能否存下权重，能否在功率预算内完成运算，以及一串有先后依赖的运算和通信能否在 10 毫秒内结束。把更多芯片接起来，会增加总资源，也会引入新的通信距离和等待。</p>
+
+    <h3>一个很大的估计，究竟说明了什么？</h3>
+    <p>Ho、Erdil 和 Besiroglu 在 2023 年研究了传统数字硅基处理器的能效边界。他们对晶体管开关、连线和漏电等因素建立简化模型，得到四位浮点运算的极限能效分布，几何平均值约为每焦耳 4.7 × 10<sup>15</sup> 次运算。四位指用四个二进制位表示一个低精度数值。这是带有较大不确定性的技术极限估计。<a href="https://arxiv.org/abs/2312.08595">〔硅基处理器能效研究〕</a></p>
+    <p>为了看清原讨论中那些大数字从何而来，可以做一次明确标出假设的计算。记 <var>W</var> 为分给处理器运算的功率，<var>η</var> 为每焦耳能完成的运算次数。只计算权重矩阵的主要乘加运算，把一次乘法和一次加法算作两次运算，则每生成一个片段约需 2<var>P</var><sub>act</sub> 次运算：</p>
+    <div class="blog-equation" aria-label="每秒需要的运算次数约为二乘生成速度乘活跃参数量，不能超过功率乘运算能效。">
+      <span class="equation-line">2<var>rP</var><sub>act</sub> ≲ <var>Wη</var></span>
+      <span class="equation-line"><var>P</var><sub>act</sub> ≲ <var>Wη</var> / (2<var>r</var>)</span>
+      <span class="equation-caption">仅核算主要权重运算的乐观预算；没有完成整台机器的设计。</span>
+    </div>
+    <p>把 1 亿瓦全部分给这项运算预算，再代入上面的四位运算能效和每秒 100 个片段，就得到约 2.35 × 10<sup>21</sup> 个活跃参数的数值。原对话又为额外的权重读取与传输假设不同能耗，于是得到 10<sup>18</sup> 到 10<sup>20</sup> 一类数量级。沿用讨论中的单位，1 T 参数表示一万亿，即 10<sup>12</sup> 个参数；这一区间就是 100 万到 1 亿 T 参数。</p>
+    <p>这里必须修正对这些数字的解读：<strong>它们是把假设代入简化预算后得到的条件性估计，尚不能给出未来可实现的模型规模。</strong>其中额外传输能耗是探索性取值，也需要和原能效模型已经计入的连线开销区分。对于完整系统，冷却、存储、通信以及运算资源闲置都会消耗预算；低精度下的模型质量也需要另行检验。</p>
+    <p>存储和传输会立刻把问题变得具体。设每个权重理想地只占四个二进制位，即半个字节，那么一个 10<sup>19</sup> 参数的密集模型，仅权重就需要 5 × 10<sup>18</sup> 字节。若每生成一个片段都要从存储器读取一遍权重，每秒 100 个片段就要求每秒读取 5 × 10<sup>20</sup> 字节。这还没有包含对已有文本的计算和其他数据传输。</p>
+    <p>用 <var>b</var> 表示每个参数占用的字节数，<var>B</var><sub>eff</sub> 表示在这一任务中真正可用的权重读取带宽，这项约束可以写为：</p>
+    <div class="blog-equation" aria-label="在每步重新读取活跃权重的假设下，带宽至少需要达到生成速度乘每个参数的字节数乘活跃参数量。">
+      <span class="equation-line"><var>rbP</var><sub>act</sub> ≤ <var>B</var><sub>eff</sub></span>
+      <span class="equation-caption">成立于每一步重新读取活跃权重的近似；缓存、批量处理和模型结构会改变读取方式。</span>
+    </div>
+    <p>即使总带宽足够，层与层之间的先后关系还在。例如 1,000 层依次执行，10 毫秒意味着每层平均只有 10 微秒，计算和必要通信必须共同占用这段时间。<strong>未来硬件能支持多少参数，最终需要由功率、存储、通信、计算深度和物理布局共同回答。</strong></p>
+
+    <h3>我对能力增长的期待，落在持续研究上</h3>
+    <p>参数增加给模型提供了更多可调整的数值，但训练数据、训练方法和调用方式决定这些数值能学到什么。Hoffmann 等人的计算预算研究已经给出过很直接的例子：在相同训练计算预算下，参数更少、训练数据更多的模型，可以在许多任务上超过更大的模型。<a href="https://arxiv.org/abs/2203.15556">〔模型规模与训练数据的配比研究〕</a></p>
+    <p>因此，把参数数量和人脑突触数量放在一起，最多能帮助感受数量级。一个突触有随时间变化的生物过程；一个模型参数则是计算中使用的数值。两者的数量没有现成的智能换算关系。</p>
+    <p>我更期待的是：模型能否长时间维护同一个研究问题，检查自己的中间结果，记住失败路线，安排实验，并在新证据出现后修正下一步。硬件进步也可以用于更长的思考、更多次独立尝试，以及更强的验证，而不必全部换成参数。</p>
+    <p>在这个意义上，硅基计算的未来已经足够值得认真讨论。它能否持续扩大有效研究能力，是一个可以逐步检验的问题；无需先为某种最终的计算机形态下结论。</p>
+  </section>
+
+  <section aria-labelledby="research">
+    <h2 id="research">二、科研效率的变化，会怎样改写协作？</h2>
+    <p>如果一个课题仍然按照“学生做一部分，等待导师看完，再进入下一步”的方式运行，那么研究周期里同时包含实际工作时间和等待时间。当实际工作加快，等待时间就会占据越来越大的比例。</p>
+    <p>举一个纯粹用于说明的例子：一项任务原本需要十天计算整理，再等五天讨论，总共十五天。把前一部分压缩到一天，总周期仍然是六天；如果连讨论和检查的组织也能调整，总周期才可能进一步缩短。工具进步首先改变的是某些步骤，科研组织决定这些进步能否传到整个过程。</p>
+    <p>这种变化可能非常不均匀。可以快速运行、快速比较好坏的任务，适合开展大量尝试。AlphaEvolve 就把模型提出程序与自动运行、评估程序结合起来，用于算法发现和优化。它提供了一个具体例子：当结果有可操作的检验方法时，模型提出的想法可以进入持续反馈的工作流程。<a href="https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/">〔AlphaEvolve 研究介绍〕</a></p>
+    <p>对某些理论和计算课题，我预期熟练使用这些工具的小团队，会获得远超其人数的产出能力。传统组织如果仍要求每个小步骤都等待同一个人批准，效率差距可能迅速拉大。年轻研究者也会更有动力围绕具体问题形成合作关系，把推导、检查和复现交给不同的人与工具并行完成。</p>
+    <p>导师的价值会随之重新分布：选择值得做的问题，识别一个假设是否偷换了研究对象，判断异常结果是否值得追踪，帮助研究者建立对证据的判断力。这些工作对研究的影响，往往超过文字润色和常规步骤的监督。培养机制也应让学生实际练习提出问题、检验假设和承担判断责任。</p>
+    <p>我对传统协作受到冲击的判断，建立在一个可以检查的条件上：<strong>经过可靠核验的工作速度，持续快于原有协作机制的处理速度。</strong>论文数量上涨本身无法说明这一点。只有当新的团队能更快交付可靠、重要、可复用的结果，组织方式的变化才有坚实基础。</p>
+    <p>这个条件把我们带向更难的问题。即使研究者之间不再互相等待，全体研究者仍然共享有限的阅读时间。每个人都产出得更快，整个共同体要读、要核实的内容也会同时增加。局部效率提升，可能把拥堵推向审稿和知识吸收。</p>
+  </section>
+
+  <section aria-labelledby="verification">
+    <h2 id="verification">三、让研究成果可以验证，也可以直接复用</h2>
+    <p>我的设想是，让一项研究的主要结论和支撑它的材料始终连在一起。读者看到一个结论时，能够直接找到它依赖的假设、推导、代码、数据与检查记录。论文正文负责解释问题和意义，这些材料负责让具体主张接受检查。</p>
+    <p>这里说的“形式化”，需要落实到实际对象上。对于数学，是把命题中的对象、条件和每一步推理写成证明检查程序能够读取的表达；对于数值研究，是明确输入、算法、软件版本、输出和误差检查；对于实验，是记录样品、仪器、操作过程、原始读数和分析方法。不同部分对应不同的证据强度。</p>
+
+    <h3>从一个能说清楚的小例子开始</h3>
+    <p>考虑一个理想弹簧上的物体。<var>m</var> 是物体的质量，<var>k</var> 是弹簧的劲度系数，即每单位伸长对应的回复力大小，两者均为正数。<var>x</var>(<var>t</var>) 是时刻 <var>t</var> 相对平衡位置的位移。假设运动只有一个方向、没有摩擦，并且回复力始终与位移成正比，运动方程是：</p>
+    <div class="blog-equation" aria-label="质量乘位移对时间的二阶导数，加上弹簧劲度系数乘位移，等于零。">
+      <span class="equation-line"><var>m</var> d²<var>x</var> / d<var>t</var>² + <var>kx</var> = 0</span>
+      <span class="equation-caption">d²<var>x</var> / d<var>t</var>² 表示加速度，也就是速度随时间变化的快慢。</span>
+    </div>
+    <p>如果一项工作给出这个方程在指定初始位置和初始速度下的解，那么它可以提供几个独立接受检查的内容：所写函数是否满足方程；初始条件是否满足；所需数学条件是否齐全；数值程序是否在指定误差内重现解析解。</p>
+    <p>Lean 这类证明助手，可以让使用者给出精确定义的命题与证明，再由核心检查程序核对证明。这里还需要检查：形式化命题是否忠实表达原来的物理陈述，是否引入了没有说明的假设，是否留下了未经证明的占位内容。<a href="https://lean-lang.org/theorem_proving_in_lean4/Introduction/">〔Lean 的证明检查说明〕</a> <a href="https://lean-lang.org/theorem_proving_in_lean4/Axioms-and-Computation/">〔公理与证明依赖〕</a></p>
+    <p>数学检查通过后，我们获得的是：在写明的模型和条件下，结论成立。把它用于真实弹簧，还需要测量摩擦、材料变形和适用的振幅范围。<strong>推导成立、程序复现成功、模型符合测量，是三项应分别记录的判断。</strong></p>
+
+    <h3>一项研究应当交付哪些东西？</h3>
+    <p>我设想的最小交付物，可以从下面几项开始。它们都应该对应可打开、可检查的文件或记录。</p>
+    <div class="blog-table-wrap" tabindex="0" role="region" aria-label="研究成果应交付的材料">
+      <table>
+        <caption>同一条研究结论，应能追溯到以下材料。</caption>
+        <thead><tr><th scope="col">材料</th><th scope="col">具体内容</th></tr></thead>
+        <tbody>
+          <tr><td>结论与条件</td><td>研究的对象、使用的量和单位、假设、初始条件、边界条件，以及结论的适用范围。</td></tr>
+          <tr><td>推导与证明</td><td>每一步如何得到；引用了哪个已有结果；哪些步骤已由证明程序检查，哪些仍需人工判断。</td></tr>
+          <tr><td>计算与数据</td><td>原始输入、处理脚本、固定的软件版本、随机过程的设置，以及生成每张图和每个表的命令。</td></tr>
+          <tr><td>验证记录</td><td>由谁、用什么方法、在什么条件下做过检查；程序测试、误差分析和独立复现分别得到了什么。</td></tr>
+          <tr><td>版本与责任</td><td>每次修改的内容、负责的作者、所用外部结果的具体版本，以及已知问题和更正记录。</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>一次测试通过，只能支持它实际覆盖的输入和性质。数值收敛检查表明减小步长后结果怎样变化；严格的误差界则需要额外的数学论证。把这些状态分别标出来，读者才知道自己究竟继承了什么保证。</p>
+    <p>计算图表也应当由保存的材料重新生成。文字中的关键数值，应尽量直接来自同一次计算输出。这样修改一个参数时，相关结论和图表可以一起更新，减少正文与计算各自变化造成的脱节。</p>
+
+    <h3>实验的真实性，需要一条完整的证据链</h3>
+    <p>实验自动化已经有具体先例。2020 年发表的一项研究让移动机器人操作实验室设备，自主搜索更好的光催化剂配方。它展示了把实验规划和实际操作接起来的可能。<a href="https://www.nature.com/articles/s41586-020-2442-2">〔移动机器人化学实验〕</a></p>
+    <p>我预期更多实验会逐步记录为可执行的操作步骤：取哪个样品，设置什么温度，施加什么信号，等待多长时间，读取哪个传感器。装置可以把操作历史、校准记录和原始数据一起保存，减少事后凭记忆还原实验过程的空间。</p>
+    <p>原讨论里曾用照片的元数据作类比，这里需要更正：普通照片元数据可以修改。数字签名能够帮助检查一份记录是否与某个签名身份关联、签名后是否被修改；它的可信程度还取决于签名密钥和记录装置。内容来源与真实性联盟的说明也明确区分了来源记录与内容本身是否真实。<a href="https://spec.c2pa.org/specifications/specifications/2.2/explainer/Explainer.html">〔数字内容的来源与真实性说明〕</a></p>
+    <p>即使一份数据确实来自某台仪器，仪器也可能失准，样品可能受到污染，分析者可能只选取了有利的数据。因此，可靠的实验记录还应包含校准、对照、排除数据的规则、测量误差，以及必要的独立复现实验。机器可以帮助执行和核查这些步骤，实验对象本身仍然决定需要等待多久、观察什么、排除哪些替代解释。</p>
+
+    <h3>审稿与合作，可以围绕一条条主张展开</h3>
+    <p>有了这些材料，评审可以拆成明确的工作：有人检查物理假设，有人核对推导，有人重跑计算，有人安排独立实验。每份意见都指向具体结论和版本。后来的使用者也能看见某个部分已被怎样检查，而不是只得到一枚笼统的“通过”标签。</p>
+    <p>合作也可以由此变得更细。一个研究者改进了误差估计，另一个人证明了关键引理，第三个人补上了反例或适用范围；这些贡献可以分别记录、分别引用，再组合进更大的工作。引用时保留准确版本，某个基础结果发生更正，就能定位哪些后续结论需要重新检查。</p>
+    <p>我希望这种方式降低反复从头检查的成本，同时让真正有争议的地方更醒目。一个模型阅读另一个模型的报告，也需要回到原始材料；多个系统给出相同回答，并不会自动增加独立证据。共同使用的训练材料、程序和数据，都可能带来共同错误。</p>
+    <p>围绕具体主张、证据和版本建立协作，才可能让快速评审保留严谨性。评审者的信用也可以来自可追踪的检查工作，以及这些检查后来经受复现和使用的表现。</p>
+
+    <h3>让人类消化得更快，关键在于减少重复劳动</h3>
+    <p>每个人的阅读速度都有上限。我理解的“跟上生产速度”，是让共同体能够及时筛选、纠错和使用新增结果，而不是要求每个人读完所有论文。</p>
+    <p>人类仍需要能够读懂的解释：这个问题为什么重要，新增了什么，哪个假设最关键，在哪些情形下会失效。这样的解释可以有不同长度：先用一页说明结论与适用条件，再展开物理图像，最后连接完整推导。读者按照自己的任务进入需要的层次，每一层都能追溯到同一份材料。</p>
+    <p>可信的结论一旦有了清楚的使用条件，就可以被许多人复用。机器负责搬运、核对和追踪依赖，人把注意力放在新假设、新现象和真正改变理解的地方。<strong>增长的目标应是可吸收的知识，而不只是新增的文稿。</strong></p>
+  </section>
+
+  <section aria-labelledby="future">
+    <h2 id="future">四、我对未来的判断</h2>
+    <p>我更愿意用可以观察的变化来描述未来，而不是给科研制度的转变指定一个年份。</p>
+    <p><strong>首先，在检查方法明确的领域，自动化会走得更快。</strong>算法、部分数学问题和可重复运行的计算任务，有条件把提出想法、运行检查和修改方案接在一起。值得关注的指标，是在相同资源下增加了多少经过核验的结果，以及失败后能否定位原因。</p>
+    <p><strong>随后，研究成果的交付标准会成为组织竞争的一部分。</strong>一组结果如果可以直接检查和调用，合作成本就会下降。小团队可以围绕清楚的问题迅速组合，成熟机构也可以借助仪器、长期数据和可靠验证积累优势。能否共享可用的材料，会影响研究者选择与谁合作。</p>
+    <p><strong>更深的变化会发生在教育和评价上。</strong>当大量常规推导和实现可以由工具完成，培养研究者就需要更直接地考察：能否提出好问题，识别错误假设，设计足以区分不同解释的实验，并把一项结论讲清楚。复现、维护基础程序、整理反例和建设可靠数据，也应得到能被看见的学术信用。</p>
+    <p>这种前景同时取决于资源如何开放。如果验证工具昂贵、数据不能迁移、成果只能在单一平台读取，研究能力可能更加集中。我希望出现开放的文件格式、可独立运行的检查程序，以及能跨团队保存的版本与贡献记录。这样，研究者离开某个平台以后，仍然可以带走自己的工作，也能继续检查别人的结论。</p>
+    <p>这些判断也应该接受反过来的检验。如果自动化增加的主要是需要人工清理的错误，如果验证的代价长期超过节省的工作，如果实验和数据始终是难以扩展的限制，那么组织变革就会更慢、范围更窄。把这些条件写出来，未来才能判断今天的期待究竟实现了哪一部分。</p>
+    <p>我最期待的，是研究者能够从大量重复核对中腾出时间，去理解更大的问题；一个好想法可以更快找到有能力检查和发展它的人；一项可靠结果可以被后来的研究直接接着使用。</p>
+    <blockquote><p>当机器越来越擅长生产答案，我们需要让证据、理解与合作，也拥有相应的速度。</p></blockquote>
+  </section>
+
+  <section class="blog-endnote" aria-labelledby="sources">
+    <h2 id="sources">资料与延伸阅读</h2>
+    <p>正文中的硬件数量来自注明假设的推算；组织与出版方式的展望是个人判断。以下原始资料支撑文中涉及的技术事实。</p>
+    <ol>
+      <li><a class="source-title" href="https://arxiv.org/abs/2312.08595">Ho、Erdil、Besiroglu：硅基处理器的能效边界</a><span class="source-detail">2023 年论文。本文采用其四位运算能效估计，所做模型规模换算是额外推算。</span></li>
+      <li><a class="source-title" href="https://arxiv.org/abs/2203.15556">Hoffmann 等：给定计算预算下的模型与数据规模</a><span class="source-detail">Training Compute-Optimal Large Language Models，2022。</span></li>
+      <li><a class="source-title" href="https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/">AlphaEvolve：结合程序生成与自动评估的算法探索</a><span class="source-detail">Google DeepMind，2025 年 5 月 14 日。</span></li>
+      <li><a class="source-title" href="https://lean-lang.org/theorem_proving_in_lean4/Introduction/">Lean 4 官方文档：证明与验证</a><span class="source-detail">另参见<a href="https://lean-lang.org/theorem_proving_in_lean4/Axioms-and-Computation/">公理与计算</a>章节，理解证明依赖和检查边界。</span></li>
+      <li><a class="source-title" href="https://www.nature.com/articles/s41586-020-2442-2">Burger 等：移动机器人化学实验</a><span class="source-detail">A mobile robotic chemist，Nature 583，237–241，2020。</span></li>
+      <li><a class="source-title" href="https://spec.c2pa.org/specifications/specifications/2.2/explainer/Explainer.html">内容来源与真实性联盟：数字内容凭证说明</a><span class="source-detail">关于来源、修改记录与内容真实性之间的区别。</span></li>
+    </ol>
+  </section>
+</div>
+<footer class="blog-footer">
+  <p>本文由一次关于计算能力与科研组织的讨论整理而成。写于 2026 年 11 月 8 日。</p>
+  <a href="/writing/blog/">← 返回博客</a>
+</footer>
+<!-- BLOG_DOCUMENT_END -->
+      </article>
+      <nav class="blog-toc" aria-label="文章目录" lang="zh-CN"><span class="blog-toc-title">本文目录</span><ol><li><a href="#hardware"><span class="toc-number">01</span>硬件与模型能力</a></li><li><a href="#research"><span class="toc-number">02</span>科研效率与协作</a></li><li><a href="#verification"><span class="toc-number">03</span>验证、复用与理解</a></li><li><a href="#future"><span class="toc-number">04</span>对未来的判断</a></li><li><a href="#sources"><span class="toc-number">05</span>资料与延伸阅读</a></li></ol></nav>
+    </div>
+  </main>
+  <script src="/assets/js/main.js?v=20261006-motion1"></script>
+  <script src="/assets/js/site-ui.js?v=20261003-header-only1" defer></script>
+  <script src="/assets/js/liquid-glass.js?v=20261003-project-motion1" defer></script>
+</body>
+</html>

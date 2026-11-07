@@ -12,6 +12,7 @@ Personal website hosted with GitHub Pages.
   - `photography/topics.html` — themed photography: conventions, birds, astronomy, outdoor
 - `academics.html` — research interests, academic background and publications
 - `writing.html` — writing landing page
+  - `writing/blog/` — public blog, with dated articles on science, technology and the future
   - `writing/fiction.html` — fiction
   - `writing/essays.html` — redirect to server-authenticated private essays and the protected collection list
 - `projects.html` — games, AI tools, pond simulations and little toys
@@ -215,3 +216,14 @@ uses a generated tone as a shared stream to check real frequency analysis,
 no playback of captured sound, stop/retry/cancellation, file fallback and
 responsive layout. Native browser/operating-system picker availability still
 depends on the visitor's device.
+
+## Public blog
+
+The public blog at `writing/blog/` is part of the Writing collection. Articles
+are static HTML with native section links, source references and print styles;
+no build step or additional JavaScript is required. Navigation is bilingual;
+each article declares its own language, and the current article is in Chinese.
+
+To add a post, create an article page in `writing/blog/`, retain its publication
+date and canonical URL, and add a dated entry to `writing/blog/index.html`.
+The shared reading layout is in `assets/css/blog.css`.
