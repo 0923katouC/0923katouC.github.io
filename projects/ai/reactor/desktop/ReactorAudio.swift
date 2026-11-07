@@ -176,9 +176,9 @@ final class Bridge {
         timer.setEventHandler { [weak self] in
             guard let self = self else { return }
             self.lock.lock()
-            let expired = self.session != nil && Date().timeIntervalSince(self.lastSeen) > 12
+            let expired = Date().timeIntervalSince(self.lastSeen) > 12 ? self.session : nil
             self.lock.unlock()
-            if expired { self.stop() }
+            if let expired = expired { self.stop(expected: expired) }
         }
         watchdog = timer; timer.resume()
     }
@@ -217,6 +217,8 @@ final class Bridge {
             lock.lock(); session = id; lastSeen = Date(); starting = true; running = false; error = ""; lock.unlock()
             control.async { [weak self] in
                 guard let self = self else { return }
+                self.lock.lock(); let current = self.session == id; self.lock.unlock()
+                guard current else { return }
                 do {
                     if self.testing {
                         let spectrum = Spectrum(); spectrum.output = self.audio.output
@@ -238,7 +240,7 @@ final class Bridge {
         lock.unlock()
         guard authorized else { reply(connection, status: 409, body: ["error": "Connection ended"], origin: origin); return }
         if method == "GET" && path == "/frame" { reply(connection, body: data, origin: origin) }
-        else if method == "POST" && path == "/stop" { stop(); reply(connection, body: ["stopped": true], origin: origin) }
+        else if method == "POST" && path == "/stop" { stop(expected: headers["x-reactor-session"]); reply(connection, body: ["stopped": true], origin: origin) }
         else { reply(connection, status: 404, body: [:], origin: origin) }
     }
 
@@ -250,9 +252,16 @@ final class Bridge {
         connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
     }
 
-    func stop() {
-        lock.lock(); session = nil; running = false; starting = false; lock.unlock()
-        control.async { [weak self] in self?.audio.stop() }
+    func stop(expected: String? = nil) {
+        lock.lock()
+        if let expected = expected, session != expected { lock.unlock(); return }
+        session = nil; running = false; starting = false
+        lock.unlock()
+        control.async { [weak self] in
+            guard let self = self else { return }
+            self.lock.lock(); let stopped = self.session == nil; self.lock.unlock()
+            if stopped { self.audio.stop() }
+        }
     }
     func shutdown() { stop(); listener?.cancel(); watchdog?.cancel(); control.sync { audio.stop() } }
 }

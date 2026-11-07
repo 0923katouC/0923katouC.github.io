@@ -119,6 +119,9 @@ async function checkParentNavigation(browser, viewport) {
 
     async function checkReturn(parentPath, parentTitle) {
       const path = new URL(page.url()).pathname;
+      // Keep hover animation separate from the scroll-stability check.
+      await page.mouse.move(10, 10);
+      await page.waitForFunction(() => getComputedStyle(document.querySelector('.project-back')).transform === 'none');
       await checkLayout(page);
       assert.deepEqual(await paths('.main-nav a'), menu, path + ' section menu');
       const initial = await geometry();
