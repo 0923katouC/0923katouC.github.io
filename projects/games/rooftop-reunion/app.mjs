@@ -9,10 +9,13 @@ scene.background = new T.Color('#b8cbd0');
 scene.fog = new T.Fog('#b8cbd0', 110, 260);
 const camera = new T.PerspectiveCamera(38, 1, .1, 500);
 let renderer;
+let dirty=true;
 try { renderer = new T.WebGLRenderer({canvas:$('scene'),antialias:true,alpha:false}); }
 catch { $('loading').textContent = '当前浏览器无法显示三维场景，请开启图形加速后重试。'; throw new Error('3D rendering unavailable'); }
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.autoUpdate=false;
+renderer.shadowMap.needsUpdate=true;
 renderer.shadowMap.type = T.PCFSoftShadowMap;
 renderer.toneMapping = T.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.02;
@@ -21,6 +24,7 @@ controls.enableDamping = true; controls.dampingFactor = .08;
 controls.minDistance = 8; controls.maxDistance = 145;
 controls.maxPolarAngle = Math.PI*.48; controls.minPolarAngle = .08;
 controls.screenSpacePanning = false;
+controls.addEventListener('change',()=>{dirty=true;});
 const sun = new T.DirectionalLight('#ffe4c7',3.1);sun.position.set(-35,65,35);sun.castShadow = true;
 sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-55;sun.shadow.camera.right=55;sun.shadow.camera.top=55;sun.shadow.camera.bottom=-55;sun.shadow.camera.far=160;sun.shadow.normalBias=.05;scene.add(sun);
 const ambient = new T.HemisphereLight('#c4e8ff','#605c7f',2.5);scene.add(ambient);
@@ -183,23 +187,36 @@ let currentView='building',activePlace=null,transition=null,night=false,swinging
 const hotspots=[];
 for(const [id,p] of Object.entries(places)){const button=document.createElement('button');button.type='button';button.className='hotspot';button.innerHTML=`<b>${p.no.slice(0,2)}</b>${id==='cinema'?'天台见':id==='swing'?'秋千':id==='terrace'?'下凹平台':'楼梯口'}`;button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>selectPlace(id));$('hotspots').append(button);hotspots.push({id,button,position:new T.Vector3(...p.point)});}
 function targetView(view){const dest=views[view]||places[view]?.view;if(!dest)return;const target=new T.Vector3(...dest.target),position=new T.Vector3(...dest.position);if(innerWidth<700)position.sub(target).multiplyScalar(1.25).add(target);transition={from:camera.position.clone(),targetFrom:controls.target.clone(),position,target,start:performance.now()};if(reduced.matches){camera.position.copy(position);controls.target.copy(target);transition=null;controls.update();}}
-function setView(view){currentView=view;cinemaRoof.visible=view!=='cinema';$('world').dataset.view=view;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));targetView(view);if(view==='cinema')showPlace('cinema');else if(activePlace){activePlace=null;updateCard();}}
+function setView(view){dirty=true;renderer.shadowMap.needsUpdate=true;currentView=view;cinemaRoof.visible=view!=='cinema';$('world').dataset.view=view;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));targetView(view);if(view==='cinema')showPlace('cinema');else if(activePlace){activePlace=null;updateCard();}}
 function showPlace(id){activePlace=id;updateCard();}
-function selectPlace(id){cinemaRoof.visible=id!=='cinema';currentView=id==='cinema'?'cinema':'roof';$('world').dataset.view=currentView;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===currentView)));targetView(id);showPlace(id);}
+function selectPlace(id){dirty=true;renderer.shadowMap.needsUpdate=true;cinemaRoof.visible=id!=='cinema';currentView=id==='cinema'?'cinema':'roof';$('world').dataset.view=currentView;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===currentView)));targetView(id);showPlace(id);}
 function updateCard(){const p=places[activePlace];$('place-no').textContent=p?.no||'00 / 抵达';$('place-title').textContent=p?.title||'最后一层，在露天。';$('place-copy').textContent=p?.copy||'沿着玻璃雨棚往上看。商场的屋顶，还有一家没打烊的私人影吧。';$('place-action').hidden=!p?.action;if(p?.action)$('place-action').textContent=activePlace==='swing'?(swinging?'让秋千停下来':'让秋千摇起来'):p.action;hotspots.forEach(h=>h.button.setAttribute('aria-pressed',String(h.id===activePlace)));}
-$('place-action').onclick=()=>{if(activePlace==='swing'){swinging=!swinging;updateCard();}else{movieAlt=!movieAlt;movie.material.color.set(movieAlt?'#f2b9a4':'#ffffff');movieSmall.material.color.set(movieAlt?'#d5f49d':'#ffffff');$('place-action').textContent=movieAlt?'放映中 · 切回片头':'切换放映画面';}};
+$('place-action').onclick=()=>{dirty=true;if(activePlace==='swing'){swinging=!swinging;updateCard();}else{movieAlt=!movieAlt;movie.material.color.set(movieAlt?'#f2b9a4':'#ffffff');movieSmall.material.color.set(movieAlt?'#d5f49d':'#ffffff');$('place-action').textContent=movieAlt?'放映中 · 切回片头':'切换放映画面';}};
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
-$('labels').onclick=()=>{showLabels=!showLabels;$('labels').setAttribute('aria-pressed',String(showLabels));};
+$('labels').onclick=()=>{dirty=true;showLabels=!showLabels;$('labels').setAttribute('aria-pressed',String(showLabels));};
 $('orbit').onclick=()=>{auto=!auto;$('orbit').setAttribute('aria-pressed',String(auto));};
 $('reset').onclick=()=>{auto=false;$('orbit').setAttribute('aria-pressed','false');setView('building');};
-$('light').onclick=()=>{night=!night;document.body.classList.toggle('night',night);$('light').textContent=night?'切回傍晚':'切到蓝调夜晚';$('light').setAttribute('aria-pressed',String(night));scene.background.set(night?'#1a2e47':'#b8cbd0');scene.fog.color.copy(scene.background);sun.intensity=night?.18:3.1;ambient.intensity=night?.65:2.5;fill.intensity=night?.4:1.5;scene.environmentIntensity=night?.22:1;m.warm.emissiveIntensity=night?3:.35;m.purple.emissiveIntensity=night?2:.3;m.blue.emissiveIntensity=night?2:.35;nightLights.forEach(l=>l.intensity=night?55:0);};
+$('light').onclick=()=>{dirty=true;night=!night;document.body.classList.toggle('night',night);$('light').textContent=night?'切回傍晚':'切到蓝调夜晚';$('light').setAttribute('aria-pressed',String(night));scene.background.set(night?'#1a2e47':'#b8cbd0');scene.fog.color.copy(scene.background);sun.intensity=night?.18:3.1;ambient.intensity=night?.65:2.5;fill.intensity=night?.4:1.5;scene.environmentIntensity=night?.22:1;m.warm.emissiveIntensity=night?3:.35;m.purple.emissiveIntensity=night?2:.3;m.blue.emissiveIntensity=night?2:.35;nightLights.forEach(l=>l.intensity=night?55:0);};
 $('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await $('world').requestFullscreen();}catch{$('place-copy').textContent='当前浏览器不支持全屏，仍可拖动和缩放场景。';}};
 controls.addEventListener('start',()=>{transition=null;});
 $('scene').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(e.key))return;e.preventDefault();if(e.key==='Home'){setView('building');return;}transition=null;const delta=camera.position.clone().sub(controls.target);const sph=new T.Spherical().setFromVector3(delta);if(e.key==='ArrowLeft')sph.theta-=.08;if(e.key==='ArrowRight')sph.theta+=.08;if(e.key==='ArrowUp')sph.phi=Math.max(.08,sph.phi-.08);if(e.key==='ArrowDown')sph.phi=Math.min(Math.PI*.48,sph.phi+.08);camera.position.copy(controls.target).add(new T.Vector3().setFromSpherical(sph));controls.update();});
-function resize(){const w=$('world').clientWidth,h=$('world').clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+function resize(){dirty=true;const w=$('world').clientWidth,h=$('world').clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe($('world'));resize();camera.position.set(...views.building.position);controls.target.set(...views.building.target);if(innerWidth<700)camera.position.sub(controls.target).multiplyScalar(1.3).add(controls.target);controls.update();
 let last=0;
-function frame(t){const dt=Math.min((t-last)/1000,.05);last=t;if(transition){let f=Math.min(1,(t-transition.start)/1100);f=f*f*(3-2*f);camera.position.lerpVectors(transition.from,transition.position,f);controls.target.lerpVectors(transition.targetFrom,transition.target,f);if(f===1)transition=null;}if(auto&&!transition){const v=camera.position.clone().sub(controls.target);v.applyAxisAngle(new T.Vector3(0,1,0),dt*.12);camera.position.copy(controls.target).add(v);}if(swinging)swing.rotation.x=Math.sin(t*.0016)*.22;else swing.rotation.x*=.94;controls.update();renderer.render(scene,camera);const rect=$('world').getBoundingClientRect();for(const h of hotspots){const p=h.position.clone().project(camera);h.button.hidden=!showLabels||p.z>1||p.z< -1||currentView==='building'||(innerWidth<700&&activePlace&&activePlace!==h.id);h.button.style.left=`${(p.x*.5+.5)*rect.width}px`;h.button.style.top=`${(-p.y*.5+.5)*rect.height}px`;}requestAnimationFrame(frame);}
+function frame(t){
+ requestAnimationFrame(frame);
+ if(document.hidden)return;
+ const dt=Math.min((t-last)/1000,.05);last=t;
+ if(transition){let f=Math.min(1,(t-transition.start)/1100);f=f*f*(3-2*f);camera.position.lerpVectors(transition.from,transition.position,f);controls.target.lerpVectors(transition.targetFrom,transition.target,f);if(f===1)transition=null;dirty=true;}
+ if(auto&&!transition){const v=camera.position.clone().sub(controls.target);v.applyAxisAngle(new T.Vector3(0,1,0),dt*.12);camera.position.copy(controls.target).add(v);dirty=true;}
+ if(swinging){swing.rotation.x=Math.sin(t*.0016)*.22;renderer.shadowMap.needsUpdate=true;dirty=true;}
+ else if(Math.abs(swing.rotation.x)>.0001){swing.rotation.x*=.88;renderer.shadowMap.needsUpdate=true;dirty=true;}
+ controls.update();
+ if(!dirty)return;
+ renderer.render(scene,camera);dirty=false;
+ const rect=$('world').getBoundingClientRect();
+ for(const h of hotspots){const p=h.position.clone().project(camera);h.button.hidden=!showLabels||p.z>1||p.z< -1||currentView==='building'||(innerWidth<700&&activePlace&&activePlace!==h.id);h.button.style.left=`${(p.x*.5+.5)*rect.width}px`;h.button.style.top=`${(-p.y*.5+.5)*rect.height}px`;}
+}
 $('world').dataset.ready='true';$('world').dataset.view='building';$('loading').hidden=true;requestAnimationFrame(frame);
 renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('loading').hidden=false;$('loading').textContent='三维画面暂时中断，请刷新后继续。';});
 // Preserve the renderer and controls when the browser restores this page from history.

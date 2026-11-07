@@ -31,7 +31,7 @@ async function exploreRooftop(page) {
   await page.locator('#world[data-ready="true"]').waitFor();
   assert.equal(await page.locator('#loading').isVisible(), false);
   const canvas = page.locator('#scene');
-  const initial = await canvas.screenshot();
+  const initial = await canvas.screenshot({timeout:30000});
   await page.locator('[data-view="roof"]').click();
   assert.equal(await page.locator('#world').getAttribute('data-view'), 'roof');
   await page.locator('.hotspot').filter({hasText:'秋千'}).click();
@@ -45,7 +45,7 @@ async function exploreRooftop(page) {
   assert.match(await page.locator('#place-action').innerText(), /放映中/);
   await page.locator('#light').click();
   assert.equal(await page.locator('#light').getAttribute('aria-pressed'), 'true');
-  assert.ok(!initial.equals(await canvas.screenshot()), 'Camera and lighting visibly change the scene');
+  assert.ok(!initial.equals(await canvas.screenshot({timeout:30000})), 'Camera and lighting visibly change the scene');
   await page.locator('[data-view="plan"]').click();
   await canvas.press('ArrowRight');
   await canvas.press('Home');
