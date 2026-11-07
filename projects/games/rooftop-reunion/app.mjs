@@ -12,7 +12,7 @@ let renderer;
 let dirty=true;
 try { renderer = new T.WebGLRenderer({canvas:$('scene'),antialias:true,alpha:false}); }
 catch { $('loading').textContent = '当前浏览器无法显示三维场景，请开启图形加速后重试。'; throw new Error('3D rendering unavailable'); }
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.autoUpdate=false;
 renderer.shadowMap.needsUpdate=true;
@@ -26,7 +26,7 @@ controls.maxPolarAngle = Math.PI*.48; controls.minPolarAngle = .08;
 controls.screenSpacePanning = false;
 controls.addEventListener('change',()=>{dirty=true;});
 const sun = new T.DirectionalLight('#ffe4c7',3.1);sun.position.set(-35,65,35);sun.castShadow = true;
-sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-55;sun.shadow.camera.right=55;sun.shadow.camera.top=55;sun.shadow.camera.bottom=-55;sun.shadow.camera.far=160;sun.shadow.normalBias=.05;scene.add(sun);
+sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-55;sun.shadow.camera.right=55;sun.shadow.camera.top=55;sun.shadow.camera.bottom=-55;sun.shadow.camera.far=160;sun.shadow.normalBias=.05;scene.add(sun);
 const ambient = new T.HemisphereLight('#c4e8ff','#605c7f',2.5);scene.add(ambient);
 const fill = new T.DirectionalLight('#bdc6ff',1.5);fill.position.set(40,25,-25);scene.add(fill);
 const envCanvas=document.createElement('canvas');envCanvas.width=512;envCanvas.height=256;
@@ -191,7 +191,7 @@ function setView(view){dirty=true;renderer.shadowMap.needsUpdate=true;currentVie
 function showPlace(id){activePlace=id;updateCard();}
 function selectPlace(id){dirty=true;renderer.shadowMap.needsUpdate=true;cinemaRoof.visible=id!=='cinema';currentView=id==='cinema'?'cinema':'roof';$('world').dataset.view=currentView;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===currentView)));targetView(id);showPlace(id);}
 function updateCard(){const p=places[activePlace];$('place-no').textContent=p?.no||'00 / 抵达';$('place-title').textContent=p?.title||'最后一层，在露天。';$('place-copy').textContent=p?.copy||'沿着玻璃雨棚往上看。商场的屋顶，还有一家没打烊的私人影吧。';$('place-action').hidden=!p?.action;if(p?.action)$('place-action').textContent=activePlace==='swing'?(swinging?'让秋千停下来':'让秋千摇起来'):p.action;hotspots.forEach(h=>h.button.setAttribute('aria-pressed',String(h.id===activePlace)));}
-$('place-action').onclick=()=>{dirty=true;if(activePlace==='swing'){swinging=!swinging;updateCard();}else{movieAlt=!movieAlt;movie.material.color.set(movieAlt?'#f2b9a4':'#ffffff');movieSmall.material.color.set(movieAlt?'#d5f49d':'#ffffff');$('place-action').textContent=movieAlt?'放映中 · 切回片头':'切换放映画面';}};
+$('place-action').onclick=()=>{dirty=true;if(activePlace==='swing'){swinging=!swinging;if(reduced.matches)swing.rotation.x=swinging?.12:0;renderer.shadowMap.needsUpdate=true;updateCard();}else{movieAlt=!movieAlt;movie.material.color.set(movieAlt?'#f2b9a4':'#ffffff');movieSmall.material.color.set(movieAlt?'#d5f49d':'#ffffff');$('place-action').textContent=movieAlt?'放映中 · 切回片头':'切换放映画面';}};
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 $('labels').onclick=()=>{dirty=true;showLabels=!showLabels;$('labels').setAttribute('aria-pressed',String(showLabels));};
 $('orbit').onclick=()=>{auto=!auto;$('orbit').setAttribute('aria-pressed',String(auto));};
@@ -202,17 +202,18 @@ controls.addEventListener('start',()=>{transition=null;});
 $('scene').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(e.key))return;e.preventDefault();if(e.key==='Home'){setView('building');return;}transition=null;const delta=camera.position.clone().sub(controls.target);const sph=new T.Spherical().setFromVector3(delta);if(e.key==='ArrowLeft')sph.theta-=.08;if(e.key==='ArrowRight')sph.theta+=.08;if(e.key==='ArrowUp')sph.phi=Math.max(.08,sph.phi-.08);if(e.key==='ArrowDown')sph.phi=Math.min(Math.PI*.48,sph.phi+.08);camera.position.copy(controls.target).add(new T.Vector3().setFromSpherical(sph));controls.update();});
 function resize(){dirty=true;const w=$('world').clientWidth,h=$('world').clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe($('world'));resize();camera.position.set(...views.building.position);controls.target.set(...views.building.target);if(innerWidth<700)camera.position.sub(controls.target).multiplyScalar(1.3).add(controls.target);controls.update();
-let last=0;
+let last=0,lastDraw=0;
 function frame(t){
  requestAnimationFrame(frame);
  if(document.hidden)return;
  const dt=Math.min((t-last)/1000,.05);last=t;
  if(transition){let f=Math.min(1,(t-transition.start)/1100);f=f*f*(3-2*f);camera.position.lerpVectors(transition.from,transition.position,f);controls.target.lerpVectors(transition.targetFrom,transition.target,f);if(f===1)transition=null;dirty=true;}
- if(auto&&!transition){const v=camera.position.clone().sub(controls.target);v.applyAxisAngle(new T.Vector3(0,1,0),dt*.12);camera.position.copy(controls.target).add(v);dirty=true;}
- if(swinging){swing.rotation.x=Math.sin(t*.0016)*.22;renderer.shadowMap.needsUpdate=true;dirty=true;}
- else if(Math.abs(swing.rotation.x)>.0001){swing.rotation.x*=.88;renderer.shadowMap.needsUpdate=true;dirty=true;}
+ if(auto&&!transition&&!reduced.matches){const v=camera.position.clone().sub(controls.target);v.applyAxisAngle(new T.Vector3(0,1,0),dt*.12);camera.position.copy(controls.target).add(v);dirty=true;}
+ if(swinging&&!reduced.matches){swing.rotation.x=Math.sin(t*.0016)*.22;dirty=true;}
+ else if(!swinging&&Math.abs(swing.rotation.x)>.0001){swing.rotation.x=reduced.matches?0:swing.rotation.x*.88;dirty=true;}
  controls.update();
- if(!dirty)return;
+ if(!dirty||t-lastDraw<33)return;
+ lastDraw=t;
  renderer.render(scene,camera);dirty=false;
  const rect=$('world').getBoundingClientRect();
  for(const h of hotspots){const p=h.position.clone().project(camera);h.button.hidden=!showLabels||p.z>1||p.z< -1||currentView==='building'||(innerWidth<700&&activePlace&&activePlace!==h.id);h.button.style.left=`${(p.x*.5+.5)*rect.width}px`;h.button.style.top=`${(-p.y*.5+.5)*rect.height}px`;}
