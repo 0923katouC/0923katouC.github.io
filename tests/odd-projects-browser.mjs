@@ -16,8 +16,9 @@ const viewports = [
 const pages = [
   { name: 'projects', path: '/projects.html', links: ['/projects/games/', '/projects/toys/', '/projects/ai/'], interact: switchDirectoryLanguage },
   { name: 'ai', path: '/projects/ai/', links: ['/projects/ai/reactor/'], interact: switchDirectoryLanguage },
-  { name: 'games', path: '/projects/games/', links: ['rain-reel', 'night-train', 'quota-arcade'].map(name => `/projects/games/${name}/`), interact: switchDirectoryLanguage },
+  { name: 'games', path: '/projects/games/', links: ['rain-reel', 'night-train', 'quota-arcade', 'rooftop-reunion'].map(name => `/projects/games/${name}/`), interact: switchDirectoryLanguage },
   { name: 'toys', path: '/projects/toys/', links: ['rain-radio', 'odd-inventions'].map(name => `/projects/toys/${name}/`), interact: switchDirectoryLanguage },
+  { name: 'rooftop-reunion', path: '/projects/games/rooftop-reunion/', interact: exploreRooftop },
   { name: 'rain-reel', path: '/projects/games/rain-reel/', interact: investigate },
   { name: 'night-train', path: '/projects/games/night-train/', interact: dispatchTrain },
   { name: 'quota-arcade', path: '/projects/games/quota-arcade/', interact: playQuota },
@@ -25,6 +26,34 @@ const pages = [
   { name: 'odd-inventions', path: '/projects/toys/odd-inventions/', interact: makeInvention },
   { name: 'binary-waves', path: '/projects/pond/binary-waves/', interact: observeBinary },
 ];
+
+async function exploreRooftop(page) {
+  await page.locator('#world[data-ready="true"]').waitFor();
+  assert.equal(await page.locator('#loading').isVisible(), false);
+  const canvas = page.locator('#scene');
+  const initial = await canvas.screenshot();
+  await page.locator('[data-view="roof"]').click();
+  assert.equal(await page.locator('#world').getAttribute('data-view'), 'roof');
+  await page.locator('.hotspot').filter({hasText:'秋千'}).click();
+  assert.match(await page.locator('#place-no').innerText(), /秋千/);
+  await page.locator('#place-action').click();
+  assert.equal(await page.locator('#place-action').innerText(), '让秋千停下来');
+  await page.locator('#place-action').click();
+  await page.locator('[data-view="cinema"]').click();
+  assert.equal(await page.locator('#world').getAttribute('data-view'), 'cinema');
+  await page.locator('#place-action').click();
+  assert.match(await page.locator('#place-action').innerText(), /放映中/);
+  await page.locator('#light').click();
+  assert.equal(await page.locator('#light').getAttribute('aria-pressed'), 'true');
+  assert.ok(!initial.equals(await canvas.screenshot()), 'Camera and lighting visibly change the scene');
+  await page.locator('[data-view="plan"]').click();
+  await canvas.press('ArrowRight');
+  await canvas.press('Home');
+  assert.equal(await page.locator('#world').getAttribute('data-view'), 'building');
+  const size = await page.evaluate(() => ({h:innerHeight,doc:document.documentElement.scrollHeight,header:document.querySelector('.site-header').getBoundingClientRect().bottom,main:document.querySelector('main').getBoundingClientRect().top}));
+  assert.ok(Math.abs(size.h-size.doc)<=1, 'The scene fills the window without page gaps');
+  assert.ok(Math.abs(size.header-size.main)<=1, 'The scene starts directly under the navigation');
+}
 
 async function observeBinary(page) {
   const ready = () => page.locator('#time:not(:disabled)').waitFor();

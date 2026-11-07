@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN" class="ui-root">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101b29"><meta name="description" content="天台再见：一座千禧年商场之上的私人影吧。可旋转、探索的三维场景初稿。">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'">
+<title>天台再见 | CMC</title>
+<link rel="stylesheet" href="./style.css?v=2">
+<link rel="stylesheet" href="/assets/css/site-navigation.css?v=20261105-nav1">
+<link rel="stylesheet" href="/assets/css/site-ui.css?v=20261105-nav1">
+<link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261105-nav1">
+<link rel="stylesheet" href="/assets/css/project-navigation.css?v=20261107-shell2">
+<script src="/assets/js/main.js?v=20261006-motion1" defer></script>
+<script src="/assets/js/site-ui.js?v=20261107-shell2" defer></script>
+<script src="/assets/js/liquid-glass.js?v=20261105-nav1" defer></script>
+<script type="module" src="./app.mjs?v=2"></script>
+</head>
+<body class="ui-page glass-ui project-app project-dark project-shell rooftop-page">
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <div class="nav-brand"><a class="site-title" href="/?v=20260911-glass1">CMC</a><a class="back-link project-back" href="/projects/games/"><span class="back-icon" aria-hidden="true">←</span><span class="back-label" data-zh="游戏" data-en="Games">游戏</span></a></div>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/?v=20260911-glass1" data-zh="Home page" data-en="Home page">Home page</a>
+        <a href="/photography.html?v=20260911-glass1" data-zh="摄影集" data-en="Photography">摄影集</a>
+        <a href="/academics.html?v=20260911-glass1" data-zh="学术集" data-en="Academics">学术集</a>
+        <a href="/writing.html?v=20260911-glass1" data-zh="码字集" data-en="Writing">码字集</a>
+        <a class="active" aria-current="location" href="/projects.html?v=20260911-glass1" data-zh="奇怪项目" data-en="Odd Projects">奇怪项目</a>
+        <button class="lang-switch" type="button" aria-label="Switch language">EN</button>
+      </nav>
+    </div>
+  </header>
+<main id="world">
+  <canvas id="scene" aria-label="天台见私人影吧与退台式商场三维模型，可拖动旋转、滚轮或双指缩放" tabindex="0"></canvas>
+  <div id="loading" role="status">正在搭起这座天台…</div>
+  <div class="scene-heading"><p class="eyebrow">AFTER HOURS / SCENE 001</p><h1>天台再见<span>ROOFTOP REUNION</span></h1><p class="tagline">散场以后，去有风的地方。</p></div>
+  <div class="top-actions"><button id="light" type="button" aria-pressed="false">切到蓝调夜晚</button><button id="fullscreen" type="button" aria-label="全屏">⛶</button></div>
+  <div id="hotspots" aria-label="场景地点"></div>
+  <aside class="place-card" aria-live="polite"><span class="place-no" id="place-no">00 / 抵达</span><h2 id="place-title">最后一层，在露天。</h2><p id="place-copy">沿着玻璃雨棚往上看。商场的屋顶，还有一家没打烊的私人影吧。</p><button id="place-action" hidden type="button"></button></aside>
+  <div class="bottom-bar"><div class="view-switch" aria-label="模型视角"><button data-view="building" aria-pressed="true">整栋商场</button><button data-view="roof" aria-pressed="false">来到天台</button><button data-view="plan" aria-pressed="false">俯看布局</button><button data-view="cinema" aria-pressed="false">影院内部</button></div><div class="scene-tools"><button id="labels" aria-pressed="true">地点标记</button><button id="orbit" aria-pressed="false">自动环绕</button><button id="reset">重置视角</button></div></div>
+  <div class="scene-caption"><span>拖动旋转 · 滚轮 / 双指缩放 · 方向键转动视角</span><span>空间初稿 01 <i>·</i> 按草图关系搭建，尺寸暂定</span></div>
+</main>
+<noscript>开启浏览器脚本功能后即可查看模型。</noscript>
+</body></html>
