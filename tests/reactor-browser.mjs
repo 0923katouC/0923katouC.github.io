@@ -78,6 +78,21 @@ try {
   await page.goto(baseURL + '/projects/ai/reactor/');
   assert.equal(await page.evaluate(() => window.captureTest.calls), 0, 'No capture before a click');
   assert.equal(await page.locator('#renderer-error').isVisible(), false);
+  const layout = await page.evaluate(() => ({
+    height:innerHeight, document:document.documentElement.scrollHeight,
+    header:document.querySelector('.site-header').getBoundingClientRect().bottom,
+    stage:document.querySelector('.stage').getBoundingClientRect().toJSON(),
+    footer:document.querySelector('footer').getBoundingClientRect().toJSON(),
+    back:document.querySelector('.project-back').getBoundingClientRect().toJSON(),
+  }));
+  assert.equal(layout.document, layout.height, 'Desktop page fits the window');
+  assert.equal(layout.stage.top, layout.header, 'No gap above the canvas');
+  assert.equal(layout.stage.bottom, layout.footer.top, 'No gap below the canvas');
+  assert.equal(layout.footer.bottom, layout.height, 'Page fills the window');
+  await page.locator('aside').evaluate(panel => { panel.scrollTop = panel.scrollHeight; });
+  assert.deepEqual(await page.locator('.project-back').evaluate(link => link.getBoundingClientRect().toJSON()), layout.back, 'Panel scrolling leaves back navigation fixed');
+  assert.deepEqual(await page.locator('.stage').evaluate(stage => stage.getBoundingClientRect().toJSON()), layout.stage, 'Panel scrolling leaves the canvas in place');
+
   assert.equal(await page.locator('#play').getAttribute('aria-pressed'), 'false');
   const connect = () => page.locator('#system').click();
   const running = () => page.waitForFunction(() => document.querySelector('#status').textContent === '运行中 · 电脑声音');

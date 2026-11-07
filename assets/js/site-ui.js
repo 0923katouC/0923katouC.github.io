@@ -3,6 +3,11 @@
   const header = page?.querySelector('.site-header');
   if (!header) return;
 
+  const fixedProjectNavigation = page.classList.contains('project-shell');
+  if (fixedProjectNavigation) {
+    document.documentElement.style.backgroundColor = getComputedStyle(page).backgroundColor;
+  }
+
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const limit = 12;
   let stretch = 0;
@@ -57,7 +62,7 @@
     frame = window.requestAnimationFrame(animate);
   };
   const respond = delta => {
-    if (motion.matches || !Number.isFinite(delta) || delta === 0) return;
+    if (fixedProjectNavigation || motion.matches || !Number.isFinite(delta) || delta === 0) return;
     target = -Math.sign(delta) * Math.min(limit, 1.5 + Math.abs(delta) * 0.18);
     lastInput = window.performance.now();
     if (frame === null) {

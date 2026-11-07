@@ -129,3 +129,21 @@ aside section { margin-bottom:18px; padding-bottom:18px; }
   .reactor-workbench { align-items:start; min-height:0; }
   .stage { position:sticky; top:var(--ui-header-space,67px); align-self:start; height:calc(100svh - 225px); min-height:520px; }
 }
+
+/* The canvas fills the window; only its control panel needs to scroll. */
+.stage-actions { display:flex; align-items:center; gap:8px; }
+@media(min-width:701px) {
+  body.reactor-page.project-shell { height:100vh; height:100dvh; min-height:0; overflow:hidden; }
+  body.reactor-page > main { flex:1 1 0; min-height:0; }
+  .reactor-workbench { height:100%; min-height:0; align-items:stretch; border-top:0; overflow:hidden; }
+  .reactor-workbench .stage { position:relative; top:auto; height:100%; min-height:0; align-self:stretch; }
+  .reactor-workbench > aside { min-height:0; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#535f48 var(--panel); }
+  .reactor-footer { flex:none; }
+}
+@media(max-width:700px) {
+  .reactor-workbench { border-top:0; }
+  .stage-bottom { gap:12px; align-items:flex-end; }
+  .stage-actions { flex-direction:column; align-items:flex-end; gap:0; }
+  .stage-actions .plain { padding:8px 0 8px 8px; }
+  .axis { bottom:94px; }
+}

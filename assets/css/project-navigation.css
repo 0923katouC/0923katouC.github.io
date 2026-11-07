@@ -12,6 +12,61 @@
 
 /* Only the navigation and title use the site's column. The workbench below
    keeps its own colors, type, and available drawing area. */
+html:has(body.project-shell) {
+  min-height: 100%;
+  overscroll-behavior: none;
+}
+
+body.project-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overscroll-behavior: none;
+}
+
+.project-shell > main {
+  flex: 1 0 auto;
+  min-width: 0;
+}
+
+.project-shell .nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+}
+
+.project-shell .site-header a.project-back {
+  margin: 0;
+  white-space: nowrap;
+  line-height: 1.65;
+  font-size: .9rem;
+}
+
+/* Back navigation no longer reserves a separate row in the document. */
+.project-shell main .page-head {
+  padding-top: 24px;
+}
+
+.project-shell .project-heading-links {
+  justify-content: flex-end;
+}
+
+.project-shell .project-heading-links:empty,
+.project-shell .project-heading:empty {
+  display: none;
+}
+
+.project-shell .project-heading-links > :last-child {
+  margin-bottom: 10px;
+}
+
+/* Keep the header's resting size through wheel, touch and keyboard scrolling. */
+.project-shell .nav-wrap {
+  --ui-header-stretch: 0px;
+}
+
 .project-app .site-header,
 .project-app .project-heading {
   --max: 1120px;

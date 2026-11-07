@@ -15,6 +15,7 @@ on:
       - 'assets/css/site-motion.css'
       - 'assets/css/liquid-glass.css'
       - 'assets/js/site-motion.js'
+      - 'assets/js/site-ui.js'
       - 'assets/js/liquid-glass.js'
       - 'tests/orbits-browser.mjs'
       - 'tests/reactor-browser.mjs'

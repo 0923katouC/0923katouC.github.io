@@ -104,7 +104,7 @@ async function checkParentNavigation(browser, viewport) {
     viewport: { width: viewport.width, height: viewport.height },
     reducedMotion: 'reduce',
   });
-  const parentLink = page.locator('.page-head a.back-link');
+  const parentLink = page.locator('.site-header a.project-back');
   const geometry = () => parentLink.evaluate(link => {
     const { x, y, height } = link.getBoundingClientRect();
     const { borderRadius, fontSize, padding } = getComputedStyle(link);
@@ -112,17 +112,40 @@ async function checkParentNavigation(browser, viewport) {
   });
   const paths = selector => page.locator(selector).evaluateAll(links => links.map(link => link.pathname));
   try {
-    await page.goto(baseURL + '/photography/topics.html');
+    await page.goto(baseURL + '/projects.html');
     // Exercise both language settings, including the different header wrap on a phone.
     if (viewport.name !== 'desktop') await page.locator('.lang-switch').click();
-    const reference = await geometry();
     const menu = await paths('.main-nav a');
 
     async function checkReturn(parentPath, parentTitle) {
       const path = new URL(page.url()).pathname;
       await checkLayout(page);
       assert.deepEqual(await paths('.main-nav a'), menu, path + ' section menu');
-      assert.deepEqual(await geometry(), reference, path + ' parent link placement and style');
+      const initial = await geometry();
+      const shell = await page.evaluate(() => {
+        const header = document.querySelector('.site-header').getBoundingClientRect();
+        const back = document.querySelector('.project-back').getBoundingClientRect();
+        const main = document.querySelector('main').getBoundingClientRect();
+        const heading = document.querySelector('main .page-head');
+        return { headerTop:header.top, headerBottom:header.bottom, backTop:back.top, backBottom:back.bottom, mainTop:main.top,
+          headingPadding:heading ? parseFloat(getComputedStyle(heading).paddingTop) : 0,
+          overscroll:getComputedStyle(document.documentElement).overscrollBehaviorY };
+      });
+      assert.equal(shell.headerTop, 0, path + ' header stays at the viewport top');
+      assert.ok(shell.backTop >= 0 && shell.backBottom <= shell.headerBottom, path + ' back link floats inside the fixed header');
+      assert.ok(Math.abs(shell.mainTop - shell.headerBottom) <= 1, path + ' no reserved blank band above the page');
+      assert.ok(shell.headingPadding <= 24, path + ' compact heading spacing');
+      assert.equal(shell.overscroll, 'none', path + ' no exposed overscroll edges');
+      await page.evaluate(() => window.scrollTo({top:document.documentElement.scrollHeight, behavior:'instant'}));
+      assert.deepEqual(await geometry(), initial, path + ' parent link stays put at the bottom');
+      await page.evaluate(() => window.scrollTo({top:0, behavior:'instant'}));
+      await page.emulateMedia({ reducedMotion:'no-preference' });
+      await page.mouse.move(10, 10);
+      await page.mouse.wheel(0, -900);
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert.deepEqual(await geometry(), initial, path + ' wheel input cannot move the parent link');
+      assert.equal(await page.locator('.site-header').evaluate(header => header.getBoundingClientRect().bottom), shell.headerBottom, path + ' header does not stretch');
+      await page.emulateMedia({ reducedMotion:'reduce' });
       assert.equal(await parentLink.locator('.back-label').innerText(), parentTitle, path + ' parent name');
       assert.equal(await parentLink.getAttribute('href'), parentPath, path + ' parent route');
       await parentLink.click();
