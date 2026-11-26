@@ -250,6 +250,20 @@ body.photography-entry-page.glass-ui .photo-entry{
   z-index:2;
 }
 
+.photography-entry-page .photo-entry .entry-index{
+  display:inline-flex;
+  align-items:center;
+  width:fit-content;
+  padding:2px 9px;
+  border-radius:999px;
+  background:rgba(8,18,31,.56);
+  border:1px solid rgba(255,255,255,.26);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  color:#f5f9ff;
+  text-shadow:none;
+}
+
 .photography-entry-page .photo-entry .entry-arrow{
   position:absolute;
 }

@@ -21,10 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const apply = (animated = false) => {
     stopAnimations();
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    if (document.documentElement.dataset) {
+      document.documentElement.dataset.lang = lang;
+      document.documentElement.dataset.langReady = '1';
+    }
     document.querySelectorAll('[data-zh][data-en]').forEach(element => {
       const changed = element.textContent !== element.dataset[lang];
       element.textContent = element.dataset[lang];
-      if (animated && changed && !motion.matches && element.animate) {
+      if (animated && changed && !motion.matches && element.tagName !== 'TITLE' && element.animate) {
         const animation = element.animate([{ opacity:.25 }, { opacity:1 }], {
           duration:180, easing:'ease-out'
         });

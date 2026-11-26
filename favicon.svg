@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#17324d"/>
+      <stop offset="100%" stop-color="#0b1726"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="#9ac8f5" stroke-opacity=".28" stroke-width="1.5"/>
+  <ellipse cx="32" cy="32" rx="25" ry="9" transform="rotate(-24 32 32)" fill="none" stroke="#a7d4ff" stroke-opacity=".55" stroke-width="1.4"/>
+  <text x="32" y="38.5" text-anchor="middle" fill="#f3f8ff" font-family="Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18.5" font-weight="750" letter-spacing=".5">CMC</text>
+</svg>

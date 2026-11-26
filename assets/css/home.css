@@ -26,18 +26,20 @@ body.home-page::after{
   inset:0;
   z-index:0;
   pointer-events:none;
-  background:rgba(247,248,250,.05);
+  background:
+    radial-gradient(ellipse at 12% 16%,rgba(247,248,250,.70),rgba(247,248,250,.28) 32%,transparent 62%),
+    rgba(247,248,250,.06);
 }
 
 .home-page .home-intro h1{
   color:#0c1015;
-  text-shadow:0 2px 20px rgba(255,255,255,.72);
+  text-shadow:0 2px 20px rgba(255,255,255,.85);
 }
 
 .home-page .home-intro p{
-  color:#303741;
-  font-weight:520;
-  text-shadow:0 1px 12px rgba(255,255,255,.82);
+  color:#1f2833;
+  font-weight:580;
+  text-shadow:0 1px 14px rgba(255,255,255,.94),0 0 24px rgba(255,255,255,.82);
 }
 
 /* Photo entrances share the theme cards' soft glass rim and pointer highlight. */
@@ -111,7 +113,7 @@ body.home-page.glass-ui .entry-panel--projects{
   z-index:1;
   border-radius:inherit;
   pointer-events:none;
-  background:linear-gradient(180deg,rgba(8,18,31,.16),transparent 30%,transparent 44%,rgba(8,18,31,.64));
+  background:linear-gradient(180deg,rgba(8,18,31,.42),transparent 34%,transparent 44%,rgba(8,18,31,.78));
 }
 
 .home-page .entry-copy,
@@ -119,6 +121,20 @@ body.home-page.glass-ui .entry-panel--projects{
 .home-page .entry-panel .entry-arrow{
   position:relative;
   z-index:2;
+}
+
+.home-page .entry-panel .entry-index{
+  display:inline-flex;
+  align-items:center;
+  width:fit-content;
+  padding:2px 9px;
+  border-radius:999px;
+  background:rgba(8,18,31,.48);
+  border:1px solid rgba(255,255,255,.26);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  color:#f5f9ff;
+  text-shadow:none;
 }
 
 .home-page .entry-copy{
@@ -134,6 +150,7 @@ body.home-page.glass-ui .entry-panel--projects{
 .home-page .entry-copy p{
   font-size:.92rem;
   line-height:1.5;
+  text-wrap:balance;
 }
 
 .home-page .entry-panel .entry-arrow{

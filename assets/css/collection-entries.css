@@ -47,12 +47,30 @@ body.collection-page.glass-ui .collection-card{
   z-index:1;
   border-radius:inherit;
   pointer-events:none;
-  background:linear-gradient(180deg,rgba(8,18,31,.14),transparent 28%,rgba(8,18,31,.10) 46%,rgba(8,18,31,.70));
+  background:linear-gradient(180deg,rgba(8,18,31,.48),rgba(8,18,31,.08) 32%,rgba(8,18,31,.16) 46%,rgba(8,18,31,.82));
 }
 
 .collection-card > :is(.entry-index,h2,p,.entry-arrow,.lock-mark){
   position:relative;
   z-index:2;
+}
+
+.collection-card .entry-index{
+  display:inline-flex;
+  align-items:center;
+  width:fit-content;
+  padding:2px 9px;
+  border-radius:999px;
+  background:rgba(8,18,31,.60);
+  border:1px solid rgba(255,255,255,.28);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  color:#f5f9ff;
+  text-shadow:none;
+}
+
+.collection-card p{
+  text-wrap:balance;
 }
 
 .collection-card .entry-arrow,

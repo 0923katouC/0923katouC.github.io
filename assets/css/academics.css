@@ -67,7 +67,31 @@ body.academic-cosmos{
   border-bottom-color:var(--line);
 }
 
-.academic-cosmos .academic-links a,
+.academic-cosmos .academic-links{
+  gap:8px 10px;
+}
+
+.academic-cosmos .academic-links a{
+  display:inline-flex;
+  align-items:center;
+  padding:5px 12px;
+  border-radius:999px;
+  border:1px solid rgba(167,212,255,.28);
+  background:rgba(7,16,28,.58);
+  color:var(--accent);
+  font-size:.9rem;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  transition:background-color .18s ease,border-color .18s ease,transform .18s ease;
+}
+
+.academic-cosmos .academic-links a:hover{
+  background:rgba(167,212,255,.16);
+  border-color:rgba(167,212,255,.58);
+  text-decoration:none;
+  transform:translateY(-1px);
+}
+
 .academic-cosmos .pub a{
   color:var(--accent);
 }

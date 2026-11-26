@@ -76,19 +76,57 @@ body.glass-ui .main-nav a{
 }
 
 body.glass-ui .main-nav a{
-  --glass-fill:rgba(246,251,255,.18);
-  --glass-top:rgba(255,255,255,.16);
+  --glass-fill:rgba(246,251,255,.32);
+  --glass-top:rgba(255,255,255,.22);
   min-height:34px;
   font-size:.93rem;
 }
 
 body.glass-ui:is(.academic-cosmos,.project-dark) .main-nav a{
-  --glass-fill:rgba(17,32,51,.20);
+  --glass-fill:rgba(17,32,51,.36);
 }
 
 body.glass-ui .main-nav a.active{
-  --glass-top:rgba(255,255,255,.32);
-  border-color:rgba(255,255,255,.68);
+  --glass-fill:rgba(18,36,56,.88);
+  --glass-top:rgba(130,178,224,.24);
+  --glass-bottom:rgba(12,26,42,.14);
+  --glass-glow:rgba(186,220,252,.22);
+  --glass-ink:#fff;
+  --glass-text-shadow:none;
+  --glass-shadow:0 6px 18px rgba(12,34,54,.24),inset 0 1px 1px rgba(255,255,255,.34);
+  background:var(--glass-surface);
+  color:var(--glass-ink);
+  border-color:rgba(255,255,255,.52);
+  box-shadow:var(--glass-shadow);
+}
+
+body.glass-ui:is(.academic-cosmos,.project-dark) .main-nav a.active{
+  --glass-fill:rgba(235,245,255,.94);
+  --glass-top:rgba(255,255,255,.46);
+  --glass-bottom:rgba(195,222,250,.22);
+  --glass-glow:rgba(255,255,255,.35);
+  --glass-ink:#0c1929;
+  --glass-text-shadow:none;
+  --glass-shadow:0 6px 20px rgba(0,0,0,.35),inset 0 1px 1px rgba(255,255,255,.85);
+  background:var(--glass-surface);
+  color:var(--glass-ink);
+  border-color:rgba(255,255,255,.92);
+  box-shadow:var(--glass-shadow);
+}
+
+@media(max-width:640px){
+  body.glass-ui .main-nav a,
+  body.glass-ui .main-nav .lang-switch{
+    min-height:30px;
+    padding:4px 8px;
+    font-size:.8rem;
+  }
+
+  body.glass-ui .site-header a.project-back{
+    min-height:30px;
+    padding:4px 10px;
+    font-size:.8rem;
+  }
 }
 
 body.glass-ui .page-head a.back-link{
